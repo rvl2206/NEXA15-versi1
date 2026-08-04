@@ -594,7 +594,7 @@ class AppStore {
       this.attendance[existingIdx] = updated;
       this.notify();
 
-      await syncAttendanceToSupabase([updated]);
+      syncAttendanceToSupabase([updated]).catch((err) => console.error('Background sync attendance error:', err));
       this.addLog('PRESENSI_MANUAL', `Memperbarui presensi (mencegah ganda): ${updated.nama} (${updated.kelas}) - ${updated.status}`);
       return updated;
     }
@@ -617,7 +617,7 @@ class AppStore {
     this.attendance.unshift(newRecord);
     this.notify();
 
-    await syncAttendanceToSupabase([newRecord]);
+    syncAttendanceToSupabase([newRecord]).catch((err) => console.error('Background sync attendance error:', err));
     this.addLog('PRESENSI_MANUAL', `Menambahkan presensi manual: ${newRecord.nama} (${newRecord.kelas}) - ${newRecord.status}`);
     return newRecord;
   }
@@ -634,18 +634,18 @@ class AppStore {
     this.attendance[idx] = updated;
     this.notify();
 
-    await syncAttendanceToSupabase([updated]);
+    syncAttendanceToSupabase([updated]).catch((err) => console.error('Background sync attendance error:', err));
     this.addLog('EDIT_PRESENSI', `Memperbarui rekaman presensi ID: ${id} (${updated.nama})`);
     return true;
   }
 
   public async deleteAttendance(id: string): Promise<boolean> {
     const target = this.attendance.find((a) => a.id === id);
-    this.attendance = this.attendance.filter((a) => a.id !== id);
+    this.attendance = this.attendance.filter((a) => !id || a.id !== id);
     this.notify();
 
     if (target) {
-      await deleteAttendanceFromSupabase(id);
+      deleteAttendanceFromSupabase(id).catch((err) => console.error('Background delete attendance error:', err));
       this.addLog('HAPUS_PRESENSI', `Menghapus rekaman presensi: ${target.nama} (${target.tanggal}) dari aplikasi dan database.`);
     }
     return true;

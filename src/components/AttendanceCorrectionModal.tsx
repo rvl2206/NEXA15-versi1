@@ -144,17 +144,25 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     }
   }, [status, jamScan]);
 
-  if (!isOpen) return null;
+  const [isSaving, setIsSaving] = useState(false);
 
-  const currentStudent = students.find((s) => s.id === selectedStudentId);
+  const currentStudent = React.useMemo(() => {
+    return students.find((s) => s.id === selectedStudentId);
+  }, [students, selectedStudentId]);
 
-  // Check if a record exists for this student on this date and jenis
-  const existingRecordForForm = initialRecord || (currentStudent ? store.getAttendance().find((a) => {
-    const matchIdentity = a.nisn === currentStudent.nisn || a.nama === currentStudent.nama;
-    const matchDate = store.normalizeToYyyyMmDd(a.tanggal) === store.normalizeToYyyyMmDd(tanggal);
-    const matchJenis = a.jenis === jenis;
-    return matchIdentity && matchDate && matchJenis;
-  }) : null);
+  // Check if a record exists for this student on this date and jenis (memoized)
+  const existingRecordForForm = React.useMemo(() => {
+    if (initialRecord) return initialRecord;
+    if (!currentStudent) return null;
+    const targetDate = store.normalizeToYyyyMmDd(tanggal);
+    const allAttendance = store.getAttendance();
+    return allAttendance.find((a) => {
+      const matchIdentity = (a.nisn && a.nisn === currentStudent.nisn) || (a.nama && a.nama === currentStudent.nama);
+      const matchDate = store.normalizeToYyyyMmDd(a.tanggal) === targetDate;
+      const matchJenis = a.jenis === jenis;
+      return matchIdentity && matchDate && matchJenis;
+    }) || null;
+  }, [initialRecord, currentStudent, tanggal, jenis]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,75 +170,82 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
       alert('Silakan pilih siswa terlebih dahulu.');
       return;
     }
+    if (isSaving) return;
 
-    let resultRecord: AttendanceRecord | null = null;
+    setIsSaving(true);
 
-    if (existingRecordForForm && existingRecordForForm.id) {
-      // Update existing record
-      await store.updateAttendanceRecord(existingRecordForForm.id, {
-        status,
-        jenis,
-        tanggal,
-        catatan,
-        terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
-        petugas: petugas || currentOfficer,
-        nama: currentStudent.nama,
-        kelas: currentStudent.kelas,
-        nisn: currentStudent.nisn,
-        id_qr: currentStudent.id_qr,
-      });
-      resultRecord = {
-        ...existingRecordForForm,
-        status,
-        jenis,
-        tanggal,
-        catatan,
-        terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
-        petugas: petugas || currentOfficer,
-      };
-    } else {
-      // Create new record for this correction
-      resultRecord = await store.addManualAttendance({
-        tanggal: store.normalizeToYyyyMmDd(tanggal) || store.getTodayFormatted(),
-        nisn: currentStudent.nisn,
-        nama: currentStudent.nama,
-        kelas: currentStudent.kelas,
-        id_qr: currentStudent.id_qr,
-        jenis,
-        status,
-        petugas: petugas || currentOfficer,
-        catatan,
-        terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
-      });
-    }
+    try {
+      let resultRecord: AttendanceRecord | null = null;
 
-    // Send WhatsApp notification if checked and phone exists
-    if (sendWaNotif && currentStudent && resultRecord) {
-      let phone = currentStudent.no_hp_ortu;
-      if (!phone) {
-        phone = prompt(`Masukkan No. WhatsApp Orang Tua untuk ${currentStudent.nama}:`, '08123456789') || undefined;
-        if (phone && phone.trim()) {
-          store.updateStudent(currentStudent.id, { no_hp_ortu: phone.trim() });
-          currentStudent.no_hp_ortu = phone.trim();
+      if (existingRecordForForm && existingRecordForForm.id) {
+        // Update existing record
+        await store.updateAttendanceRecord(existingRecordForForm.id, {
+          status,
+          jenis,
+          tanggal,
+          catatan,
+          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+          petugas: petugas || currentOfficer,
+          nama: currentStudent.nama,
+          kelas: currentStudent.kelas,
+          nisn: currentStudent.nisn,
+          id_qr: currentStudent.id_qr,
+        });
+        resultRecord = {
+          ...existingRecordForForm,
+          status,
+          jenis,
+          tanggal,
+          catatan,
+          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+          petugas: petugas || currentOfficer,
+        };
+      } else {
+        // Create new record for this correction
+        resultRecord = await store.addManualAttendance({
+          tanggal: store.normalizeToYyyyMmDd(tanggal) || store.getTodayFormatted(),
+          nisn: currentStudent.nisn,
+          nama: currentStudent.nama,
+          kelas: currentStudent.kelas,
+          id_qr: currentStudent.id_qr,
+          jenis,
+          status,
+          petugas: petugas || currentOfficer,
+          catatan,
+          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+        });
+      }
+
+      // Send WhatsApp notification if checked and phone exists
+      if (sendWaNotif && currentStudent && resultRecord) {
+        let phone = currentStudent.no_hp_ortu;
+        if (!phone) {
+          phone = prompt(`Masukkan No. WhatsApp Orang Tua untuk ${currentStudent.nama}:`, '08123456789') || undefined;
+          if (phone && phone.trim()) {
+            store.updateStudent(currentStudent.id, { no_hp_ortu: phone.trim() });
+            currentStudent.no_hp_ortu = phone.trim();
+          }
+        }
+        if (phone) {
+          const schoolSettings = store.getSettings();
+          let template: string | undefined;
+          if (status === 'Hadir') template = schoolSettings.waTemplateHadir;
+          else if (status === 'Terlambat') template = schoolSettings.waTemplateTerlambat;
+          else if (status === 'Izin' || status === 'Sakit') template = schoolSettings.waTemplateIzinSakit;
+          else if (status === 'Alpa') template = schoolSettings.waTemplateAlpa;
+
+          const schoolName = schoolSettings.schoolName || 'SMA NEGERI 15 AMBON';
+          const waMsg = generateWhatsAppMessage(currentStudent, resultRecord, schoolName, template);
+          const waUrl = getWhatsAppLink(phone, waMsg);
+          window.open(waUrl, '_blank');
         }
       }
-      if (phone) {
-        const schoolSettings = store.getSettings();
-        let template: string | undefined;
-        if (status === 'Hadir') template = schoolSettings.waTemplateHadir;
-        else if (status === 'Terlambat') template = schoolSettings.waTemplateTerlambat;
-        else if (status === 'Izin' || status === 'Sakit') template = schoolSettings.waTemplateIzinSakit;
-        else if (status === 'Alpa') template = schoolSettings.waTemplateAlpa;
 
-        const schoolName = schoolSettings.schoolName || 'SMA NEGERI 15 AMBON';
-        const waMsg = generateWhatsAppMessage(currentStudent, resultRecord, schoolName, template);
-        const waUrl = getWhatsAppLink(phone, waMsg);
-        window.open(waUrl, '_blank');
-      }
+      if (onSuccess) onSuccess();
+      onClose();
+    } finally {
+      setIsSaving(false);
     }
-
-    if (onSuccess) onSuccess();
-    onClose();
   };
 
   const getStatusBadgeIcon = (s: AttendanceStatus) => {
@@ -247,6 +262,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
         return <XCircle className="w-4 h-4 text-red-600" />;
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -524,10 +541,11 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+              disabled={isSaving}
+              className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-xl shadow-md transition-all flex items-center gap-1.5"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Simpan Koreksi Kehadiran</span>
+              <ShieldCheck className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
+              <span>{isSaving ? 'Menyimpan...' : 'Simpan Koreksi Kehadiran'}</span>
             </button>
           </div>
         </form>
