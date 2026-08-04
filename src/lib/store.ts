@@ -1,4 +1,4 @@
-import { Student, AttendanceRecord, AttendanceType, AttendanceStatus, ActivityLog, SchoolSettings, User } from '../types';
+import { Student, AttendanceRecord, AttendanceType, AttendanceStatus, ActivityLog, SchoolSettings, User, Holiday } from '../types';
 import { toast } from './toast';
 import {
   isSupabaseConfigured,
@@ -51,6 +51,8 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   schoolName: 'SMA NEGERI 15 AMBON',
   schoolNPSN: '69933068',
   cutoffTime: '07:15',
+  autoAlpaCutoffTime: '14:30',
+  enableAutoAlpa: true,
   academicYear: '2026/2027',
   enableWaNotif: true,
   waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
@@ -60,6 +62,7 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   supabaseUrl: 'https://tpxyvbfbahsjssqwubfl.supabase.co',
   supabaseKey: 'sb_publishable_oH-2538e28kbMbpk8ESZ7w_LpeIn1Jh',
   enableSupabaseAutoSync: true,
+  holidays: [],
 };
 
 class AppStore {
@@ -106,6 +109,7 @@ class AppStore {
       if (savedLogs) {
         this.logs = JSON.parse(savedLogs);
       }
+      this.processAutoAlpa();
     } catch (e) {
       console.warn('LocalStorage load error:', e);
     }
@@ -152,6 +156,123 @@ class AppStore {
     this.notify();
   }
 
+  public getHolidays(): Holiday[] {
+    return this.settings.holidays || [];
+  }
+
+  public addHoliday(data: { tanggal: string; keterangan: string }): Holiday {
+    const normDate = this.normalizeToYyyyMmDd(data.tanggal);
+    const newHoliday: Holiday = {
+      id: `hol-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      tanggal: normDate,
+      keterangan: data.keterangan,
+    };
+    const current = this.getHolidays();
+    const updated = [...current.filter((h) => this.normalizeToYyyyMmDd(h.tanggal) !== normDate), newHoliday];
+    this.updateSettings({ holidays: updated });
+    this.addLog('TAMBAH_HARI_LIBUR', `Menambahkan hari libur: ${data.keterangan} (${normDate})`);
+    return newHoliday;
+  }
+
+  public deleteHoliday(id: string): void {
+    const current = this.getHolidays();
+    const target = current.find((h) => h.id === id);
+    const updated = current.filter((h) => h.id !== id);
+    this.updateSettings({ holidays: updated });
+    if (target) {
+      this.addLog('HAPUS_HARI_LIBUR', `Menghapus hari libur: ${target.keterangan} (${target.tanggal})`);
+    }
+  }
+
+  public isHoliday(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const normDate = this.normalizeToYyyyMmDd(dateStr);
+    if (!normDate || normDate.length < 10) return false;
+
+    // 1. Check configured holidays
+    const holidays = this.getHolidays();
+    if (holidays.some((h) => this.normalizeToYyyyMmDd(h.tanggal) === normDate)) {
+      return true;
+    }
+
+    // 2. Check Weekend (Saturday or Sunday)
+    const dateObj = new Date(normDate + 'T00:00:00');
+    if (!isNaN(dateObj.getTime())) {
+      const day = dateObj.getDay();
+      if (day === 0 || day === 6) return true; // 0: Minggu, 6: Sabtu
+    }
+
+    return false;
+  }
+
+  public processAutoAlpa(targetDateYyyyMmDd?: string): { addedCount: number; date: string } {
+    if (this.settings.enableAutoAlpa === false) {
+      return { addedCount: 0, date: targetDateYyyyMmDd || this.getTodayYyyyMmDd() };
+    }
+
+    const todayYyyyMmDd = this.getTodayYyyyMmDd();
+    const checkDate = targetDateYyyyMmDd ? this.normalizeToYyyyMmDd(targetDateYyyyMmDd) : todayYyyyMmDd;
+
+    // If checking for today, ensure current local time is >= autoAlpaCutoffTime (default 14:30)
+    if (checkDate === todayYyyyMmDd) {
+      const now = new Date();
+      const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
+      const [cutoffH, cutoffM] = cutoffStr.split(':').map((n) => parseInt(n, 10) || 0);
+      const cutoffMinutes = cutoffH * 60 + cutoffM;
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      if (currentMinutes < cutoffMinutes) {
+        // Current time is before cutoff
+        return { addedCount: 0, date: checkDate };
+      }
+    }
+
+    // Check if target date is a holiday or weekend
+    if (this.isHoliday(checkDate)) {
+      return { addedCount: 0, date: checkDate };
+    }
+
+    const activeStudents = this.students.filter((s) => s.status === 'aktif');
+    if (activeStudents.length === 0) {
+      return { addedCount: 0, date: checkDate };
+    }
+
+    const newRecords: AttendanceRecord[] = [];
+    const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
+    const parts = checkDate.split('-');
+    const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : checkDate;
+
+    activeStudents.forEach((student) => {
+      // Check if student has any existing attendance record for checkDate
+      const existing = this.attendance.some((a) => a.nisn === student.nisn && this.isRecordForDate(a, checkDate));
+      if (!existing) {
+        const newRecord: AttendanceRecord = {
+          id: `att-autoalpa-${student.nisn}-${checkDate}`,
+          tanggal: formattedDate,
+          timestamp: `${checkDate}T${cutoffStr}:00.000Z`,
+          nisn: student.nisn,
+          nama: student.nama,
+          kelas: student.kelas,
+          id_qr: student.id_qr || '',
+          jenis: 'Masuk',
+          status: 'Alpa',
+          petugas: `Otopresensi Sistem (${cutoffStr})`,
+          catatan: `Alpa Otomatis (Tidak ada presensi hingga jam ${cutoffStr})`,
+        };
+        newRecords.push(newRecord);
+      }
+    });
+
+    if (newRecords.length > 0) {
+      this.attendance = [...this.attendance, ...newRecords];
+      this.notify();
+      this.addLog('AUTO_ALPA_MASSAL', `Sistem Otopresensi (${cutoffStr}): Otomatis mencatat ${newRecords.length} siswa sebagai Alpa pada tanggal ${checkDate}.`);
+      syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
+    }
+
+    return { addedCount: newRecords.length, date: checkDate };
+  }
+
   public getCurrentUser(): User | null {
     return this.currentUser;
   }
@@ -195,14 +316,22 @@ class AppStore {
     return [...this.logs];
   }
 
+  public getSupabaseConfig() {
+    return {
+      url: this.settings.supabaseUrl || DEFAULT_SETTINGS.supabaseUrl,
+      key: this.settings.supabaseKey || DEFAULT_SETTINGS.supabaseKey,
+    };
+  }
+
   public async fetchFromServer(): Promise<void> {
     try {
-      if (!isSupabaseConfigured()) return;
+      const config = this.getSupabaseConfig();
+      if (!isSupabaseConfigured(config)) return;
 
       const [remoteStudents, remoteAttendance, remoteLogs] = await Promise.all([
-        fetchStudentsFromSupabase(),
-        fetchAttendanceFromSupabase(),
-        fetchLogsFromSupabase(),
+        fetchStudentsFromSupabase(config),
+        fetchAttendanceFromSupabase(config),
+        fetchLogsFromSupabase(config),
       ]);
 
       if (remoteStudents !== null) {
@@ -215,6 +344,7 @@ class AppStore {
         this.logs = remoteLogs;
       }
 
+      this.processAutoAlpa();
       this.notify();
     } catch (err) {
       console.error('Failed fetching data from Supabase Cloud PostgreSQL:', err);
@@ -223,18 +353,28 @@ class AppStore {
 
   public async syncAllToSupabase(): Promise<{ success: boolean; message: string }> {
     try {
+      const config = this.getSupabaseConfig();
       const [sRes, aRes, lRes] = await Promise.all([
-        syncStudentsToSupabase(this.students),
-        syncAttendanceToSupabase(this.attendance),
-        syncLogsToSupabase(this.logs),
+        syncStudentsToSupabase(this.students, config),
+        syncAttendanceToSupabase(this.attendance, config),
+        syncLogsToSupabase(this.logs, config),
       ]);
 
-      if (sRes.success && aRes.success && lRes.success) {
+      const errors: string[] = [];
+      if (!sRes.success) errors.push(`Siswa: ${sRes.error || 'Gagal'}`);
+      if (!aRes.success) errors.push(`Presensi: ${aRes.error || 'Gagal'}`);
+      if (!lRes.success) errors.push(`Log: ${lRes.error || 'Gagal'}`);
+
+      if (errors.length === 0) {
         const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi, dan ${lRes.count} log ke Supabase Cloud PostgreSQL.`;
         this.updateSettings({ lastSupabaseSync: new Date().toISOString() });
         return { success: true, message: msg };
       }
-      return { success: false, message: 'Gagal menyelaraskan sebagian data ke Supabase Cloud PostgreSQL.' };
+
+      return {
+        success: false,
+        message: `Gagal menyelaraskan data: ${errors.join(' | ')}`,
+      };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Error koneksi Supabase Cloud PostgreSQL.' };
     }
@@ -298,14 +438,14 @@ class AppStore {
       if (orphanAtts.length > 0) {
         const orphanIds = orphanAtts.map((a) => a.id);
         this.attendance = this.attendance.filter((a) => a.nisn !== target.nisn);
-        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId)));
+        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId, this.getSupabaseConfig())));
       }
     }
 
     this.notify();
 
     if (target) {
-      await deleteStudentFromSupabase(id);
+      await deleteStudentFromSupabase(target.nisn || id, this.getSupabaseConfig());
       this.addLog('HAPUS_SISWA', `Menghapus siswa: ${target.nama} (${target.kelas}) dari aplikasi dan database.`);
     }
     return true;
@@ -324,24 +464,24 @@ class AppStore {
       if (orphanAtts.length > 0) {
         const orphanIds = orphanAtts.map((a) => a.id);
         this.attendance = this.attendance.filter((a) => !targetNisns.has(a.nisn));
-        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId)));
+        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId, this.getSupabaseConfig())));
       }
     }
 
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteStudentFromSupabase(id)));
+    await Promise.all(targets.map((s) => deleteStudentFromSupabase(s.nisn || s.id, this.getSupabaseConfig())));
     this.addLog('HAPUS_MASSAL_SISWA', `Menghapus ${ids.length} siswa terpilih dari aplikasi dan database.`);
     return true;
   }
 
   public async deleteAllStudents(): Promise<boolean> {
     const count = this.students.length;
-    const ids = this.students.map((s) => s.id);
+    const oldStudents = [...this.students];
     this.students = [];
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteStudentFromSupabase(id)));
+    await Promise.all(oldStudents.map((s) => deleteStudentFromSupabase(s.nisn || s.id, this.getSupabaseConfig())));
     this.addLog('RESET_SISWA', `Menghapus seluruh ${count} data siswa dari aplikasi dan database.`);
     return true;
   }
@@ -401,18 +541,34 @@ class AppStore {
     return `${d}-${m}-${y}`;
   }
 
-  public isRecordForToday(r: AttendanceRecord): boolean {
-    if (!r.tanggal) return false;
-    const todayFormatted = this.getTodayFormatted();
-    if (r.tanggal === todayFormatted) return true;
+  public getTodayYyyyMmDd(): string {
+    const today = new Date();
+    const d = String(today.getDate()).padStart(2, '0');
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const y = today.getFullYear();
+    return `${y}-${m}-${d}`;
+  }
 
-    // Check ISO timestamp vs today YYYY-MM-DD
-    if (r.timestamp) {
-      const todayISO = new Date().toISOString().slice(0, 10);
-      const recordISO = new Date(r.timestamp).toISOString().slice(0, 10);
-      if (todayISO === recordISO) return true;
+  public isRecordForDate(r: AttendanceRecord, targetYyyyMmDd: string): boolean {
+    if (!r || !targetYyyyMmDd) return false;
+    const targetNorm = this.normalizeToYyyyMmDd(targetYyyyMmDd);
+
+    if (r.tanggal) {
+      const recordNorm = this.normalizeToYyyyMmDd(r.tanggal);
+      if (recordNorm === targetNorm) return true;
+      if (r.tanggal.includes(targetYyyyMmDd) || targetYyyyMmDd.includes(r.tanggal)) return true;
     }
+
+    if (r.timestamp) {
+      const tsNorm = this.normalizeToYyyyMmDd(r.timestamp);
+      if (tsNorm === targetNorm) return true;
+    }
+
     return false;
+  }
+
+  public isRecordForToday(r: AttendanceRecord): boolean {
+    return this.isRecordForDate(r, this.getTodayYyyyMmDd());
   }
 
   public recordScan(
@@ -536,7 +692,7 @@ class AppStore {
     this.notify();
 
     // Direct save to Supabase Cloud PostgreSQL
-    syncAttendanceToSupabase([newRecord]);
+    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig());
     this.addLog(
       `SCAN_${jenis.toUpperCase()}`,
       `Scan Presensi ${jenis} ${status.toUpperCase()}: ${matchedStudent.nama} (${matchedStudent.kelas}) oleh ${formatPetugasRole(officerEmail)}`
@@ -560,14 +716,33 @@ class AppStore {
 
   public normalizeToYyyyMmDd(dateStr: string): string {
     if (!dateStr) return '';
-    if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
-      return dateStr;
+    const str = String(dateStr).trim();
+    if (str.includes('T')) {
+      const datePart = str.split('T')[0];
+      if (datePart.split('-')[0].length === 4) return datePart;
     }
-    if (dateStr.includes('-') && dateStr.split('-')[2]?.length === 4) {
-      const [d, m, y] = dateStr.split('-');
-      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    if (str.includes('-')) {
+      const parts = str.split('-');
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}`;
+      }
+      if (parts[2]?.length === 4) {
+        const [d, m, y] = parts;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
     }
-    return dateStr;
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        if (parts[2].length === 4) {
+          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        if (parts[0].length === 4) {
+          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+      }
+    }
+    return str;
   }
 
   public async addManualAttendance(data: Partial<AttendanceRecord> & { nisn: string; nama: string; kelas: string }): Promise<AttendanceRecord> {
@@ -594,7 +769,7 @@ class AppStore {
       this.attendance[existingIdx] = updated;
       this.notify();
 
-      syncAttendanceToSupabase([updated]).catch((err) => console.error('Background sync attendance error:', err));
+      syncAttendanceToSupabase([updated], this.getSupabaseConfig()).catch((err) => console.error('Background sync attendance error:', err));
       this.addLog('PRESENSI_MANUAL', `Memperbarui presensi (mencegah ganda): ${updated.nama} (${updated.kelas}) - ${updated.status}`);
       return updated;
     }
@@ -617,7 +792,7 @@ class AppStore {
     this.attendance.unshift(newRecord);
     this.notify();
 
-    syncAttendanceToSupabase([newRecord]).catch((err) => console.error('Background sync attendance error:', err));
+    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch((err) => console.error('Background sync attendance error:', err));
     this.addLog('PRESENSI_MANUAL', `Menambahkan presensi manual: ${newRecord.nama} (${newRecord.kelas}) - ${newRecord.status}`);
     return newRecord;
   }
@@ -634,7 +809,7 @@ class AppStore {
     this.attendance[idx] = updated;
     this.notify();
 
-    syncAttendanceToSupabase([updated]).catch((err) => console.error('Background sync attendance error:', err));
+    syncAttendanceToSupabase([updated], this.getSupabaseConfig()).catch((err) => console.error('Background sync attendance error:', err));
     this.addLog('EDIT_PRESENSI', `Memperbarui rekaman presensi ID: ${id} (${updated.nama})`);
     return true;
   }
@@ -712,7 +887,7 @@ class AppStore {
       this.notify();
     }
 
-    await syncAttendanceToSupabase(this.attendance);
+    await syncAttendanceToSupabase(this.attendance, this.getSupabaseConfig());
     this.addLog('IMPORT_PRESENSI', `Mengimpor ${records.length} data rekap presensi tanpa duplikasi.`);
     return true;
   }
@@ -733,7 +908,7 @@ class AppStore {
     }
     this.notify();
 
-    syncLogsToSupabase([newLog]).catch(() => {});
+    syncLogsToSupabase([newLog], this.getSupabaseConfig()).catch(() => {});
   }
 
   public async deleteSelectedLogs(ids: string[]): Promise<boolean> {
@@ -741,7 +916,7 @@ class AppStore {
     this.logs = this.logs.filter((l) => !idSet.has(l.id));
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteLogFromSupabase(id)));
+    await Promise.all(ids.map((id) => deleteLogFromSupabase(id, this.getSupabaseConfig())));
     return true;
   }
 

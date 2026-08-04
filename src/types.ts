@@ -47,10 +47,18 @@ export interface ActivityLog {
   details: string;
 }
 
+export interface Holiday {
+  id: string;
+  tanggal: string; // format YYYY-MM-DD
+  keterangan: string;
+}
+
 export interface SchoolSettings {
   schoolName: string;
   schoolNPSN: string;
   cutoffTime: string; // e.g. "07:15"
+  autoAlpaCutoffTime?: string; // e.g. "14:30"
+  enableAutoAlpa?: boolean; // default true
   academicYear: string;
   enableWaNotif?: boolean;
   waTemplateHadir?: string;
@@ -61,6 +69,7 @@ export interface SchoolSettings {
   supabaseKey?: string;
   enableSupabaseAutoSync?: boolean;
   lastSupabaseSync?: string;
+  holidays?: Holiday[];
 }
 
 export interface FilterOptions {

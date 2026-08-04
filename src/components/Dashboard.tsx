@@ -37,6 +37,7 @@ export const Dashboard: React.FC = () => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(store.getTodayYyyyMmDd());
 
   const syncData = async () => {
     setIsRefreshing(true);
@@ -78,21 +79,49 @@ export const Dashboard: React.FC = () => {
     };
   }, []);
 
+  const todayYyyyMmDd = store.getTodayYyyyMmDd();
   const todayStr = store.getTodayFormatted();
-  const todayRecords = attendance.filter((a) => store.isRecordForToday(a) && a.jenis === 'Masuk');
+
+  // Extract unique available dates with attendance data (sorted descending)
+  const availableDates: string[] = Array.from(
+    new Set<string>(
+      attendance
+        .map((a) => store.normalizeToYyyyMmDd(a.tanggal) || store.normalizeToYyyyMmDd(a.timestamp))
+        .filter((d): d is string => Boolean(d))
+    )
+  ).sort().reverse();
+
+  // Today or selected date raw attendance records
+  const dateRecords = attendance.filter((a) => store.isRecordForDate(a, selectedDate));
+
+  // Deduplicate records per student for the selected date to count daily status accurately
+  // Prioritize "Masuk" or non-"Pulang" records for primary status
+  const studentDailyMap = new Map<string, AttendanceRecord>();
+  dateRecords.forEach((r) => {
+    const existing = studentDailyMap.get(r.nisn);
+    if (!existing) {
+      studentDailyMap.set(r.nisn, r);
+    } else {
+      if (existing.jenis === 'Pulang' && r.jenis !== 'Pulang') {
+        studentDailyMap.set(r.nisn, r);
+      }
+    }
+  });
+
+  const uniqueDailyRecords = Array.from(studentDailyMap.values());
 
   const totalStudents = students.filter((s) => s.status === 'aktif').length;
-  const totalHadir = todayRecords.filter((a) => a.status === 'Hadir').length;
-  const totalTerlambat = todayRecords.filter((a) => a.status === 'Terlambat').length;
-  const totalIzin = todayRecords.filter((a) => a.status === 'Izin').length;
-  const totalSakit = todayRecords.filter((a) => a.status === 'Sakit').length;
-  const totalAlpa = todayRecords.filter((a) => a.status === 'Alpa').length;
+  const totalHadir = uniqueDailyRecords.filter((a) => a.status === 'Hadir').length;
+  const totalTerlambat = uniqueDailyRecords.filter((a) => a.status === 'Terlambat').length;
+  const totalIzin = uniqueDailyRecords.filter((a) => a.status === 'Izin').length;
+  const totalSakit = uniqueDailyRecords.filter((a) => a.status === 'Sakit').length;
+  const totalAlpa = uniqueDailyRecords.filter((a) => a.status === 'Alpa').length;
 
   // Class breakdown data for BarChart
   const classList = Array.from(new Set(students.map((s) => s.kelas))).sort();
   const classData = classList.map((cls) => {
     const clsStudents = students.filter((s) => s.kelas === cls && s.status === 'aktif');
-    const clsRecords = todayRecords.filter((a) => a.kelas === cls);
+    const clsRecords = uniqueDailyRecords.filter((a) => a.kelas === cls);
 
     const hadir = clsRecords.filter((a) => a.status === 'Hadir').length;
     const terlambat = clsRecords.filter((a) => a.status === 'Terlambat').length;
@@ -107,26 +136,50 @@ export const Dashboard: React.FC = () => {
     };
   });
 
-  // Trend data grouped by date for AreaChart
-  const uniqueDates = Array.from(new Set(attendance.map((a) => a.tanggal))).slice(0, 10).reverse();
-  const trendData = uniqueDates.map((d) => {
-    const dayMasuk = attendance.filter((a) => a.tanggal === d && a.jenis === 'Masuk');
+  // Trend data grouped by normalized date for AreaChart (10 date entries, sorted ascending)
+  const uniqueNormalizedDates: string[] = Array.from(
+    new Set<string>(
+      attendance
+        .map((a) => store.normalizeToYyyyMmDd(a.tanggal) || store.normalizeToYyyyMmDd(a.timestamp))
+        .filter((d): d is string => Boolean(d))
+    )
+  )
+    .sort()
+    .slice(-10);
+
+  const trendData = uniqueNormalizedDates.map((d) => {
+    const dayRecords = attendance.filter((a) => store.isRecordForDate(a, d));
+    // Deduplicate per student
+    const dayStudentMap = new Map<string, AttendanceRecord>();
+    dayRecords.forEach((r) => {
+      if (!dayStudentMap.has(r.nisn) || (dayStudentMap.get(r.nisn)?.jenis === 'Pulang' && r.jenis !== 'Pulang')) {
+        dayStudentMap.set(r.nisn, r);
+      }
+    });
+    const uniqueDayRecords = Array.from(dayStudentMap.values());
+
+    const parts = d.split('-');
+    const labelDate = parts.length === 3 ? `${parts[2]}-${parts[1]}` : d;
+
     return {
-      tanggal: (d as string).slice(0, 5), // DD-MM
-      Hadir: dayMasuk.filter((a) => a.status === 'Hadir').length,
-      Terlambat: dayMasuk.filter((a) => a.status === 'Terlambat').length,
-      Alpa: dayMasuk.filter((a) => a.status === 'Alpa').length,
+      tanggal: labelDate,
+      Hadir: uniqueDayRecords.filter((a) => a.status === 'Hadir').length,
+      Terlambat: uniqueDayRecords.filter((a) => a.status === 'Terlambat').length,
+      Alpa: uniqueDayRecords.filter((a) => a.status === 'Alpa').length,
     };
   });
 
   // Pie chart status distribution data
   const pieData = [
-    { name: 'Hadir', value: totalHadir || 1, color: '#10b981' },
+    { name: 'Hadir', value: totalHadir || (uniqueDailyRecords.length === 0 ? 0 : 1), color: '#10b981' },
     { name: 'Terlambat', value: totalTerlambat, color: '#f59e0b' },
     { name: 'Izin', value: totalIzin, color: '#3b82f6' },
     { name: 'Sakit', value: totalSakit, color: '#8b5cf6' },
     { name: 'Alpa', value: totalAlpa, color: '#ef4444' },
   ].filter((item) => item.value > 0);
+
+  const isTodaySelected = selectedDate === todayYyyyMmDd;
+  const latestDataDate: string | null = availableDates.length > 0 ? availableDates[0] : null;
 
   return (
     <div className="space-y-6">
@@ -152,6 +205,27 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Date Selector Filter */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ml-1" />
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-2"
+            >
+              <option value={todayYyyyMmDd}>Hari Ini ({todayStr})</option>
+              {availableDates.map((d) => {
+                if (d === todayYyyyMmDd) return null;
+                const [y, m, day] = d.split('-');
+                return (
+                  <option key={d} value={d}>
+                    {day}-{m}-{y}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-800 dark:text-emerald-200 text-xs font-medium shadow-2xs">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -178,6 +252,42 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Info Notice Banner if Today has 0 records but past dates exist */}
+      {isTodaySelected && uniqueDailyRecords.length === 0 && latestDataDate && (
+        <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>
+              Belum ada aktivitas presensi yang tercatat untuk <strong>Hari Ini ({todayStr})</strong>.
+              Terdapat data rekaman terakhir pada tanggal <strong>{latestDataDate.split('-').reverse().join('-')}</strong>.
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedDate(latestDataDate)}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors cursor-pointer flex-shrink-0"
+          >
+            Lihat Data {latestDataDate.split('-').reverse().join('-')}
+          </button>
+        </div>
+      )}
+
+      {/* Holiday Banner */}
+      {store.isHoliday(selectedDate) && (
+        <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded-xl flex items-center gap-3 text-xs text-purple-900 dark:text-purple-200">
+          <div className="p-2 bg-purple-600 text-white rounded-lg shrink-0">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold text-purple-950 dark:text-purple-100 uppercase tracking-wider block">
+              HARI LIBUR SEKOLAH ({selectedDate.split('-').reverse().join('-')})
+            </span>
+            <span className="text-[11px] text-purple-700 dark:text-purple-300">
+              {store.getHolidays().find(h => store.normalizeToYyyyMmDd(h.tanggal) === selectedDate)?.keterangan || 'Akhir Pekan (Sabtu / Minggu)'} — Penalti Presensi & Otopresensi Alpa nonaktif pada hari libur.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Top Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">

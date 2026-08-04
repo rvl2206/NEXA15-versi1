@@ -30,17 +30,27 @@ export function getSupabaseCredentials(): SupabaseConfig {
   let key = '';
 
   try {
-    const saved = localStorage.getItem('school_settings_v2');
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    // 1. Primary storage key: nexa15_settings_v3
+    const savedV3 = localStorage.getItem('nexa15_settings_v3');
+    if (savedV3) {
+      const parsed = JSON.parse(savedV3);
       if (parsed.supabaseUrl) url = sanitizeSupabaseUrl(parsed.supabaseUrl);
       if (parsed.supabaseKey) key = parsed.supabaseKey.trim();
+    }
+    // 2. Legacy fallback: school_settings_v2
+    if (!url || !key) {
+      const savedV2 = localStorage.getItem('school_settings_v2');
+      if (savedV2) {
+        const parsed = JSON.parse(savedV2);
+        if (!url && parsed.supabaseUrl) url = sanitizeSupabaseUrl(parsed.supabaseUrl);
+        if (!key && parsed.supabaseKey) key = parsed.supabaseKey.trim();
+      }
     }
   } catch {
     // ignore
   }
 
-  // Fallback to environment variables or hardcoded user credentials if not set in UI settings
+  // 3. Fallback to environment variables or default credentials if not set in UI settings
   if (!url) {
     const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
     url = sanitizeSupabaseUrl(envUrl) || DEFAULT_SUPABASE_URL;
@@ -159,37 +169,51 @@ export async function testSupabaseConnection(customConfig?: SupabaseConfig): Pro
   }
 }
 
-export async function syncStudentsToSupabase(students: Student[], customConfig?: SupabaseConfig): Promise<{ success: boolean; count: number; error?: string }> {
+export async function syncStudentsToSupabase(
+  students: Student[],
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient(customConfig);
-  if (!client || students.length === 0) return { success: false, count: 0, error: 'Klien tidak aktif atau data kosong' };
+  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
+  if (students.length === 0) return { success: true, count: 0 };
 
   try {
-    const records = students.map((s) => ({
-      id: s.id,
-      id_qr: s.id_qr || '',
-      nisn: s.nisn || '',
-      nama: s.nama || '',
-      kelas: s.kelas || '',
-      no_hp_ortu: s.no_hp_ortu || '',
-      foto: s.foto || '',
-      status: s.status || 'aktif',
-      created_at: s.createdAt || new Date().toISOString(),
-    }));
+    const records = students
+      .map((s) => ({
+        id: s.id,
+        id_qr: s.id_qr || '',
+        nisn: s.nisn || '',
+        nama: s.nama || '',
+        kelas: s.kelas || '',
+        no_hp_ortu: s.no_hp_ortu || '',
+        foto: s.foto || '',
+        status: s.status || 'aktif',
+        created_at: s.createdAt || new Date().toISOString(),
+      }))
+      // penting: jangan biarkan nisn kosong
+      .filter((r) => r.nisn && r.nisn.trim().length > 0);
 
-    const { error } = await client.from('students').upsert(records, { onConflict: 'id' });
-    if (error) {
-      throw error;
-    }
+    const { error } = await client
+      .from('students')
+      .upsert(records, { onConflict: 'nisn' });
+
+    if (error) throw error;
+
     return { success: true, count: records.length };
   } catch (err: any) {
     console.error('Error syncing students to Supabase:', err);
-    return { success: false, count: 0, error: err.message || 'Gagal menyimpan ke Supabase' };
+    return {
+      success: false,
+      count: 0,
+      error: err.message || 'Gagal menyimpan tabel students ke Supabase',
+    };
   }
 }
 
 export async function syncAttendanceToSupabase(attendance: AttendanceRecord[], customConfig?: SupabaseConfig): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient(customConfig);
-  if (!client || attendance.length === 0) return { success: false, count: 0, error: 'Klien tidak aktif atau data kosong' };
+  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
+  if (attendance.length === 0) return { success: true, count: 0 };
 
   try {
     const records = attendance.map((a) => ({
@@ -214,13 +238,14 @@ export async function syncAttendanceToSupabase(attendance: AttendanceRecord[], c
     return { success: true, count: records.length };
   } catch (err: any) {
     console.error('Error syncing attendance to Supabase:', err);
-    return { success: false, count: 0, error: err.message || 'Gagal menyimpan ke Supabase' };
+    return { success: false, count: 0, error: err.message || 'Gagal menyimpan tabel attendance ke Supabase' };
   }
 }
 
 export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: SupabaseConfig): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient(customConfig);
-  if (!client || logs.length === 0) return { success: false, count: 0, error: 'Klien tidak aktif atau data kosong' };
+  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
+  if (logs.length === 0) return { success: true, count: 0 };
 
   try {
     const records = logs.map((l) => ({
@@ -239,7 +264,7 @@ export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: Sup
     return { success: true, count: records.length };
   } catch (err: any) {
     console.error('Error syncing activity logs to Supabase:', err);
-    return { success: false, count: 0, error: err.message || 'Gagal menyimpan ke Supabase' };
+    return { success: false, count: 0, error: err.message || 'Gagal menyimpan tabel activity_logs ke Supabase' };
   }
 }
 
@@ -324,11 +349,15 @@ export async function fetchLogsFromSupabase(customConfig?: SupabaseConfig): Prom
   }
 }
 
-export async function deleteStudentFromSupabase(id: string, customConfig?: SupabaseConfig): Promise<boolean> {
+export async function deleteStudentFromSupabase(identifier: string, customConfig?: SupabaseConfig): Promise<boolean> {
   const client = getSupabaseClient(customConfig);
   if (!client) return false;
+
   try {
-    const { error } = await client.from('students').delete().eq('id', id);
+    const { error } = await client
+      .from('students')
+      .delete()
+      .or(`nisn.eq.${identifier},id.eq.${identifier}`);
     return !error;
   } catch {
     return false;
@@ -361,11 +390,11 @@ export function getSupabaseSchemaSQL(): string {
   return `-- SQL Schema untuk aplikasi Presensi Siswa di Supabase
 -- Jalankan perintah SQL ini di menu SQL Editor pada Dashboard Supabase Anda
 
--- 1. Tabel Siswa (students)
+-- 1. -- 1. Tabel Siswa (students)
 CREATE TABLE IF NOT EXISTS public.students (
-    id TEXT PRIMARY KEY,
+    id TEXT,
     id_qr TEXT,
-    nisn TEXT,
+    nisn TEXT PRIMARY KEY,
     nama TEXT NOT NULL,
     kelas TEXT NOT NULL,
     no_hp_ortu TEXT,
@@ -373,6 +402,10 @@ CREATE TABLE IF NOT EXISTS public.students (
     status TEXT DEFAULT 'aktif',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- (opsional tapi bagus) index utk cari cepat
+CREATE INDEX IF NOT EXISTS idx_students_id_qr ON public.students(id_qr);
+CREATE INDEX IF NOT EXISTS idx_students_nama ON public.students(nama);
 
 -- Index untuk mempercepat pencarian siswa berdasarkan QR code dan NISN
 CREATE INDEX IF NOT EXISTS idx_students_id_qr ON public.students(id_qr);
