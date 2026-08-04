@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXA15 - SMA Negeri 15 Ambon Digital Presence</title>
+    <script>
+      (function() {
+        try {
+          var win = typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : globalThis);
+          if (!win) return;
+
+          var activeFetch = win.fetch;
+
+          function getFetch() {
+            return activeFetch;
+          }
+
+          function setFetch(fn) {
+            activeFetch = fn;
+          }
+
+          // 1. Try patching Window.prototype
+          if (win.Window && win.Window.prototype) {
+            try {
+              var pDesc = Object.getOwnPropertyDescriptor(win.Window.prototype, 'fetch');
+              if (!pDesc || pDesc.configurable !== false) {
+                Object.defineProperty(win.Window.prototype, 'fetch', {
+                  get: getFetch,
+                  set: setFetch,
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            } catch (e) {}
+          }
+
+          // 2. Try patching window instance
+          try {
+            var wDesc = Object.getOwnPropertyDescriptor(win, 'fetch');
+            if (!wDesc || wDesc.configurable !== false) {
+              Object.defineProperty(win, 'fetch', {
+                get: getFetch,
+                set: setFetch,
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (e) {}
+
+          // 3. Try patching globalThis if distinct
+          if (typeof globalThis !== 'undefined' && globalThis !== win) {
+            try {
+              var gDesc = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+              if (!gDesc || gDesc.configurable !== false) {
+                Object.defineProperty(globalThis, 'fetch', {
+                  get: getFetch,
+                  set: setFetch,
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            } catch (e) {}
+          }
+        } catch (err) {
+          console.warn('Fetch patch initialized with warning:', err);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,387 @@
+import React, { useEffect, useState } from 'react';
+import { store } from '../lib/store';
+import { Student, AttendanceRecord } from '../types';
+import { SchoolLogo } from './SchoolLogo';
+import { LowAttendanceNotifications } from './LowAttendanceNotifications';
+import {
+  Users,
+  UserCheck,
+  Clock,
+  FileCheck,
+  Stethoscope,
+  XCircle,
+  TrendingUp,
+  BarChart2,
+  PieChart as PieChartIcon,
+  Calendar,
+  RefreshCw,
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+
+export const Dashboard: React.FC = () => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const syncData = async () => {
+    setIsRefreshing(true);
+    try {
+      await store.fetchFromServer();
+    } catch (err) {
+      console.error('Auto sync error:', err);
+    } finally {
+      setStudents(store.getStudents());
+      setAttendance(store.getAttendance());
+      setLastUpdated(new Date());
+      setTimeout(() => setIsRefreshing(false), 400);
+    }
+  };
+
+  const handleManualRefresh = () => {
+    syncData();
+  };
+
+  useEffect(() => {
+    setStudents(store.getStudents());
+    setAttendance(store.getAttendance());
+    setLastUpdated(new Date());
+
+    const unsubscribe = store.subscribe(() => {
+      setStudents(store.getStudents());
+      setAttendance(store.getAttendance());
+      setLastUpdated(new Date());
+    });
+
+    // Polling otomatis setiap 30 detik untuk sinkronisasi Google Sheets & server
+    const intervalId = setInterval(() => {
+      syncData();
+    }, 30 * 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const todayStr = store.getTodayFormatted();
+  const todayRecords = attendance.filter((a) => store.isRecordForToday(a) && a.jenis === 'Masuk');
+
+  const totalStudents = students.filter((s) => s.status === 'aktif').length;
+  const totalHadir = todayRecords.filter((a) => a.status === 'Hadir').length;
+  const totalTerlambat = todayRecords.filter((a) => a.status === 'Terlambat').length;
+  const totalIzin = todayRecords.filter((a) => a.status === 'Izin').length;
+  const totalSakit = todayRecords.filter((a) => a.status === 'Sakit').length;
+  const totalAlpa = todayRecords.filter((a) => a.status === 'Alpa').length;
+
+  // Class breakdown data for BarChart
+  const classList = Array.from(new Set(students.map((s) => s.kelas))).sort();
+  const classData = classList.map((cls) => {
+    const clsStudents = students.filter((s) => s.kelas === cls && s.status === 'aktif');
+    const clsRecords = todayRecords.filter((a) => a.kelas === cls);
+
+    const hadir = clsRecords.filter((a) => a.status === 'Hadir').length;
+    const terlambat = clsRecords.filter((a) => a.status === 'Terlambat').length;
+    const alpa = clsRecords.filter((a) => a.status === 'Alpa').length;
+
+    return {
+      kelas: cls,
+      TotalSiswa: clsStudents.length,
+      Hadir: hadir,
+      Terlambat: terlambat,
+      Alpa: alpa,
+    };
+  });
+
+  // Trend data grouped by date for AreaChart
+  const uniqueDates = Array.from(new Set(attendance.map((a) => a.tanggal))).slice(0, 10).reverse();
+  const trendData = uniqueDates.map((d) => {
+    const dayMasuk = attendance.filter((a) => a.tanggal === d && a.jenis === 'Masuk');
+    return {
+      tanggal: (d as string).slice(0, 5), // DD-MM
+      Hadir: dayMasuk.filter((a) => a.status === 'Hadir').length,
+      Terlambat: dayMasuk.filter((a) => a.status === 'Terlambat').length,
+      Alpa: dayMasuk.filter((a) => a.status === 'Alpa').length,
+    };
+  });
+
+  // Pie chart status distribution data
+  const pieData = [
+    { name: 'Hadir', value: totalHadir || 1, color: '#10b981' },
+    { name: 'Terlambat', value: totalTerlambat, color: '#f59e0b' },
+    { name: 'Izin', value: totalIzin, color: '#3b82f6' },
+    { name: 'Sakit', value: totalSakit, color: '#8b5cf6' },
+    { name: 'Alpa', value: totalAlpa, color: '#ef4444' },
+  ].filter((item) => item.value > 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Welcome & Overview Header */}
+      <div className="bg-white dark:bg-slate-900/90 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur-xs opacity-30"></div>
+            <SchoolLogo className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 relative drop-shadow-md" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-1">
+              <Calendar className="w-4 h-4 text-cyan-500" />
+              <span>Hari Ini: {todayStr}</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Dashboard Kehadiran NEXA15
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              SMA Negeri 15 Ambon — Ringkasan statistik & tren kedisiplinan harian realtime.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-800 dark:text-emerald-200 text-xs font-medium shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-extrabold text-[11px]">Auto Sync (30s)</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 border-l border-emerald-300 dark:border-emerald-800/80 pl-2 font-mono">
+              {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jayapura' })} WIT
+            </span>
+            <button
+              onClick={handleManualRefresh}
+              className="p-1 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded-lg text-emerald-600 dark:text-emerald-300 transition-colors ml-0.5 cursor-pointer"
+              title="Perbarui data sekarang dari server"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-700 dark:text-emerald-200' : ''}`} />
+            </button>
+          </div>
+
+          <div className="bg-blue-600/10 border border-blue-500/20 px-4 py-2 rounded-xl text-center min-w-[140px]">
+            <span className="text-[10px] text-blue-700 dark:text-blue-300 font-extrabold block uppercase tracking-wider">Tingkat Kehadiran</span>
+            <span className="text-xl font-black text-blue-900 dark:text-blue-100">
+              {totalStudents > 0 ? Math.round(((totalHadir + totalTerlambat) / totalStudents) * 100) : 0}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Siswa</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">{totalStudents}</div>
+          <span className="text-[10px] text-slate-400 font-medium">Terdaftar aktif</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Hadir</span>
+            <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-2">{totalHadir}</div>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Tepat waktu</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Terlambat</span>
+            <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-2">{totalTerlambat}</div>
+          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">&gt; Jam 07:15</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/20 dark:bg-blue-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Izin</span>
+            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+              <FileCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-blue-950 dark:text-blue-100 mt-2">{totalIzin}</div>
+          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Dengan surat</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-purple-200/80 dark:border-purple-800/50 bg-purple-50/20 dark:bg-purple-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-purple-800 dark:text-purple-300">Sakit</span>
+            <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+              <Stethoscope className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-purple-950 dark:text-purple-100 mt-2">{totalSakit}</div>
+          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Surat dokter</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-800/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-rose-800 dark:text-rose-300">Alpa</span>
+            <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
+              <XCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-rose-950 dark:text-rose-100 mt-2">{totalAlpa}</div>
+          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Tanpa keterangan</span>
+        </div>
+      </div>
+
+      {/* Automatic Low Attendance Notifications Banner & AI Analysis */}
+      <LowAttendanceNotifications students={students} attendance={attendance} />
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* BarChart: Kehadiran Per Kelas */}
+        <div className="lg:col-span-8 bg-white dark:bg-slate-900/90 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>Grafik Kehadiran per Kelas Hari Ini</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Perbandingan jumlah siswa Hadir vs Terlambat vs Alpa</p>
+            </div>
+          </div>
+
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={classData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="kelas" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    borderColor: '#1e293b',
+                    borderRadius: '0.75rem',
+                    color: '#fff',
+                    fontSize: '12px',
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Bar dataKey="Hadir" fill="#10b981" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Terlambat" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Alpa" fill="#ef4444" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* PieChart: Status Distribution */}
+        <div className="lg:col-span-4 bg-white dark:bg-slate-900/90 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between transition-colors">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-1">
+              <PieChartIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span>Distribusi Status Kehadiran</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Proporsi presensi siswa hari ini</p>
+          </div>
+
+          <div className="h-56 w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    borderRadius: '0.5rem',
+                    color: '#fff',
+                    fontSize: '11px',
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-slate-100 dark:border-slate-800">
+            {pieData.map((p) => (
+              <div key={p.name} className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }}></span>
+                <span className="text-slate-600 dark:text-slate-400 font-medium">{p.name}:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{p.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AreaChart: Tren Kehadiran Harian/Bulanan */}
+        <div className="lg:col-span-12 bg-white dark:bg-slate-900/90 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Grafik Tren Kehadiran Bulanan</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Perkembangan jumlah siswa hadir dan terlambat dari hari ke hari</p>
+            </div>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorHadir" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="tanggal" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    borderRadius: '0.75rem',
+                    color: '#fff',
+                    fontSize: '12px',
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Area type="monotone" dataKey="Hadir" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorHadir)" />
+                <Area type="monotone" dataKey="Terlambat" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorLate)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
