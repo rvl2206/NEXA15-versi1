@@ -10,6 +10,8 @@ import { QRScanner } from './components/QRScanner';
 import { StudentManagement } from './components/StudentManagement';
 import { DigitalCardTemplate } from './components/DigitalCardTemplate';
 import { AttendanceRecap } from './components/AttendanceRecap';
+import { TeacherManagement } from './components/TeacherManagement';
+import { TeacherAttendanceRecap } from './components/TeacherAttendanceRecap';
 import { AIAnalysis } from './components/AIAnalysis';
 import { ActivityLogs } from './components/ActivityLogs';
 import { SettingsPage } from './components/SettingsPage';
@@ -55,9 +57,9 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return;
     const rolePermissions: Record<UserRole, string[]> = {
-      Admin: ['dashboard', 'scan', 'recap', 'students', 'card-template', 'ai-analysis', 'logs', 'settings'],
-      Guru: ['scan', 'dashboard', 'recap', 'students', 'card-template'],
-      'Kepala Sekolah': ['dashboard', 'recap', 'students', 'ai-analysis', 'logs', 'settings'],
+      Admin: ['dashboard', 'scan', 'recap', 'teacher-recap', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
+      Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'students', 'teachers', 'card-template'],
+      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'students', 'teachers', 'ai-analysis', 'logs', 'settings'],
     };
 
     const allowed = rolePermissions[currentUser.role] || rolePermissions.Admin;
@@ -145,10 +147,14 @@ export function App() {
         return <QRScanner currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'students':
         return <StudentManagement userRole={currentUser?.role} />;
+      case 'teachers':
+        return <TeacherManagement userRole={currentUser?.role} />;
       case 'card-template':
         return <DigitalCardTemplate />;
       case 'recap':
         return <AttendanceRecap currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
+      case 'teacher-recap':
+        return <TeacherAttendanceRecap userRole={currentUser?.role} currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'ai-analysis':
         return <AIAnalysis />;
       case 'logs':

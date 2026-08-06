@@ -123,6 +123,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   const [filterKelas, setFilterKelas] = useState<string>('Semua');
   const [filterNama, setFilterNama] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('Semua');
+  const [filterJenis, setFilterJenis] = useState<string>('Semua'); // 'Semua' | 'Masuk' | 'Pulang'
+  const [filterStatusPulang, setFilterStatusPulang] = useState<'Semua' | 'SudahPulang' | 'BelumPulang'>('Semua');
 
   // Print Monthly Report / Slip Modal State
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -190,11 +192,18 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   const [correctionRecord, setCorrectionRecord] = useState<AttendanceRecord | null>(null);
   const [correctionStudent, setCorrectionStudent] = useState<Student | null>(null);
   const [correctionDate, setCorrectionDate] = useState<string>('');
+  const [correctionType, setCorrectionType] = useState<AttendanceType>('Masuk');
 
-  const handleOpenCorrection = (record?: AttendanceRecord | null, student?: Student | null, dateStr?: string) => {
+  const handleOpenCorrection = (
+    record?: AttendanceRecord | null,
+    student?: Student | null,
+    dateStr?: string,
+    initialType?: AttendanceType
+  ) => {
     setCorrectionRecord(record || null);
     setCorrectionStudent(student || null);
     setCorrectionDate(dateStr || filterTanggal || todayISO);
+    setCorrectionType(initialType || (record?.jenis as AttendanceType) || 'Masuk');
     setIsCorrectionModalOpen(true);
   };
 
@@ -205,7 +214,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   // Reset page to 1 when filter, mode, or page size changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterTanggal, filterBulan, filterKelas, filterNama, filterStatus, recapMode, harianViewType, monthlyViewType, semuaTanggalFilter, pageSize]);
+  }, [filterTanggal, filterBulan, filterKelas, filterNama, filterStatus, filterJenis, filterStatusPulang, recapMode, harianViewType, monthlyViewType, semuaTanggalFilter, pageSize]);
 
   const renderPaginationFooter = (totalItems: number) => {
     if (totalItems === 0) return null;
@@ -328,8 +337,16 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   }, []);
 
   const classOptions = React.useMemo(() => {
-    return Array.from(new Set(students.map((s) => s.kelas))).sort();
-  }, [students]);
+    const fromStudents = students.map((s) => s.kelas.trim()).filter(Boolean);
+    const fromAttendance = attendance.map((a) => a.kelas.trim()).filter(Boolean);
+    return Array.from(new Set([...fromStudents, ...fromAttendance])).sort();
+  }, [students, attendance]);
+
+  const isMatchKelas = (itemClass?: string, targetClass?: string) => {
+    if (!targetClass || targetClass === 'Semua') return true;
+    if (!itemClass) return false;
+    return itemClass.trim().toLowerCase() === targetClass.trim().toLowerCase();
+  };
 
   // Helpers to check date matching
   const normalizeToYyyyMmDd = (dateStr: string) => {
@@ -420,10 +437,13 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         r.id_qr.includes(filterNama);
 
       // Class filter
-      const matchKelas = filterKelas === 'Semua' || r.kelas === filterKelas;
+      const matchKelas = isMatchKelas(r.kelas, filterKelas);
 
       // Status filter
       const matchStatus = filterStatus === 'Semua' || r.status === filterStatus;
+
+      // Jenis Presensi filter (Masuk / Pulang)
+      const matchJenis = filterJenis === 'Semua' || r.jenis === filterJenis;
 
       // Date / Month mode matching
       let matchTime = true;
@@ -438,16 +458,16 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         }
       }
 
-      return matchNama && matchKelas && matchStatus && matchTime;
+      return matchNama && matchKelas && matchStatus && matchJenis && matchTime;
     });
-  }, [attendance, filterNama, filterKelas, filterStatus, recapMode, filterTanggal, filterBulan, semuaTanggalFilter]);
+  }, [attendance, filterNama, filterKelas, filterStatus, filterJenis, recapMode, filterTanggal, filterBulan, semuaTanggalFilter]);
 
   // Calculate Monthly Summary per Student
   const monthlyStudentSummaries: StudentMonthlySummary[] = React.useMemo(() => {
     const cutoffTime = store.getSettings().cutoffTime || '07:15';
 
     const activeStudents = students.filter((s) => {
-      const matchKelas = filterKelas === 'Semua' || s.kelas === filterKelas;
+      const matchKelas = isMatchKelas(s.kelas, filterKelas);
       const matchNama =
         !filterNama ||
         s.nama.toLowerCase().includes(filterNama.toLowerCase()) ||
@@ -543,13 +563,13 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     });
   }, [students, attendance, filterBulan, filterKelas, filterNama]);
 
-  // Calculate Paired Daily Attendance (Waktu Masuk, Waktu Pulang, and Waktu Terlambat)
-  const pairedDailyRecords = React.useMemo(() => {
+  // Calculate Raw Paired Daily Attendance (Waktu Masuk, Waktu Pulang, and Waktu Terlambat)
+  const rawPairedDailyRecords = React.useMemo(() => {
     if (recapMode !== 'harian' && recapMode !== 'semua') return [];
     const cutoffTime = store.getSettings().cutoffTime || '07:15';
 
     const activeStudents = students.filter((s) => {
-      const matchKelas = filterKelas === 'Semua' || s.kelas === filterKelas;
+      const matchKelas = isMatchKelas(s.kelas, filterKelas);
       const matchNama =
         !filterNama ||
         s.nama.toLowerCase().includes(filterNama.toLowerCase()) ||
@@ -558,8 +578,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     });
 
     const dayRecords = attendance.filter((r) => isMatchTanggal(r, filterTanggal));
+    const activeStudentNisns = new Set(activeStudents.map((s) => s.nisn).filter(Boolean));
 
-    return activeStudents.map((student) => {
+    // 1. Process active registered students
+    const paired = activeStudents.map((student) => {
       const studentDayRecords = dayRecords.filter((r) => r.nisn === student.nisn);
       const masuk = studentDayRecords.find((r) => r.jenis === 'Masuk');
       const pulang = studentDayRecords.find((r) => r.jenis === 'Pulang');
@@ -593,13 +615,100 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         partialInfo,
         petugas: masuk?.petugas || pulang?.petugas || '-',
       };
-    }).filter((item) => {
+    });
+
+    // 2. Also account for any attendance records on this date matching the class filter whose student isn't in activeStudents list
+    const unlinkedRecords = dayRecords.filter((r) => {
+      if (activeStudentNisns.has(r.nisn)) return false;
+      const matchKelas = isMatchKelas(r.kelas, filterKelas);
+      const matchNama =
+        !filterNama ||
+        r.nama.toLowerCase().includes(filterNama.toLowerCase()) ||
+        r.nisn.includes(filterNama);
+      return matchKelas && matchNama;
+    });
+
+    const unlinkedNisns: string[] = Array.from(new Set<string>(unlinkedRecords.map((r) => r.nisn).filter(Boolean)));
+    unlinkedNisns.forEach((nisn) => {
+      const studentDayRecords = unlinkedRecords.filter((r) => r.nisn === nisn);
+      const masuk = studentDayRecords.find((r) => r.jenis === 'Masuk');
+      const pulang = studentDayRecords.find((r) => r.jenis === 'Pulang');
+      const sample = masuk || pulang || studentDayRecords[0];
+
+      const syntheticStudent: Student = {
+        id: `unlinked-${nisn}`,
+        nisn: nisn,
+        nama: sample.nama || `Siswa ${nisn}`,
+        kelas: sample.kelas || (filterKelas !== 'Semua' ? filterKelas : 'X'),
+        id_qr: sample.id_qr || nisn,
+        foto: '',
+        status: 'aktif',
+      };
+
+      let status: AttendanceStatus = 'Alpa';
+      let lateMinutes = 0;
+      let partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' = 'Tanpa Absen';
+
+      if (masuk) {
+        status = masuk.status;
+        lateMinutes = calculateLateMinutes(masuk, cutoffTime);
+        if (!pulang && (status === 'Hadir' || status === 'Terlambat')) {
+          partialInfo = 'Tanpa Absen Pulang';
+        } else {
+          partialInfo = 'Lengkap';
+        }
+      } else if (pulang) {
+        status = 'Hadir';
+        partialInfo = 'Tanpa Absen Masuk';
+      }
+
+      paired.push({
+        student: syntheticStudent,
+        masuk,
+        pulang,
+        status,
+        lateMinutes,
+        partialInfo,
+        petugas: masuk?.petugas || pulang?.petugas || '-',
+      });
+    });
+
+    return paired;
+  }, [students, attendance, filterTanggal, filterKelas, filterNama, recapMode]);
+
+  // Quick summary count of paired records for tabs and badges
+  const pairedSummaryCounts = React.useMemo(() => {
+    const total = rawPairedDailyRecords.length;
+    const sudahPulang = rawPairedDailyRecords.filter((r) => Boolean(r.pulang)).length;
+    const belumPulang = rawPairedDailyRecords.filter((r) => Boolean(r.masuk) && !r.pulang).length;
+    const hadirMasuk = rawPairedDailyRecords.filter((r) => Boolean(r.masuk)).length;
+    const dayRecords = attendance.filter((r) => isMatchTanggal(r, filterTanggal));
+    const totalScans = dayRecords.filter((r) => {
+      const matchKelas = isMatchKelas(r.kelas, filterKelas);
+      const matchNama =
+        !filterNama ||
+        r.nama.toLowerCase().includes(filterNama.toLowerCase()) ||
+        r.nisn.includes(filterNama);
+      return matchKelas && matchNama;
+    }).length;
+
+    return { total, sudahPulang, belumPulang, hadirMasuk, totalScans };
+  }, [rawPairedDailyRecords, attendance, filterTanggal, filterKelas, filterNama]);
+
+  // Filtered Paired Daily Records for current table view
+  const pairedDailyRecords = React.useMemo(() => {
+    return rawPairedDailyRecords.filter((item) => {
       if (filterStatus !== 'Semua') {
         if (item.status !== filterStatus) return false;
       }
+      if (filterStatusPulang === 'SudahPulang') {
+        if (!item.pulang) return false;
+      } else if (filterStatusPulang === 'BelumPulang') {
+        if (item.pulang || !item.masuk) return false;
+      }
       return true;
     });
-  }, [students, attendance, filterTanggal, filterKelas, filterNama, filterStatus, recapMode]);
+  }, [rawPairedDailyRecords, filterStatus, filterStatusPulang]);
 
   // Lateness & Absence Discipline Guidance Analysis
   const latenessAnalysisData: LateGuidanceExportItem[] = React.useMemo(() => {
@@ -760,17 +869,60 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   }, [latenessAnalysisData, disciplineFilterType]);
 
 
-  // Statistics Counter for Current View
+  // Statistics Counter for Current View (Consistent with Dashboard & Student Totals)
   const stats = React.useMemo(() => {
-    const total = filteredAttendance.length;
-    const hadir = filteredAttendance.filter((r) => r.status === 'Hadir').length;
-    const terlambat = filteredAttendance.filter((r) => r.status === 'Terlambat').length;
-    const izin = filteredAttendance.filter((r) => r.status === 'Izin').length;
-    const sakit = filteredAttendance.filter((r) => r.status === 'Sakit').length;
-    const alpa = filteredAttendance.filter((r) => r.status === 'Alpa').length;
+    if (recapMode === 'harian') {
+      const hadir = rawPairedDailyRecords.filter((r) => r.status === 'Hadir').length;
+      const terlambat = rawPairedDailyRecords.filter((r) => r.status === 'Terlambat').length;
+      const izin = rawPairedDailyRecords.filter((r) => r.status === 'Izin').length;
+      const sakit = rawPairedDailyRecords.filter((r) => r.status === 'Sakit').length;
+      const alpa = rawPairedDailyRecords.filter((r) => r.status === 'Alpa').length;
+      const totalSiswaMasuk = hadir + terlambat;
+      const scanPulang = rawPairedDailyRecords.filter((r) => Boolean(r.pulang)).length;
+      const totalScan = filteredAttendance.length;
+      const totalScanMasuk = filteredAttendance.filter((r) => r.jenis === 'Masuk').length;
+      const totalScanPulang = filteredAttendance.filter((r) => r.jenis === 'Pulang').length;
 
-    return { total, hadir, terlambat, izin, sakit, alpa };
-  }, [filteredAttendance]);
+      return {
+        total: totalScan,
+        totalSiswaMasuk,
+        hadir,
+        terlambat,
+        izin,
+        sakit,
+        alpa,
+        scanPulang,
+        totalScanMasuk,
+        totalScanPulang,
+      };
+    } else {
+      const totalScan = filteredAttendance.length;
+      const totalScanMasuk = filteredAttendance.filter((r) => r.jenis === 'Masuk').length;
+      const totalScanPulang = filteredAttendance.filter((r) => r.jenis === 'Pulang').length;
+
+      // Count status from Masuk / primary records to avoid double counting Pulang as extra Hadir
+      const masukRecords = filteredAttendance.filter((r) => r.jenis === 'Masuk');
+      const hadir = masukRecords.filter((r) => r.status === 'Hadir').length;
+      const terlambat = masukRecords.filter((r) => r.status === 'Terlambat').length;
+      const izin = filteredAttendance.filter((r) => r.status === 'Izin').length;
+      const sakit = filteredAttendance.filter((r) => r.status === 'Sakit').length;
+      const alpa = filteredAttendance.filter((r) => r.status === 'Alpa').length;
+      const totalSiswaMasuk = hadir + terlambat;
+
+      return {
+        total: totalScan,
+        totalSiswaMasuk,
+        hadir,
+        terlambat,
+        izin,
+        sakit,
+        alpa,
+        scanPulang: totalScanPulang,
+        totalScanMasuk,
+        totalScanPulang,
+      };
+    }
+  }, [recapMode, rawPairedDailyRecords, filteredAttendance]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1256,15 +1408,31 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               <option value="Alpa">Alpa</option>
             </select>
           </div>
+
+          {/* Filter Jenis Presensi (Masuk / Pulang) */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Jenis Presensi</label>
+            <select
+              value={filterJenis}
+              onChange={(e) => setFilterJenis(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white font-medium"
+            >
+              <option value="Semua">Semua Scan (Masuk & Pulang)</option>
+              <option value="Masuk">Hanya Scan Masuk</option>
+              <option value="Pulang">Hanya Scan Pulang</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500">Total Scan</div>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{stats.total}</div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Catatan Masuk</div>
+          <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500">Total Siswa Presensi</div>
+          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{stats.totalSiswaMasuk}</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5" title={`${stats.totalScanMasuk} Masuk, ${stats.totalScanPulang} Pulang`}>
+            {stats.total} Total Scan ({stats.totalScanPulang} Pulang)
+          </div>
         </div>
 
         <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-sm">
@@ -1310,6 +1478,24 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
           </div>
           <div className="text-xl font-black text-red-900 dark:text-red-200 mt-1">{stats.alpa}</div>
           <div className="text-[10px] text-red-800/80 dark:text-red-300 mt-0.5">Tanpa Keterangan</div>
+        </div>
+      </div>
+
+      {/* Synchronization & Breakdown Info Banner */}
+      <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span>
+            <strong>Data Sinkron dengan Dashboard:</strong> {stats.totalSiswaMasuk} Siswa Masuk ({stats.hadir} Hadir Tepat Waktu + {stats.terlambat} Terlambat) • {stats.scanPulang} Siswa Scan Pulang • {stats.total} Total Transaksi Scan.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[11px] border border-blue-200 dark:border-blue-800">
+            {stats.totalScanMasuk} Scan Masuk
+          </span>
+          <span className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-bold text-[11px] border border-purple-200 dark:border-purple-800">
+            {stats.totalScanPulang} Scan Pulang
+          </span>
         </div>
       </div>
 
@@ -1389,7 +1575,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       {recapMode === 'harian' && harianViewType === 'pasangan' ? (
         /* Harian Paired View Table (Jam Masuk, Jam Pulang, Status, Jumlah Waktu Terlambat) */
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                 Rekap Pasangan Waktu Masuk & Pulang Siswa ({formatIndoDate(filterTanggal)})
@@ -1398,9 +1584,45 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 Mencatat waktu masuk, waktu pulang, serta perhitungan akurat jumlah waktu keterlambatan siswa.
               </p>
             </div>
-            <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">
-              {pairedDailyRecords.length} Siswa Terdaftar
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterStatusPulang('Semua')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                  filterStatusPulang === 'Semua'
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                Semua ({pairedSummaryCounts.total})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatusPulang('SudahPulang')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  filterStatusPulang === 'SudahPulang'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                }`}
+                title="Tampilkan hanya siswa yang sudah melakukan scan pulang"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sudah Scan Pulang ({pairedSummaryCounts.sudahPulang})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatusPulang('BelumPulang')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  filterStatusPulang === 'BelumPulang'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                }`}
+                title="Tampilkan siswa yang masuk namun belum scan pulang"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Belum Scan Pulang ({pairedSummaryCounts.belumPulang})</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1432,26 +1654,57 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                       </td>
                       <td className="p-3.5">
                         {item.masuk ? (
-                          <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCorrection(item.masuk, item.student, filterTanggal, 'Masuk')}
+                            className="font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1 group transition cursor-pointer"
+                            title={`Klik untuk koreksi Scan Masuk ${item.student.nama}`}
+                          >
                             <LogIn className="w-3 h-3 text-emerald-600" />
                             {new Date(item.masuk.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jayapura' })} WIT
-                          </span>
+                            <Edit3 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 ml-0.5 text-emerald-600" />
+                          </button>
                         ) : (
-                          <span className="text-slate-400 dark:text-slate-500 font-mono">-</span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Masuk')}
+                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                            title={`Input Presensi Masuk untuk ${item.student.nama}`}
+                          >
+                            <span>-</span>
+                          </button>
                         )}
                       </td>
                       <td className="p-3.5">
                         {item.pulang ? (
-                          <span className="font-mono font-bold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCorrection(item.pulang, item.student, filterTanggal, 'Pulang')}
+                            className="font-mono font-bold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 dark:hover:bg-purple-900/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 inline-flex items-center gap-1 group transition cursor-pointer"
+                            title={`Klik untuk koreksi Scan Pulang ${item.student.nama}`}
+                          >
                             <LogOut className="w-3 h-3 text-purple-600" />
                             {new Date(item.pulang.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jayapura' })} WIT
-                          </span>
+                            <Edit3 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 ml-0.5 text-purple-600" />
+                          </button>
                         ) : item.masuk ? (
-                          <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
-                            Belum Scan Pulang
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
+                            className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 inline-flex items-center gap-1 transition cursor-pointer"
+                            title={`Input Scan Pulang untuk ${item.student.nama}`}
+                          >
+                            <span>Belum Scan Pulang</span>
+                          </button>
                         ) : (
-                          <span className="text-slate-400 dark:text-slate-500 font-mono">-</span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
+                            className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                            title={`Input Presensi Pulang untuk ${item.student.nama}`}
+                          >
+                            <span>-</span>
+                          </button>
                         )}
                       </td>
                       <td className="p-3.5">
@@ -2761,6 +3014,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         initialRecord={correctionRecord}
         initialStudent={correctionStudent}
         initialDate={correctionDate}
+        initialType={correctionType}
         currentOfficer={currentOfficer}
       />
     </div>

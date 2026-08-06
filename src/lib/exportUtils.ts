@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AttendanceRecord, Student } from '../types';
+import { AttendanceRecord, Student, Teacher, TeacherAttendanceRecord } from '../types';
 
 export function printElement(
   elementId: string,
@@ -1550,5 +1550,351 @@ export function exportLateGuidanceToPDF(items: LateGuidanceExportItem[], periodT
 
   doc.save(`Laporan_Resmi_Kedisiplinan_Alpa_${filterKelas}_NEXA15.pdf`);
 }
+
+// =========================================================================
+// EXPORT & IMPORT UTILITIES FOR TEACHERS (GURU & STAF)
+// =========================================================================
+
+export function exportTeacherListToExcel(teachers: Teacher[], schoolName = 'SMA NEGERI 15 AMBON') {
+  const data = teachers.map((t, idx) => ({
+    No: idx + 1,
+    NIP: t.nip,
+    'Nama Lengkap': t.nama,
+    Jabatan: t.jabatan,
+    Status: t.status === 'nonaktif' ? 'Nonaktif' : 'Aktif',
+    'ID QR Code': t.id_qr || `69933068.${t.nip}`,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Guru');
+
+  worksheet['!cols'] = [
+    { wch: 6 },
+    { wch: 24 },
+    { wch: 35 },
+    { wch: 30 },
+    { wch: 12 },
+    { wch: 30 },
+  ];
+
+  XLSX.writeFile(workbook, `Data_Guru_${schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+export function exportTeacherListToCSV(teachers: Teacher[]) {
+  const headers = ['No', 'NIP', 'Nama', 'Jabatan', 'Status', 'ID_QR'];
+  const rows = teachers.map((t, idx) => [
+    idx + 1,
+    `"${t.nip}"`,
+    `"${t.nama}"`,
+    `"${t.jabatan}"`,
+    `"${t.status || 'aktif'}"`,
+    `"${t.id_qr || `69933068.${t.nip}`}"`,
+  ]);
+
+  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `Data_Guru_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export function downloadTeacherImportTemplate() {
+  const sampleData = [
+    {
+      NIP: '196803151994031008',
+      Nama: 'Drs. La Ode Alimin, M.Pd.',
+      Jabatan: 'Kepala Sekolah',
+      Status: 'aktif',
+    },
+    {
+      NIP: '197505122002122004',
+      Nama: 'Dra. Siti Aminah, M.Pd.',
+      Jabatan: 'Guru Bahasa Indonesia',
+      Status: 'aktif',
+    },
+    {
+      NIP: '198208142008011012',
+      Nama: 'Ahmad Fauzi, S.Pd., M.Si.',
+      Jabatan: 'Guru Matematika',
+      Status: 'aktif',
+    },
+  ];
+
+  const worksheet = XLSX.utils.json_to_sheet(sampleData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Import Guru');
+
+  worksheet['!cols'] = [
+    { wch: 25 },
+    { wch: 35 },
+    { wch: 30 },
+    { wch: 15 },
+  ];
+
+  XLSX.writeFile(workbook, 'Template_Import_Data_Guru_NIP.xlsx');
+}
+
+export async function parseTeacherImportFile(file: File): Promise<Omit<Teacher, 'id' | 'createdAt'>[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        if (!json || json.length === 0) {
+          throw new Error('File tidak memiliki baris data.');
+        }
+
+        const parsedTeachers: Omit<Teacher, 'id' | 'createdAt'>[] = [];
+
+        json.forEach((row) => {
+          // Cari field nama, nip, jabatan fleksibel
+          const nip = String(row['NIP'] || row['nip'] || row['Nomor Induk Pegawai'] || row['Nip'] || '').trim();
+          const nama = String(row['Nama'] || row['nama'] || row['Nama Lengkap'] || row['Nama Guru'] || '').trim();
+          const jabatan = String(row['Jabatan'] || row['jabatan'] || row['Posisi'] || row['Tugas'] || 'Guru Mata Pelajaran').trim();
+          const statusRaw = String(row['Status'] || row['status'] || 'aktif').toLowerCase().trim();
+          const status = statusRaw.includes('non') ? 'nonaktif' : 'aktif';
+
+          if (nama && nip) {
+            parsedTeachers.push({
+              nip,
+              nama,
+              jabatan: jabatan || 'Guru',
+              status,
+              id_qr: `69933068.${nip}`,
+            });
+          }
+        });
+
+        if (parsedTeachers.length === 0) {
+          throw new Error('Kolom NIP dan Nama wajib ada pada file excel/csv.');
+        }
+
+        resolve(parsedTeachers);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = (error) => reject(error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+export function exportTeacherAttendanceToExcel(
+  records: TeacherAttendanceRecord[],
+  options: {
+    schoolName?: string;
+    filterDate?: string;
+    filterMonth?: string;
+    filterStatus?: string;
+    filterJabatan?: string;
+  } = {}
+) {
+  const { schoolName = 'SMA NEGERI 15 AMBON' } = options;
+
+  const data = records.map((r, idx) => {
+    let scanTime = '-';
+    if (r.timestamp) {
+      const d = new Date(r.timestamp);
+      scanTime = !isNaN(d.getTime())
+        ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jayapura' }) + ' WIT'
+        : r.timestamp;
+    }
+
+    return {
+      No: idx + 1,
+      Tanggal: r.tanggal,
+      'Waktu Scan': scanTime,
+      NIP: r.nip,
+      'Nama Guru': r.nama,
+      Jabatan: r.jabatan,
+      'Jenis Presensi': r.jenis,
+      Status: r.status,
+      'Terlambat (Menit)': r.terlambatMenit || 0,
+      'Keterangan / Catatan': r.catatan || '-',
+      Petugas: r.petugas || 'Petugas Piket',
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Presensi Guru');
+
+  worksheet['!cols'] = [
+    { wch: 6 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 24 },
+    { wch: 32 },
+    { wch: 28 },
+    { wch: 15 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 30 },
+    { wch: 20 },
+  ];
+
+  XLSX.writeFile(
+    workbook,
+    `Rekap_Presensi_Guru_${schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+export function exportTeacherAttendanceToPDF(
+  records: TeacherAttendanceRecord[],
+  options: {
+    schoolName?: string;
+    schoolNPSN?: string;
+    filterDate?: string;
+    filterMonth?: string;
+    filterStatus?: string;
+    filterJabatan?: string;
+    kepsekName?: string;
+    kepsekNIP?: string;
+  } = {}
+) {
+  const {
+    schoolName = 'SMA NEGERI 15 AMBON',
+    schoolNPSN = '69933068',
+    filterDate = '',
+    filterMonth = '',
+    filterStatus = 'Semua',
+    filterJabatan = 'Semua',
+    kepsekName = 'Drs. La Ode Alimin, M.Pd.',
+    kepsekNIP = '196803151994031008',
+  } = options;
+
+  const doc = new jsPDF('landscape', 'mm', 'a4');
+
+  // School Header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`PEMERINTAH PROVINSI MALUKU - DINAS PENDIDIKAN`, 148.5, 12, { align: 'center' });
+  doc.text(schoolName.toUpperCase(), 148.5, 18, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`NPSN: ${schoolNPSN} | Alamat: Jln. Dr. Leimena, Hative Besar, Kec. Teluk Ambon | Kota Ambon`, 148.5, 23, { align: 'center' });
+
+  // Divider line
+  doc.setLineWidth(0.6);
+  doc.setDrawColor(30, 41, 59);
+  doc.line(14, 26, 283, 26);
+  doc.setLineWidth(0.2);
+  doc.line(14, 27, 283, 27);
+
+  // Document Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text('LAPORAN REKAPITULASI PRESENSI GURU DAN TENAGA KEPENDIDIKAN', 148.5, 34, { align: 'center' });
+
+  // Filter Subtitle
+  const periodText = filterDate
+    ? `Tanggal: ${filterDate}`
+    : filterMonth
+    ? `Bulan: ${filterMonth}`
+    : 'Semua Periode';
+  const statusText = filterStatus !== 'Semua' ? `Status: ${filterStatus}` : 'Semua Status';
+  const jabatanText = filterJabatan !== 'Semua' ? `Jabatan: ${filterJabatan}` : 'Semua Jabatan';
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`${periodText} | ${statusText} | ${jabatanText} | Total Data: ${records.length} Presensi`, 148.5, 39, { align: 'center' });
+
+  const tableHead = [
+    ['No', 'Tanggal', 'Waktu', 'NIP Guru', 'Nama Lengkap', 'Jabatan', 'Jenis', 'Status', 'Keterangan', 'Petugas']
+  ];
+
+  const tableBody = records.map((r, i) => {
+    let scanTime = '-';
+    if (r.timestamp) {
+      const d = new Date(r.timestamp);
+      scanTime = !isNaN(d.getTime())
+        ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jayapura' })
+        : '-';
+    }
+
+    return [
+      i + 1,
+      r.tanggal,
+      scanTime,
+      r.nip,
+      r.nama,
+      r.jabatan,
+      r.jenis,
+      r.status,
+      r.terlambatMenit && r.terlambatMenit > 0 ? `Terlambat +${r.terlambatMenit} mnt` : r.catatan || '-',
+      r.petugas || 'Petugas Piket',
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 44,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 16 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 50 },
+      5: { cellWidth: 44 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 20 },
+      8: { cellWidth: 34 },
+      9: { cellWidth: 25 },
+    },
+  });
+
+  let sigY = (doc as any).lastAutoTable?.finalY || 150;
+  if (sigY + 40 > 195) {
+    doc.addPage();
+    sigY = 20;
+  } else {
+    sigY += 10;
+  }
+
+  const formattedToday = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+
+  doc.text(`Ambon, ${formattedToday}`, 220, sigY);
+  sigY += 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Petugas Piket / Operator Presensi,', 30, sigY);
+  doc.text('Mengetahui: Kepala Sekolah,', 220, sigY);
+
+  const finalSigY = sigY + 22;
+  doc.setFont('helvetica', 'normal');
+  doc.text('(................................................)', 30, finalSigY);
+  doc.text(`( ${kepsekName} )`, 220, finalSigY);
+
+  doc.setFontSize(7.5);
+  doc.text('NIP. ........................................', 30, finalSigY + 4);
+  doc.text(`NIP. ${kepsekNIP}`, 220, finalSigY + 4);
+
+  doc.save(`Rekap_Presensi_Guru_${schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
 
 

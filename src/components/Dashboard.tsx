@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { store } from '../lib/store';
-import { Student, AttendanceRecord } from '../types';
+import { Student, AttendanceRecord, Teacher, TeacherAttendanceRecord } from '../types';
 import { SchoolLogo } from './SchoolLogo';
 import { LowAttendanceNotifications } from './LowAttendanceNotifications';
 import {
@@ -15,6 +15,8 @@ import {
   PieChart as PieChartIcon,
   Calendar,
   RefreshCw,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import {
   BarChart,
@@ -35,6 +37,8 @@ import {
 export const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherAttendance, setTeacherAttendance] = useState<TeacherAttendanceRecord[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(store.getTodayYyyyMmDd());
@@ -48,6 +52,8 @@ export const Dashboard: React.FC = () => {
     } finally {
       setStudents(store.getStudents());
       setAttendance(store.getAttendance());
+      setTeachers(store.getTeachers());
+      setTeacherAttendance(store.getTeacherAttendance());
       setLastUpdated(new Date());
       setTimeout(() => setIsRefreshing(false), 400);
     }
@@ -60,11 +66,15 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     setStudents(store.getStudents());
     setAttendance(store.getAttendance());
+    setTeachers(store.getTeachers());
+    setTeacherAttendance(store.getTeacherAttendance());
     setLastUpdated(new Date());
 
     const unsubscribe = store.subscribe(() => {
       setStudents(store.getStudents());
       setAttendance(store.getAttendance());
+      setTeachers(store.getTeachers());
+      setTeacherAttendance(store.getTeacherAttendance());
       setLastUpdated(new Date());
     });
 
@@ -81,6 +91,18 @@ export const Dashboard: React.FC = () => {
 
   const todayYyyyMmDd = store.getTodayYyyyMmDd();
   const todayStr = store.getTodayFormatted();
+
+  const formatIndoDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const norm = store.normalizeToYyyyMmDd(dateStr) || dateStr;
+    const [y, m, d] = norm.split('-');
+    if (!y || !m || !d) return dateStr;
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1] || m} ${y}`;
+  };
 
   // Extract unique available dates with attendance data (sorted descending)
   const availableDates: string[] = Array.from(
@@ -117,11 +139,54 @@ export const Dashboard: React.FC = () => {
   const totalSakit = uniqueDailyRecords.filter((a) => a.status === 'Sakit').length;
   const totalAlpa = uniqueDailyRecords.filter((a) => a.status === 'Alpa').length;
 
+  const totalScanHariIni = dateRecords.length;
+  const totalScanMasuk = dateRecords.filter((r) => r.jenis === 'Masuk').length;
+  const totalScanPulang = dateRecords.filter((r) => r.jenis === 'Pulang').length;
+  const totalSiswaMasuk = totalHadir + totalTerlambat;
+
+  // Teacher attendance statistics calculation
+  const totalActiveTeachers = teachers.filter((t) => t.status === 'aktif').length;
+  const teacherDateRecords = teacherAttendance.filter((r) =>
+    store.isTeacherRecordForDate(r, selectedDate)
+  );
+
+  const teacherDailyMap = new Map<string, TeacherAttendanceRecord>();
+  teacherDateRecords.forEach((r) => {
+    const existing = teacherDailyMap.get(r.nip);
+    if (!existing) {
+      teacherDailyMap.set(r.nip, r);
+    } else {
+      if (existing.jenis === 'Pulang' && r.jenis !== 'Pulang') {
+        teacherDailyMap.set(r.nip, r);
+      }
+    }
+  });
+
+  const uniqueTeacherDailyRecords = Array.from(teacherDailyMap.values());
+  const teacherTotalHadir = uniqueTeacherDailyRecords.filter((a) => a.status === 'Hadir').length;
+  const teacherTotalTerlambat = uniqueTeacherDailyRecords.filter((a) => a.status === 'Terlambat').length;
+  const teacherTotalIzin = uniqueTeacherDailyRecords.filter((a) => a.status === 'Izin').length;
+  const teacherTotalSakit = uniqueTeacherDailyRecords.filter((a) => a.status === 'Sakit').length;
+  const teacherTotalCuti = uniqueTeacherDailyRecords.filter((a) => a.status === 'Cuti').length;
+  const teacherTotalDinas = uniqueTeacherDailyRecords.filter((a) => a.status === 'Dinas Luar').length;
+  const teacherTotalAlpa = uniqueTeacherDailyRecords.filter((a) => a.status === 'Alpa').length;
+  const teacherTotalMasuk = teacherTotalHadir + teacherTotalTerlambat;
+
   // Class breakdown data for BarChart
-  const classList = Array.from(new Set(students.map((s) => s.kelas))).sort();
+  const classList = Array.from(
+    new Set([
+      ...students.map((s) => s.kelas.trim()),
+      ...attendance.map((a) => a.kelas.trim()),
+    ])
+  ).filter(Boolean).sort();
+
   const classData = classList.map((cls) => {
-    const clsStudents = students.filter((s) => s.kelas === cls && s.status === 'aktif');
-    const clsRecords = uniqueDailyRecords.filter((a) => a.kelas === cls);
+    const clsStudents = students.filter(
+      (s) => s.kelas.trim().toLowerCase() === cls.toLowerCase() && s.status === 'aktif'
+    );
+    const clsRecords = uniqueDailyRecords.filter(
+      (a) => a.kelas.trim().toLowerCase() === cls.toLowerCase()
+    );
 
     const hadir = clsRecords.filter((a) => a.status === 'Hadir').length;
     const terlambat = clsRecords.filter((a) => a.status === 'Terlambat').length;
@@ -289,72 +354,168 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Siswa</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">{totalStudents}</div>
-          <span className="text-[10px] text-slate-400 font-medium">Terdaftar aktif</span>
+      {/* Activity & Scan Transactions Summary Bar */}
+      <div className="bg-white dark:bg-slate-900/90 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span>
+            <strong>Presensi Hari ({formatIndoDate(selectedDate)}):</strong> {totalSiswaMasuk} Siswa Hadir ({totalHadir} Hadir Tepat Waktu + {totalTerlambat} Terlambat) • {totalScanPulang} Siswa Pulang
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
+            {totalScanHariIni} Total Scan Tercatat ({totalScanMasuk} Masuk • {totalScanPulang} Pulang)
+          </span>
+        </div>
+      </div>
+
+      {/* Top Metric Cards (Siswa) */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Presensi Siswa Hari Ini</span>
+          </h3>
+          <span className="text-[11px] font-bold text-slate-500">
+            {totalSiswaMasuk} dari {totalStudents} Siswa Masuk
+          </span>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Hadir</span>
-            <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-              <UserCheck className="w-4 h-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Siswa</span>
+              <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                <Users className="w-4 h-4" />
+              </div>
             </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">{totalStudents}</div>
+            <span className="text-[10px] text-slate-400 font-medium">Terdaftar aktif</span>
           </div>
-          <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-2">{totalHadir}</div>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Tepat waktu</span>
+
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Hadir</span>
+              <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                <UserCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-2">{totalHadir}</div>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Tepat waktu</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Terlambat</span>
+              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-2">{totalTerlambat}</div>
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">&gt; Jam 07:15</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/20 dark:bg-blue-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Izin</span>
+              <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                <FileCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-blue-950 dark:text-blue-100 mt-2">{totalIzin}</div>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Dengan surat</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-purple-200/80 dark:border-purple-800/50 bg-purple-50/20 dark:bg-purple-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-purple-800 dark:text-purple-300">Sakit</span>
+              <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                <Stethoscope className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-purple-950 dark:text-purple-100 mt-2">{totalSakit}</div>
+            <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Surat dokter</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-800/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-rose-800 dark:text-rose-300">Alpa</span>
+              <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
+                <XCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-rose-950 dark:text-rose-100 mt-2">{totalAlpa}</div>
+            <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Tanpa keterangan</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Metric Cards (Guru & Staf) */}
+      <div className="bg-gradient-to-r from-sky-50/60 via-slate-50 to-indigo-50/40 dark:from-slate-900/90 dark:via-slate-900/70 dark:to-sky-950/30 p-4 rounded-2xl border border-sky-200/70 dark:border-slate-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
+            <Briefcase className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <span>Presensi Guru & Tenaga Kependidikan (NIP)</span>
+          </h3>
+          <span className="text-[11px] font-bold text-sky-700 dark:text-sky-400">
+            {teacherTotalMasuk} dari {totalActiveTeachers} Guru Hadir Hari Ini ({totalActiveTeachers > 0 ? Math.round((teacherTotalMasuk / totalActiveTeachers) * 100) : 0}%)
+          </span>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Terlambat</span>
-            <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
-              <Clock className="w-4 h-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-slate-500 font-bold">
+              <span>Total Guru</span>
+              <Briefcase className="w-3.5 h-3.5 text-sky-600" />
             </div>
+            <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{totalActiveTeachers}</div>
+            <span className="text-[9px] text-slate-400">Terdaftar</span>
           </div>
-          <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-2">{totalTerlambat}</div>
-          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">&gt; Jam 07:15</span>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/20 dark:bg-blue-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Izin</span>
-            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-              <FileCheck className="w-4 h-4" />
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 font-bold">
+              <span>Hadir Tepat</span>
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
             </div>
+            <div className="text-xl font-black text-emerald-950 dark:text-emerald-100 mt-1">{teacherTotalHadir}</div>
+            <span className="text-[9px] text-emerald-600 font-medium">Tepat Waktu</span>
           </div>
-          <div className="text-2xl font-black text-blue-950 dark:text-blue-100 mt-2">{totalIzin}</div>
-          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Dengan surat</span>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-purple-200/80 dark:border-purple-800/50 bg-purple-50/20 dark:bg-purple-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-800 dark:text-purple-300">Sakit</span>
-            <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-              <Stethoscope className="w-4 h-4" />
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/60 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-400 font-bold">
+              <span>Terlambat</span>
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
             </div>
+            <div className="text-xl font-black text-amber-950 dark:text-amber-100 mt-1">{teacherTotalTerlambat}</div>
+            <span className="text-[9px] text-amber-600 font-medium">&gt; 07:15 WIT</span>
           </div>
-          <div className="text-2xl font-black text-purple-950 dark:text-purple-100 mt-2">{totalSakit}</div>
-          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Surat dokter</span>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-800/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-2xs hover:shadow-md transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-rose-800 dark:text-rose-300">Alpa</span>
-            <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
-              <XCircle className="w-4 h-4" />
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/60 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-400 font-bold">
+              <span>Izin / Cuti</span>
+              <FileCheck className="w-3.5 h-3.5 text-blue-600" />
             </div>
+            <div className="text-xl font-black text-blue-950 dark:text-blue-100 mt-1">{teacherTotalIzin + teacherTotalCuti}</div>
+            <span className="text-[9px] text-blue-600 font-medium">Izin Resmi</span>
           </div>
-          <div className="text-2xl font-black text-rose-950 dark:text-rose-100 mt-2">{totalAlpa}</div>
-          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Tanpa keterangan</span>
+
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-indigo-700 dark:text-indigo-400 font-bold">
+              <span>Dinas Luar</span>
+              <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <div className="text-xl font-black text-indigo-950 dark:text-indigo-100 mt-1">{teacherTotalDinas}</div>
+            <span className="text-[9px] text-indigo-600 font-medium">Tugas Dinas</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-rose-700 dark:text-rose-400 font-bold">
+              <span>Sakit / Alpa</span>
+              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+            </div>
+            <div className="text-xl font-black text-rose-950 dark:text-rose-100 mt-1">{teacherTotalSakit + teacherTotalAlpa}</div>
+            <span className="text-[9px] text-rose-600 font-medium">Tidak Hadir</span>
+          </div>
         </div>
       </div>
 

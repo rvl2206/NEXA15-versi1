@@ -11,6 +11,8 @@ import {
   Settings,
   ShieldAlert,
   CreditCard,
+  Briefcase,
+  UserCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,15 +38,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
     },
     {
       id: 'recap',
-      label: 'Log Absensi & Rekap',
+      label: 'Log Absensi Siswa',
       icon: FileSpreadsheet,
       roles: ['Admin', 'Guru', 'Kepala Sekolah'],
+    },
+    {
+      id: 'teacher-recap',
+      label: 'Log Presensi Guru',
+      icon: UserCheck,
+      roles: ['Admin', 'Guru', 'Kepala Sekolah'],
+      badge: 'Guru',
     },
     {
       id: 'students',
       label: 'Database Siswa',
       icon: Users,
       roles: ['Admin', 'Guru', 'Kepala Sekolah'],
+    },
+    {
+      id: 'teachers',
+      label: 'Database Guru (NIP)',
+      icon: Briefcase,
+      roles: ['Admin', 'Guru', 'Kepala Sekolah'],
+      badge: 'NIP',
     },
     {
       id: 'card-template',

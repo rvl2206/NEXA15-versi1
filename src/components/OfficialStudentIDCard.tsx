@@ -1,6 +1,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { SchoolLogo } from './SchoolLogo';
+import { store } from '../lib/store';
 import {
   User,
   Hash,
@@ -57,6 +58,7 @@ interface CardFrontProps {
   nisn: string;
   kelas: string;
   tahunAjaran?: string;
+  schoolName?: string;
   statusSiswa?: string;
   qrValue?: string;
   cardSize?: CardSizeOption;
@@ -70,7 +72,8 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
   nama,
   nisn,
   kelas,
-  tahunAjaran = '2024/2025',
+  tahunAjaran = '2026/2027',
+  schoolName,
   statusSiswa = 'Siswa Aktif',
   qrValue,
   cardSize = 'CR80',
@@ -80,7 +83,9 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
   className = '',
 }) => {
   const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
-  const computedQr = qrValue || (nisn ? `69933068.${nisn}.${nama}` : 'SMANEGERI15AMBON_TEMPLATE');
+  const activeSchoolName = schoolName || store.getSettings().schoolName || 'SMA NEGERI 15 AMBON';
+  const schoolNpsn = store.getSettings().schoolNPSN || '69933068';
+  const computedQr = qrValue || (nisn ? `${schoolNpsn}.${nisn}.${nama}` : 'SMANEGERI15AMBON_TEMPLATE');
 
   return (
     <div
@@ -156,9 +161,11 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
           }}
         />
 
-        {/* School Logo */}
+        {/* Dedicated School Logo Slot with Fixed Box */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2px' }}>
-          <SchoolLogo size={32} className="drop-shadow-sm" />
+          <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <SchoolLogo size={32} className="w-full h-full drop-shadow-sm" />
+          </div>
         </div>
 
         {/* Titles */}
@@ -186,7 +193,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
             marginBottom: 0,
           }}
         >
-          SMA NEGERI 15 AMBON
+          {activeSchoolName}
         </h3>
       </div>
 
@@ -514,6 +521,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
 
 interface CardBackProps {
   cardSize?: CardSizeOption;
+  schoolName?: string;
   isSelected?: boolean;
   onClick?: () => void;
   showCheckbox?: boolean;
@@ -522,12 +530,14 @@ interface CardBackProps {
 
 export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
   cardSize = 'CR80',
+  schoolName,
   isSelected = true,
   onClick,
   showCheckbox = false,
   className = '',
 }) => {
   const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
+  const activeSchoolName = schoolName || store.getSettings().schoolName || 'SMA NEGERI 15 AMBON';
 
   return (
     <div
@@ -602,7 +612,9 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
         />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
-          <SchoolLogo size={28} className="drop-shadow-sm" />
+          <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            <SchoolLogo size={28} className="w-full h-full drop-shadow-sm" />
+          </div>
           <div style={{ textAlign: 'right', flex: 1, paddingLeft: '6px' }}>
             <h2
               style={{
@@ -615,7 +627,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
                 lineHeight: 1.15,
               }}
             >
-              SMA NEGERI 15 AMBON
+              {activeSchoolName}
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '1px', marginBottom: '1px' }}>
               <div style={{ height: '1px', backgroundColor: 'rgba(245, 158, 11, 0.6)', flex: 1 }} />

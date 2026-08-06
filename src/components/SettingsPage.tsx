@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { store, HealthCheckResult } from '../lib/store';
 import { SchoolSettings, UserRole } from '../types';
-import { testSupabaseConnection, getSupabaseSchemaSQL } from '../lib/supabase';
+import { testSupabaseConnection, getSupabaseSchemaSQL, getSupabaseTeacherOnlySchemaSQL } from '../lib/supabase';
 import { toast } from '../lib/toast';
+import { SchoolLogo } from './SchoolLogo';
 import {
   Settings,
   School,
@@ -45,6 +46,10 @@ import {
   ChevronUp,
   Calendar,
   Plus,
+  Image as ImageIcon,
+  Upload,
+  X,
+  Layers,
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -137,12 +142,140 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     }
   };
 
+  // School Logo Upload State
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingLogo, setIsProcessingLogo] = useState(false);
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+
+  const processLogoFile = (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Format File Salah', 'Harap pilih file gambar (PNG, JPG, SVG, atau WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran File Terlalu Besar', 'Maksimum ukuran gambar logo adalah 5MB.');
+      return;
+    }
+
+    setIsProcessingLogo(true);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (!result) {
+        setIsProcessingLogo(false);
+        return;
+      }
+
+      // If SVG, save directly to keep clean vector paths
+      if (file.type.includes('svg') || result.startsWith('data:image/svg+xml')) {
+        setSettings((prev) => ({ ...prev, schoolLogo: result }));
+        store.updateSettings({ schoolLogo: result });
+        setIsProcessingLogo(false);
+        toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo vektor SVG telah diterapkan ke seluruh komponen dan kartu.');
+        return;
+      }
+
+      // If raster image (PNG, JPG, WebP), scale onto a crisp canvas (max 512px) to optimize local storage & retain alpha transparency
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxDim = 512;
+          let w = img.width;
+          let h = img.height;
+
+          if (w > h) {
+            if (w > maxDim) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            }
+          } else {
+            if (h > maxDim) {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            const optimizedBase64 = canvas.toDataURL('image/png', 0.95);
+            setSettings((prev) => ({ ...prev, schoolLogo: optimizedBase64 }));
+            store.updateSettings({ schoolLogo: optimizedBase64 });
+            setIsProcessingLogo(false);
+            toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah diunggah dan otomatis disesuaikan ukurannya di seluruh layout.');
+          } else {
+            setSettings((prev) => ({ ...prev, schoolLogo: result }));
+            store.updateSettings({ schoolLogo: result });
+            setIsProcessingLogo(false);
+            toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah disimpan.');
+          }
+        } catch {
+          setSettings((prev) => ({ ...prev, schoolLogo: result }));
+          store.updateSettings({ schoolLogo: result });
+          setIsProcessingLogo(false);
+          toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah disimpan.');
+        }
+      };
+
+      img.onerror = () => {
+        setIsProcessingLogo(false);
+        toast.error('Gagal Membaca Gambar', 'Pastikan file gambar valid dan tidak rusak.');
+      };
+
+      img.src = result;
+    };
+
+    reader.onerror = () => {
+      setIsProcessingLogo(false);
+      toast.error('Gagal Mengunggah', 'Terjadi kesalahan saat membaca file.');
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      processLogoFile(files[0]);
+    }
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleLogoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingLogo(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processLogoFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    if (confirm('Apakah Anda yakin ingin menghapus logo kustom? Sistem akan kembali menggunakan lambang sekolah standar.')) {
+      setSettings((prev) => ({ ...prev, schoolLogo: '' }));
+      store.updateSettings({ schoolLogo: '' });
+      toast.info('Logo Kustom Dihapus', 'Sistem kembali menggunakan lambang sekolah default.');
+    }
+  };
+
   // Supabase Integration States
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [supabaseTestStatus, setSupabaseTestStatus] = useState<{ success?: boolean; message?: string; missingTables?: string[] } | null>(null);
   const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
   const [showSupabaseSchema, setShowSupabaseSchema] = useState(false);
   const [copiedSupabaseSchema, setCopiedSupabaseSchema] = useState(false);
+  const [copiedTeacherSchema, setCopiedTeacherSchema] = useState(false);
+  const [activeSchemaTab, setActiveSchemaTab] = useState<'all' | 'teachers'>('teachers');
 
   const handleTestSupabase = async () => {
     setIsTestingSupabase(true);
@@ -176,8 +309,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     const sql = getSupabaseSchemaSQL();
     navigator.clipboard.writeText(sql);
     setCopiedSupabaseSchema(true);
-    toast.success('SQL Schema Disalin', 'Perintah DDL SQL untuk tabel Supabase berhasil disalin ke clipboard.');
+    toast.success('SQL Schema Disalin', 'Perintah DDL SQL untuk seluruh tabel Supabase berhasil disalin.');
     setTimeout(() => setCopiedSupabaseSchema(false), 3000);
+  };
+
+  const handleCopyTeacherSchema = () => {
+    const sql = getSupabaseTeacherOnlySchemaSQL();
+    navigator.clipboard.writeText(sql);
+    setCopiedTeacherSchema(true);
+    toast.success('SQL Guru Disalin', 'Perintah SQL khusus tabel Guru (teachers & teacher_attendance) berhasil disalin.');
+    setTimeout(() => setCopiedTeacherSchema(false), 3000);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -322,7 +463,144 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           </h3>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-6">
+          {/* Logo Sekolah Upload & Auto-Fit Layout Section */}
+          <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800/60 dark:to-blue-950/20 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span>Logo Sekolah & Identitas Visual</span>
+                  {settings.schoolLogo ? (
+                    <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-full text-[10px] font-bold">
+                      Logo Kustom Aktif
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-bold">
+                      Lambang Standar
+                    </span>
+                  )}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Unggah logo resmi sekolah (PNG, JPG, SVG, WebP). Sistem akan otomatis menyesuaikan ukuran (auto-fit) di seluruh kartu, navbar, kartu guru, dan laporan.
+                </p>
+              </div>
+
+              {settings.schoolLogo && (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus Logo</span>
+                </button>
+              )}
+            </div>
+
+            {/* Hidden Input File */}
+            <input
+              type="file"
+              ref={logoFileInputRef}
+              onChange={handleLogoFileChange}
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+            />
+
+            {/* Drag & Drop Upload Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingLogo(true);
+              }}
+              onDragLeave={() => setIsDraggingLogo(false)}
+              onDrop={handleLogoDrop}
+              onClick={() => logoFileInputRef.current?.click()}
+              className={`p-5 rounded-2xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                isDraggingLogo
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50 scale-[1.01]'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-white/80 dark:hover:bg-slate-800/80 bg-white/50 dark:bg-slate-900/50'
+              }`}
+            >
+              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center p-2 relative overflow-hidden group">
+                <SchoolLogo className="w-full h-full object-contain drop-shadow-xs" />
+                <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-2xl">
+                  <Upload className="w-5 h-5 animate-bounce" />
+                </div>
+              </div>
+
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors mb-1.5">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isProcessingLogo ? 'Memproses Logo...' : 'Pilih File Logo Sekolah'}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  atau tarik dan lepas (drag & drop) file logo ke sini
+                </p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  Format: PNG (transparan disarankan), JPG, SVG, WebP • Maks. 5MB
+                </p>
+              </div>
+            </div>
+
+            {/* Layout Preview Auto-Sizing Showcase */}
+            <div className="bg-white/80 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-3">
+                <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>Simulasi Penyesuaian Ukuran di Seluruh Tata Letak (Live Auto-Fit)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Header / Navbar Preview */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    1. Navbar & Header
+                  </span>
+                  <div className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs w-full justify-center">
+                    <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <SchoolLogo size={28} className="w-full h-full" />
+                    </div>
+                    <div className="text-left overflow-hidden">
+                      <p className="text-[10px] font-black text-slate-800 dark:text-white truncate">NEXA15</p>
+                      <p className="text-[8px] text-slate-400 truncate">{settings.schoolName || 'SMA NEGERI 15 AMBON'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Kartu Absensi Pelajar CR80 Preview */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    2. Kartu Siswa & Guru
+                  </span>
+                  <div className="p-2 bg-[#071a3d] text-white rounded-lg border border-amber-500/40 shadow-2xs w-full flex flex-col items-center justify-center">
+                    <div className="w-7 h-7 flex items-center justify-center mb-0.5">
+                      <SchoolLogo size={28} className="w-full h-full drop-shadow-xs" />
+                    </div>
+                    <p className="text-[7.5px] font-black text-amber-400 uppercase truncate max-w-full">
+                      {settings.schoolName || 'SMA NEGERI 15 AMBON'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Login Modal & Laporan Preview */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    3. Login & Dokumen
+                  </span>
+                  <div className="p-2 bg-gradient-to-br from-[#071a3d] to-slate-900 text-white rounded-lg border border-white/20 shadow-2xs w-full flex items-center justify-center gap-2">
+                    <div className="w-8 h-8 p-1 bg-white/10 rounded-lg flex items-center justify-center">
+                      <SchoolLogo size={32} className="w-full h-full" />
+                    </div>
+                    <div className="text-left overflow-hidden">
+                      <p className="text-[9px] font-black text-amber-300">PRESENSI</p>
+                      <p className="text-[7.5px] text-slate-300 truncate">Sistem Digital</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nama Sekolah</label>
@@ -702,21 +980,90 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   </button>
 
                   {showSupabaseSchema && (
-                    <div className="mt-3 p-4 bg-slate-900 text-slate-100 rounded-xl space-y-3 text-xs font-sans border border-slate-800">
-                      <div className="font-bold text-emerald-400 border-b border-slate-800 pb-2">
-                        Panduan Menghubungkan Supabase:
+                    <div className="mt-3 p-4 bg-slate-950 text-slate-100 rounded-xl space-y-3 text-xs font-sans border border-slate-800 shadow-inner">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                        <div>
+                          <span className="font-bold text-emerald-400 block">
+                            Panduan SQL Query Database Supabase (PostgreSQL)
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            Pilih query yang ingin Anda buat di SQL Editor Supabase:
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setActiveSchemaTab('teachers')}
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                              activeSchemaTab === 'teachers'
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            Khusus Tabel Guru & GTK
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSchemaTab('all')}
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                              activeSchemaTab === 'all'
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            Semua 5 Tabel (Lengkap)
+                          </button>
+                        </div>
                       </div>
+
                       <ol className="list-decimal pl-5 space-y-2 text-slate-300 text-[11px] leading-relaxed">
                         <li>
-                          Buka <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline">supabase.com</a> dan buat project baru secara gratis.
+                          Buka <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline font-semibold">supabase.com</a> dan buka Dashboard Project Anda.
                         </li>
                         <li>
-                          Buka menu <b>SQL Editor</b> di Dashboard Supabase, klik <b>New Query</b>, lalu tempelkan <b>SQL Schema</b> (klik tombol <i>Salin SQL Schema Supabase</i> di atas) dan klik <b>Run</b> untuk membuat tabel <code className="text-cyan-300">students</code>, <code className="text-cyan-300">attendance</code>, dan <code className="text-cyan-300">activity_logs</code>.
+                          Buka menu <b>SQL Editor</b> (ikon &lt;/&gt; di sebelah kiri), lalu klik tombol <b>New Query</b>.
                         </li>
                         <li>
-                          Buka menu <b>Project Settings &gt; API</b> di Supabase, salin <b>Project URL</b> dan <b>anon / public Key</b>, tempelkan di formulir atas, lalu klik <b>Simpan & Sinkronkan Konfigurasi</b>.
+                          Klik tombol <b>{activeSchemaTab === 'teachers' ? 'Salin SQL Tabel Guru' : 'Salin SQL Lengkap'}</b> di bawah, tempelkan (Paste) ke SQL Editor Supabase, lalu klik tombol hijau <b>Run</b>.
+                        </li>
+                        <li>
+                          <b>Apakah datanya langsung masuk dengan sendirinya?</b><br />
+                          <span className="text-emerald-400 font-semibold">YA!</span> Begitu tabel dibuat, setiap Anda menambah/mengubah data guru atau saat guru scan presensi, sistem akan <b>otomatis mengirim data ke Supabase</b> secara real-time. Untuk mengirim data guru yang sudah ada saat ini, Anda cukup menekan tombol <b>Sinkronkan Sekarang</b> di atas!
                         </li>
                       </ol>
+
+                      {/* SQL Code Block Preview with Quick Copy */}
+                      <div className="pt-1">
+                        <div className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+                            {activeSchemaTab === 'teachers'
+                              ? 'Query SQL: Tabel Guru (teachers) & Presensi Guru (teacher_attendance)'
+                              : 'Query SQL: Seluruh 5 Tabel Aplikasi (Siswa, Presensi, Guru, Log)'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={activeSchemaTab === 'teachers' ? handleCopyTeacherSchema : handleCopySupabaseSchema}
+                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          >
+                            {activeSchemaTab === 'teachers' ? (
+                              copiedTeacherSchema ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />
+                            ) : (
+                              copiedSupabaseSchema ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />
+                            )}
+                            <span>
+                              {activeSchemaTab === 'teachers'
+                                ? (copiedTeacherSchema ? 'Tersalin!' : 'Salin SQL Tabel Guru')
+                                : (copiedSupabaseSchema ? 'Tersalin!' : 'Salin SQL Seluruh Tabel')}
+                            </span>
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <pre className="max-h-64 overflow-y-auto p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-emerald-300 leading-relaxed border border-slate-800 select-all">
+                            {activeSchemaTab === 'teachers' ? getSupabaseTeacherOnlySchemaSQL() : getSupabaseSchemaSQL()}
+                          </pre>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

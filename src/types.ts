@@ -22,6 +22,19 @@ export interface Student {
 
 export type AttendanceType = 'Masuk' | 'Pulang';
 export type AttendanceStatus = 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpa';
+export type TeacherAttendanceStatus = 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Dinas Luar' | 'Cuti' | 'Alpa';
+
+export interface Teacher {
+  id: string; // Document ID
+  nip: string; // Nomor Induk Pegawai (Kunci Identitas Utama)
+  nama: string; // Nama Lengkap Guru & Gelar
+  jabatan: string; // Jabatan / Mata Pelajaran (e.g. Guru Matematika, Kepala Sekolah)
+  id_qr?: string; // QR Code Identifier
+  status: 'aktif' | 'nonaktif';
+  no_hp?: string;
+  foto?: string;
+  createdAt?: string;
+}
 
 export interface AttendanceRecord {
   id: string;
@@ -36,6 +49,21 @@ export interface AttendanceRecord {
   petugas: string; // Email/Name of officer scanning or logged in user
   catatan?: string;
   terlambatMenit?: number; // Late duration in minutes
+}
+
+export interface TeacherAttendanceRecord {
+  id: string;
+  tanggal: string; // format "DD-MM-YYYY" or "YYYY-MM-DD"
+  timestamp: string; // ISO String
+  nip: string;
+  nama: string;
+  jabatan: string;
+  id_qr?: string;
+  jenis: AttendanceType;
+  status: TeacherAttendanceStatus;
+  petugas: string;
+  catatan?: string;
+  terlambatMenit?: number;
 }
 
 export interface ActivityLog {
@@ -56,6 +84,9 @@ export interface Holiday {
 export interface SchoolSettings {
   schoolName: string;
   schoolNPSN: string;
+  schoolLogo?: string; // Base64 data URL or image URL for custom school logo
+  schoolAddress?: string;
+  schoolCity?: string;
   cutoffTime: string; // e.g. "07:15"
   autoAlpaCutoffTime?: string; // e.g. "14:30"
   enableAutoAlpa?: boolean; // default true

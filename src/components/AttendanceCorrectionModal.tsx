@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AttendanceRecord, Student, AttendanceStatus, AttendanceType } from '../types';
 import { store } from '../lib/store';
+import { toast } from '../lib/toast';
 import { generateWhatsAppMessage, getWhatsAppLink, formatPetugasRole } from '../lib/exportUtils';
 import {
   X,
@@ -17,8 +18,8 @@ import {
   Send,
   Sparkles,
   Edit3,
-  Check,
   ShieldCheck,
+  Info,
 } from 'lucide-react';
 
 interface AttendanceCorrectionModalProps {
@@ -28,6 +29,7 @@ interface AttendanceCorrectionModalProps {
   initialRecord?: AttendanceRecord | null;
   initialStudent?: Student | null;
   initialDate?: string; // YYYY-MM-DD or DD-MM-YYYY
+  initialType?: AttendanceType; // 'Masuk' | 'Pulang'
   currentOfficer: string;
 }
 
@@ -38,11 +40,11 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
   initialRecord,
   initialStudent,
   initialDate,
+  initialType,
   currentOfficer,
 }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
   // Form State
   const [tanggal, setTanggal] = useState<string>('');
@@ -53,121 +55,228 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
   const [catatan, setCatatan] = useState<string>('');
   const [petugas, setPetugas] = useState<string>('');
   const [sendWaNotif, setSendWaNotif] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Helper to extract time string "HH:mm" from timestamp or date
-  const extractJamFromRecord = (rec: AttendanceRecord | null | undefined): string => {
-    if (!rec || !rec.timestamp) return '07:00';
+  // Helper to extract time string "HH:mm" from timestamp or date (in WIT / Asia/Jayapura)
+  const extractJamFromRecord = useCallback((rec: AttendanceRecord | null | undefined): string => {
+    if (!rec || !rec.timestamp) return '';
     try {
       const d = new Date(rec.timestamp);
-      if (isNaN(d.getTime())) return '07:00';
-      const timeStr = d.toLocaleTimeString('en-US', { timeZone: 'Asia/Jayapura', hour12: false });
-      const parts = timeStr.split(':');
-      if (parts.length >= 2) {
-        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
-      }
-    } catch {}
-    return '07:00';
-  };
+      if (isNaN(d.getTime())) return '';
+      const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jayapura',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return formatter.format(d);
+    } catch {
+      return '';
+    }
+  }, []);
 
   // Helper to normalize date to YYYY-MM-DD for input[type="date"]
-  const formatForDateInput = (dStr?: string): string => {
+  const formatForDateInput = useCallback((dStr?: string): string => {
     if (!dStr) {
       const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jayapura',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(d);
     }
-    if (dStr.includes('T')) dStr = dStr.split('T')[0];
-    const parts = dStr.split(/[-/.]/);
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      } else if (parts[2].length === 4) {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    return store.normalizeToYyyyMmDd(dStr) || dStr;
+  }, []);
+
+  // Helper to compute late minutes against cutoff
+  const computeLateMinutes = useCallback((targetJam: string): number => {
+    const cutoffTime = store.getSettings().cutoffTime || '07:15';
+    const [cutoffH, cutoffM] = cutoffTime.split(':').map(Number);
+    const [scanH, scanM] = targetJam.split(':').map(Number);
+    if (!isNaN(cutoffH) && !isNaN(scanH) && !isNaN(cutoffM) && !isNaN(scanM)) {
+      const cutoffTotalMin = cutoffH * 60 + cutoffM;
+      const scanTotalMin = scanH * 60 + scanM;
+      if (scanTotalMin > cutoffTotalMin) {
+        return scanTotalMin - cutoffTotalMin;
       }
     }
-    return dStr;
-  };
+    return 0;
+  }, []);
 
+  // Initial load when modal opens
   useEffect(() => {
+    if (!isOpen) return;
+
     const allStudents = store.getStudents();
     setStudents(allStudents);
     setPetugas(formatPetugasRole(currentOfficer) || 'Petugas Piket');
 
-    if (initialRecord) {
-      setSelectedRecordId(initialRecord.id);
-      const foundStd = allStudents.find(
+    const targetDate = formatForDateInput(initialDate || initialRecord?.tanggal || initialRecord?.timestamp);
+    setTanggal(targetDate);
+
+    let activeStudent: Student | undefined;
+    if (initialStudent) {
+      activeStudent = initialStudent;
+      setSelectedStudentId(initialStudent.id);
+    } else if (initialRecord) {
+      activeStudent = allStudents.find(
         (s) => s.nisn === initialRecord.nisn || s.id_qr === initialRecord.id_qr || s.nama === initialRecord.nama
       );
-      if (foundStd) setSelectedStudentId(foundStd.id);
+      if (activeStudent) setSelectedStudentId(activeStudent.id);
+    } else if (allStudents.length > 0) {
+      activeStudent = allStudents[0];
+      setSelectedStudentId(allStudents[0].id);
+    }
 
-      setTanggal(formatForDateInput(initialRecord.tanggal || initialRecord.timestamp));
-      setJenis(initialRecord.jenis || 'Masuk');
+    const activeType: AttendanceType = initialType || initialRecord?.jenis || 'Masuk';
+    setJenis(activeType);
+
+    if (initialRecord) {
       setStatus(initialRecord.status || 'Hadir');
-      setJamScan(extractJamFromRecord(initialRecord));
+      setJamScan(extractJamFromRecord(initialRecord) || (activeType === 'Masuk' ? '07:00' : '14:00'));
       setTerlambatMenit(initialRecord.terlambatMenit || 0);
       setCatatan(initialRecord.catatan || 'Koreksi Kehadiran');
-    } else {
-      setSelectedRecordId(null);
-      if (initialStudent) {
-        setSelectedStudentId(initialStudent.id);
-      } else if (allStudents.length > 0) {
-        setSelectedStudentId(allStudents[0].id);
+    } else if (activeStudent) {
+      // Find if student already has a record on targetDate for activeType
+      const allAttendance = store.getAttendance();
+      const rec = allAttendance.find((a) => {
+        const matchIdentity = (a.nisn && a.nisn === activeStudent?.nisn) || (a.nama && a.nama === activeStudent?.nama);
+        const matchDate = store.isRecordForDate(a, targetDate);
+        return matchIdentity && matchDate && a.jenis === activeType;
+      });
+
+      if (rec) {
+        setStatus(rec.status || 'Hadir');
+        setJamScan(extractJamFromRecord(rec) || (activeType === 'Masuk' ? '07:00' : '14:00'));
+        setTerlambatMenit(rec.terlambatMenit || 0);
+        setCatatan(rec.catatan || 'Koreksi Kehadiran');
+      } else {
+        setStatus('Hadir');
+        setJamScan(activeType === 'Masuk' ? '07:00' : '14:00');
+        setTerlambatMenit(0);
+        setCatatan('Koreksi Kehadiran');
       }
-      setTanggal(formatForDateInput(initialDate));
-      setJenis('Masuk');
+    }
+  }, [isOpen, initialRecord, initialStudent, initialDate, initialType, currentOfficer, formatForDateInput, extractJamFromRecord]);
+
+  const currentStudent = useMemo(() => {
+    return students.find((s) => s.id === selectedStudentId);
+  }, [students, selectedStudentId]);
+
+  // Find all attendance records for this student on the selected date
+  const dayRecordsForStudent = useMemo(() => {
+    if (!currentStudent || !tanggal) return { masuk: null, pulang: null };
+    const normDate = store.normalizeToYyyyMmDd(tanggal);
+    const allAttendance = store.getAttendance();
+    const studentRecords = allAttendance.filter((a) => {
+      const matchIdentity = (a.nisn && a.nisn === currentStudent.nisn) || (a.nama && a.nama === currentStudent.nama);
+      const matchDate = store.isRecordForDate(a, normDate);
+      return matchIdentity && matchDate;
+    });
+
+    const masukRecords = studentRecords.filter((a) => a.jenis === 'Masuk');
+    const pulangRecords = studentRecords.filter((a) => a.jenis === 'Pulang');
+
+    return {
+      masuk: masukRecords[masukRecords.length - 1] || masukRecords[0] || null,
+      pulang: pulangRecords[pulangRecords.length - 1] || pulangRecords[0] || null,
+    };
+  }, [currentStudent, tanggal, isOpen]);
+
+  // Intelligently handle jam scan changes
+  const handleJamScanChange = (newJam: string) => {
+    setJamScan(newJam);
+    if (jenis === 'Masuk') {
+      const lateMins = computeLateMinutes(newJam);
+      if (lateMins > 0) {
+        if (status === 'Hadir') {
+          setStatus('Terlambat');
+        }
+        setTerlambatMenit(lateMins);
+      } else {
+        if (status === 'Terlambat') {
+          setStatus('Hadir');
+          setTerlambatMenit(0);
+        }
+      }
+    }
+  };
+
+  // Switch scan type (Masuk / Pulang) and load the specific existing data
+  const handleJenisChange = (newJenis: AttendanceType) => {
+    setJenis(newJenis);
+    const existingForType = newJenis === 'Masuk' ? dayRecordsForStudent.masuk : dayRecordsForStudent.pulang;
+    if (existingForType) {
+      setStatus(existingForType.status || 'Hadir');
+      const extracted = extractJamFromRecord(existingForType);
+      setJamScan(extracted || (newJenis === 'Masuk' ? '07:00' : '14:00'));
+      setTerlambatMenit(existingForType.terlambatMenit || 0);
+      setCatatan(existingForType.catatan || 'Koreksi Kehadiran');
+    } else {
       setStatus('Hadir');
-      setJamScan('07:00');
+      setJamScan(newJenis === 'Masuk' ? '07:00' : '14:00');
       setTerlambatMenit(0);
       setCatatan('Koreksi Kehadiran');
     }
-  }, [initialRecord, initialStudent, initialDate, currentOfficer, isOpen]);
+  };
+
+  // When changing student or date, refresh fields if existing record is found
+  const handleStudentChange = (newStudentId: string) => {
+    setSelectedStudentId(newStudentId);
+    const st = students.find((s) => s.id === newStudentId);
+    if (st && tanggal) {
+      const normDate = store.normalizeToYyyyMmDd(tanggal);
+      const allAttendance = store.getAttendance();
+      const rec = allAttendance.find((a) => {
+        const matchIdentity = (a.nisn && a.nisn === st.nisn) || (a.nama && a.nama === st.nama);
+        const matchDate = store.isRecordForDate(a, normDate);
+        return matchIdentity && matchDate && a.jenis === jenis;
+      });
+
+      if (rec) {
+        setStatus(rec.status || 'Hadir');
+        setJamScan(extractJamFromRecord(rec) || (jenis === 'Masuk' ? '07:00' : '14:00'));
+        setTerlambatMenit(rec.terlambatMenit || 0);
+        setCatatan(rec.catatan || 'Koreksi Kehadiran');
+      }
+    }
+  };
+
+  const handleDateChange = (newDate: string) => {
+    setTanggal(newDate);
+    if (currentStudent && newDate) {
+      const normDate = store.normalizeToYyyyMmDd(newDate);
+      const allAttendance = store.getAttendance();
+      const rec = allAttendance.find((a) => {
+        const matchIdentity = (a.nisn && a.nisn === currentStudent.nisn) || (a.nama && a.nama === currentStudent.nama);
+        const matchDate = store.isRecordForDate(a, normDate);
+        return matchIdentity && matchDate && a.jenis === jenis;
+      });
+
+      if (rec) {
+        setStatus(rec.status || 'Hadir');
+        setJamScan(extractJamFromRecord(rec) || (jenis === 'Masuk' ? '07:00' : '14:00'));
+        setTerlambatMenit(rec.terlambatMenit || 0);
+        setCatatan(rec.catatan || 'Koreksi Kehadiran');
+      }
+    }
+  };
 
   // Recalculate late minutes when status or jamScan changes
   useEffect(() => {
     if (status === 'Terlambat') {
-      const cutoffTime = store.getSettings().cutoffTime || '07:15';
-      const [cutoffH, cutoffM] = cutoffTime.split(':').map(Number);
-      const [scanH, scanM] = jamScan.split(':').map(Number);
-      if (!isNaN(cutoffH) && !isNaN(scanH)) {
-        const cutoffTotalMin = cutoffH * 60 + cutoffM;
-        const scanTotalMin = scanH * 60 + scanM;
-        if (scanTotalMin > cutoffTotalMin) {
-          setTerlambatMenit(scanTotalMin - cutoffTotalMin);
-        } else {
-          setTerlambatMenit(1);
-        }
-      }
+      const lateMins = computeLateMinutes(jamScan);
+      setTerlambatMenit(lateMins > 0 ? lateMins : 1);
     } else {
       setTerlambatMenit(0);
     }
-  }, [status, jamScan]);
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  const currentStudent = React.useMemo(() => {
-    return students.find((s) => s.id === selectedStudentId);
-  }, [students, selectedStudentId]);
-
-  // Check if a record exists for this student on this date and jenis (memoized)
-  const existingRecordForForm = React.useMemo(() => {
-    if (initialRecord) return initialRecord;
-    if (!currentStudent) return null;
-    const targetDate = store.normalizeToYyyyMmDd(tanggal);
-    const allAttendance = store.getAttendance();
-    return allAttendance.find((a) => {
-      const matchIdentity = (a.nisn && a.nisn === currentStudent.nisn) || (a.nama && a.nama === currentStudent.nama);
-      const matchDate = store.normalizeToYyyyMmDd(a.tanggal) === targetDate;
-      const matchJenis = a.jenis === jenis;
-      return matchIdentity && matchDate && matchJenis;
-    }) || null;
-  }, [initialRecord, currentStudent, tanggal, jenis]);
+  }, [status, jamScan, computeLateMinutes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentStudent) {
-      alert('Silakan pilih siswa terlebih dahulu.');
+      toast.warning('Pilih Siswa', 'Silakan pilih target siswa terlebih dahulu.');
       return;
     }
     if (isSaving) return;
@@ -175,16 +284,37 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     setIsSaving(true);
 
     try {
-      let resultRecord: AttendanceRecord | null = null;
+      const normTanggal = store.normalizeToYyyyMmDd(tanggal) || tanggal;
+      const finalTimestamp = store.buildIsoTimestamp(normTanggal, jamScan);
+      const finalLateMinutes =
+        status === 'Terlambat'
+          ? terlambatMenit > 0
+            ? terlambatMenit
+            : computeLateMinutes(jamScan) || 1
+          : 0;
 
-      if (existingRecordForForm && existingRecordForForm.id) {
+      // Find existing record matching student, date, and jenis
+      const allAttendance = store.getAttendance();
+      const existing = allAttendance.find((a) => {
+        const matchIdentity =
+          (a.nisn && a.nisn === currentStudent.nisn) ||
+          (a.nama && a.nama === currentStudent.nama);
+        const matchDate = store.isRecordForDate(a, normTanggal);
+        const matchJenis = a.jenis === jenis;
+        return matchIdentity && matchDate && matchJenis;
+      });
+
+      let resultRecord: AttendanceRecord;
+
+      if (existing && existing.id) {
         // Update existing record
-        await store.updateAttendanceRecord(existingRecordForForm.id, {
+        await store.updateAttendanceRecord(existing.id, {
           status,
           jenis,
-          tanggal,
+          tanggal: normTanggal,
+          timestamp: finalTimestamp,
           catatan,
-          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+          terlambatMenit: finalLateMinutes,
           petugas: petugas || currentOfficer,
           nama: currentStudent.nama,
           kelas: currentStudent.kelas,
@@ -192,18 +322,20 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           id_qr: currentStudent.id_qr,
         });
         resultRecord = {
-          ...existingRecordForForm,
+          ...existing,
           status,
           jenis,
-          tanggal,
+          tanggal: normTanggal,
+          timestamp: finalTimestamp,
           catatan,
-          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+          terlambatMenit: finalLateMinutes,
           petugas: petugas || currentOfficer,
         };
       } else {
-        // Create new record for this correction
+        // Create new record
         resultRecord = await store.addManualAttendance({
-          tanggal: store.normalizeToYyyyMmDd(tanggal) || store.getTodayFormatted(),
+          tanggal: normTanggal,
+          timestamp: finalTimestamp,
           nisn: currentStudent.nisn,
           nama: currentStudent.nama,
           kelas: currentStudent.kelas,
@@ -212,11 +344,16 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           status,
           petugas: petugas || currentOfficer,
           catatan,
-          terlambatMenit: status === 'Terlambat' ? terlambatMenit : 0,
+          terlambatMenit: finalLateMinutes,
         });
       }
 
-      // Send WhatsApp notification if checked and phone exists
+      toast.success(
+        'Koreksi Presensi Berhasil Disimpan',
+        `Waktu scan ${currentStudent.nama} (${jenis}) berhasil diubah menjadi ${jamScan} WIT (${status}). Data langsung diperbarui di tabel rekap.`
+      );
+
+      // Send WhatsApp notification if requested
       if (sendWaNotif && currentStudent && resultRecord) {
         let phone = currentStudent.no_hp_ortu;
         if (!phone) {
@@ -243,6 +380,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
       if (onSuccess) onSuccess();
       onClose();
+    } catch (err: any) {
+      toast.error('Gagal Menyimpan Koreksi', err?.message || 'Terjadi kesalahan saat menyimpan koreksi.');
     } finally {
       setIsSaving(false);
     }
@@ -263,6 +402,11 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     }
   };
 
+  const quickTimes =
+    jenis === 'Masuk'
+      ? ['06:30', '06:45', '07:00', '07:10', '07:15', '07:20', '07:30', '07:45', '08:00']
+      : ['12:30', '13:00', '13:30', '14:00', '14:15', '14:30', '15:00', '15:30'];
+
   if (!isOpen) return null;
 
   return (
@@ -277,14 +421,14 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-sm sm:text-base text-white tracking-tight">
-                  Koreksi Data Kehadiran Siswa
+                  Koreksi Jam & Status Presensi Siswa
                 </h3>
                 <span className="text-[10px] font-bold uppercase bg-blue-500/30 text-blue-100 border border-blue-400/30 px-2 py-0.5 rounded-full">
-                  Status & Jam Scan
+                  Waktu WIT Resmi
                 </span>
               </div>
               <p className="text-xs text-blue-100/90 mt-0.5">
-                Ubah atau sesuaikan status kehadiran dan jam scan absensi harian secara resmi.
+                Ubah jam scan, tanggal, atau status kehadiran siswa dengan pembaruan instan ke tabel rekap.
               </p>
             </div>
           </div>
@@ -296,6 +440,26 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           </button>
         </div>
 
+        {/* Existing Status Banner */}
+        {currentStudent && (
+          <div className="bg-slate-50 dark:bg-slate-800/80 px-5 py-2.5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {currentStudent.nama} ({currentStudent.kelas})
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="font-mono bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 font-bold">
+                Masuk: {dayRecordsForStudent.masuk ? `${extractJamFromRecord(dayRecordsForStudent.masuk)} WIT (${dayRecordsForStudent.masuk.status})` : 'Belum Ada'}
+              </span>
+              <span className="font-mono bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 font-bold">
+                Pulang: {dayRecordsForStudent.pulang ? `${extractJamFromRecord(dayRecordsForStudent.pulang)} WIT (${dayRecordsForStudent.pulang.status})` : 'Belum Ada'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
           {/* Siswa Selector */}
@@ -306,10 +470,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             </label>
             <select
               value={selectedStudentId}
-              onChange={(e) => {
-                setSelectedStudentId(e.target.value);
-                setSelectedRecordId(null);
-              }}
+              onChange={(e) => handleStudentChange(e.target.value)}
               className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
               required
             >
@@ -332,7 +493,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               <input
                 type="date"
                 value={tanggal}
-                onChange={(e) => setTanggal(e.target.value)}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
                 required
               />
@@ -340,16 +501,16 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
             <div>
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-                <span>Jenis Scan:</span>
+                <span>Pilih Scan Yang Dikoreksi:</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setJenis('Masuk')}
+                  onClick={() => handleJenisChange('Masuk')}
                   className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all border ${
                     jenis === 'Masuk'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300 dark:ring-blue-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   <LogIn className="w-3.5 h-3.5" />
@@ -357,11 +518,11 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setJenis('Pulang')}
+                  onClick={() => handleJenisChange('Pulang')}
                   className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all border ${
                     jenis === 'Pulang'
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-2 ring-purple-300 dark:ring-purple-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -378,11 +539,11 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {[
-                { key: 'Hadir', label: 'Hadir', color: 'emerald' },
-                { key: 'Terlambat', label: 'Terlambat', color: 'amber' },
-                { key: 'Izin', label: 'Izin', color: 'blue' },
-                { key: 'Sakit', label: 'Sakit', color: 'purple' },
-                { key: 'Alpa', label: 'Alpa', color: 'red' },
+                { key: 'Hadir', label: 'Hadir' },
+                { key: 'Terlambat', label: 'Terlambat' },
+                { key: 'Izin', label: 'Izin' },
+                { key: 'Sakit', label: 'Sakit' },
+                { key: 'Alpa', label: 'Alpa' },
               ].map((item) => {
                 const isSelected = status === item.key;
                 return (
@@ -420,12 +581,12 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               <div>
                 <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Koreksi Jam Scan (Waktu WIT):</span>
+                  <span>Koreksi Jam Scan (Format Waktu WIT):</span>
                 </label>
                 <input
                   type="time"
                   value={jamScan}
-                  onChange={(e) => setJamScan(e.target.value)}
+                  onChange={(e) => handleJamScanChange(e.target.value)}
                   className="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono font-bold"
                   required
                 />
@@ -451,23 +612,38 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             {/* Jam Scan Shortcut Buttons */}
             <div>
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                Pilihan Waktu Pintas:
+                Pilihan Waktu Cepat ({jenis}):
               </span>
               <div className="flex flex-wrap items-center gap-1.5">
-                {['06:45', '07:00', '07:15', '07:30', '08:00', '12:30', '13:30'].map((timeStr) => (
+                {quickTimes.map((timeStr) => (
                   <button
                     key={timeStr}
                     type="button"
-                    onClick={() => setJamScan(timeStr)}
+                    onClick={() => handleJamScanChange(timeStr)}
                     className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-all border ${
                       jamScan === timeStr
-                        ? 'bg-blue-600 text-white border-blue-600'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     {timeStr}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Live Preview Card */}
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-slate-700 dark:text-slate-300">Hasil Koreksi:</span>
+              </div>
+              <div className="font-mono font-bold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                <span>{jamScan} WIT</span>
+                <span className="text-slate-400">•</span>
+                <span className={status === 'Terlambat' ? 'text-amber-600' : 'text-emerald-600'}>
+                  {status} {status === 'Terlambat' && `(${terlambatMenit}m)`}
+                </span>
               </div>
             </div>
           </div>
