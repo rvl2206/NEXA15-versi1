@@ -232,11 +232,11 @@ class AppStore {
       return true;
     }
 
-    // 2. Check Weekend (Saturday or Sunday)
+    // 2. Check Weekend (Only Sunday is an automatic holiday; Monday to Saturday are active school days)
     const dateObj = new Date(normDate + 'T00:00:00');
     if (!isNaN(dateObj.getTime())) {
       const day = dateObj.getDay();
-      if (day === 0 || day === 6) return true; // 0: Minggu, 6: Sabtu
+      if (day === 0) return true; // 0: Minggu (Hari libur otomatis hanya hari Minggu)
     }
 
     return false;

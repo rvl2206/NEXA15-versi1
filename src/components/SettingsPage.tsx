@@ -1148,7 +1148,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
             <span>Daftar Hari Libur Terdaftar ({settings.holidays?.length || 0})</span>
             <span className="text-[11px] text-purple-600 dark:text-purple-400 font-normal">
-              * Hari Sabtu & Minggu otomatis dianggap Hari Libur
+              * Hari Minggu otomatis dianggap Hari Libur (Senin – Sabtu aktif sekolah)
             </span>
           </div>
 
