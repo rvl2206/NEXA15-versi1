@@ -56,7 +56,7 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<FlaggedStudent | null>(null);
 
   // Compute low attendance students
@@ -282,47 +282,51 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
   const mediumRiskCount = flaggedStudents.filter((s) => s.riskLevel === 'Sedang').length;
   const attentionCount = flaggedStudents.filter((s) => s.riskLevel === 'Perhatian').length;
 
+  if (flaggedStudents.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-md overflow-hidden transition-all duration-200">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-xs overflow-hidden transition-all duration-200">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-rose-900 via-slate-900 to-amber-950 p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-rose-900 via-slate-900 to-amber-950 p-3.5 sm:p-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-rose-500/20 border border-rose-400/30 rounded-xl text-rose-300 relative">
-            <ShieldAlert className="w-6 h-6 animate-pulse" />
+          <div className="p-2.5 bg-rose-500/20 border border-rose-400/30 rounded-xl text-rose-300 relative shrink-0">
+            <ShieldAlert className="w-5 h-5 animate-pulse" />
             {highRiskCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
               </span>
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-rose-500/30 border border-rose-400/40 text-rose-200 rounded-md text-[10px] font-black uppercase tracking-wider">
-                Notifikasi Otomatis Dashboard
+              <span className="px-1.5 py-0.5 bg-rose-500/30 border border-rose-400/40 text-rose-200 rounded text-[9px] font-black uppercase tracking-wider">
+                Perhatian BK & Wali Kelas
               </span>
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 border border-amber-400/30 text-amber-300 rounded-md text-[10px] font-bold">
-                <Sparkles className="w-3 h-3 text-amber-300" />
-                Gemini AI Analysis
+              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 border border-amber-400/30 text-amber-300 rounded text-[9px] font-bold">
+                <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                Gemini AI
               </span>
             </div>
-            <h3 className="text-lg font-black tracking-tight text-white mt-1 flex items-center gap-2">
-              <span>Peringatan Dini Siswa Kehadiran Rendah</span>
-              <span className="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">
-                {flaggedStudents.length} Siswa
+            <h3 className="text-sm sm:text-base font-black tracking-tight text-white mt-0.5 flex items-center gap-2">
+              <span>Peringatan Presensi Siswa</span>
+              <span className="bg-rose-600 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
+                {flaggedStudents.length} Siswa Perlu Perhatian
               </span>
             </h3>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Deteksi otomatis siswa berisiko alpa/terlambat/kehadiran &lt;80% lengkap dengan saran rekomendasi Gemini AI.
-            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-center">
           <button
-            onClick={() => runGeminiLowAttendanceAnalysis()}
+            onClick={() => {
+              if (!isExpanded) setIsExpanded(true);
+              runGeminiLowAttendanceAnalysis();
+            }}
             disabled={isAiLoading || flaggedStudents.length === 0}
-            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             title="Jalankan analisis mendalam Gemini AI untuk daftar ketidakhadiran"
           >
             {isAiLoading ? (
@@ -340,10 +344,11 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
             title={isExpanded ? 'Sembunyikan detail' : 'Tampilkan detail'}
           >
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            <span>{isExpanded ? 'Tutup Detail' : 'Buka Detail'}</span>
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
       </div>
