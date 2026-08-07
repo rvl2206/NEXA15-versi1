@@ -94,12 +94,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleForceSync = async () => {
     setIsSyncing(true);
-    await store.processOfflineQueue();
+    const queueRes = await store.processOfflineQueue();
+    const syncRes = await store.syncAllToSupabase();
     await store.fetchFromServer();
-    await store.syncAllToServer();
-    setOfflineQueueCount(store.getOfflineQueueCount());
+    const remaining = store.getOfflineQueueCount();
+    setOfflineQueueCount(remaining);
     setIsSyncing(false);
-    toast.success('Data presensi & siswa berhasil disinkronkan dengan Database Cloud & Server!');
+    if (syncRes.success) {
+      toast.success('Sinkronisasi Sukses', syncRes.message);
+    } else {
+      toast.info('Sinkronisasi Parsial', `${syncRes.message} (Antrian tersisa: ${remaining})`);
+    }
   };
 
   const getRoleBadge = (role?: string) => {

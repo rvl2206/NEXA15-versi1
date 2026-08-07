@@ -190,6 +190,9 @@ class AppStore {
           this.processPendingSyncQueue();
         }
       }, 8000);
+
+      // Automatic 30-second background retry mechanism for flushing queued attendance records to the server
+      this.startBackgroundAttendanceRetry(30000);
     }
 
     // Synchronize with server automatically in background
@@ -197,6 +200,52 @@ class AppStore {
     if (this.syncQueue.length > 0) {
       this.processPendingSyncQueue();
     }
+  }
+
+  private backgroundRetryInterval: any = null;
+
+  /**
+   * Starts the automatic background retry timer that attempts to flush
+   * queued attendance records to the server every 30 seconds if online.
+   */
+  public startBackgroundAttendanceRetry(intervalMs = 30000): void {
+    if (typeof window === 'undefined') return;
+
+    if (this.backgroundRetryInterval) {
+      clearInterval(this.backgroundRetryInterval);
+      this.backgroundRetryInterval = null;
+    }
+
+    this.backgroundRetryInterval = setInterval(() => {
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (isOnline && this.syncQueue.length > 0) {
+        this.flushQueuedAttendanceToServer().catch((err) => {
+          console.warn('[Background 30s Retry] Flushing queued attendance records failed:', err);
+        });
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stops the background retry timer
+   */
+  public stopBackgroundAttendanceRetry(): void {
+    if (this.backgroundRetryInterval) {
+      clearInterval(this.backgroundRetryInterval);
+      this.backgroundRetryInterval = null;
+    }
+  }
+
+  /**
+   * Flushes queued attendance records (and sync queue items) to the server if online
+   */
+  public async flushQueuedAttendanceToServer(): Promise<{ success: boolean; processedCount: number; remainingCount: number }> {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!isOnline) {
+      return { success: false, processedCount: 0, remainingCount: this.syncQueue.length };
+    }
+
+    return await this.processPendingSyncQueue(true);
   }
 
   private saveTimeout: any = null;
@@ -249,20 +298,32 @@ class AppStore {
 
     this.saveLocalData(true);
     // Trigger background sync immediately
-    this.processPendingSyncQueue();
+    this.processPendingSyncQueue().catch(() => {});
   }
 
-  public async processPendingSyncQueue(force = false): Promise<{ success: boolean; processedCount: number }> {
-    if (this.isSyncingQueue || this.syncQueue.length === 0) {
-      return { success: true, processedCount: 0 };
+  private lastSyncQueueTimestamp = 0;
+
+  public async processPendingSyncQueue(force = false): Promise<{ success: boolean; processedCount: number; remainingCount: number }> {
+    // Reset stuck queue lock if more than 15 seconds
+    if (this.isSyncingQueue && Date.now() - this.lastSyncQueueTimestamp > 15000) {
+      this.isSyncingQueue = false;
+    }
+
+    if (this.isSyncingQueue) {
+      return { success: false, processedCount: 0, remainingCount: this.syncQueue.length };
+    }
+
+    if (this.syncQueue.length === 0) {
+      return { success: true, processedCount: 0, remainingCount: 0 };
     }
 
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     if (!isOnline && !force) {
-      return { success: false, processedCount: 0 };
+      return { success: false, processedCount: 0, remainingCount: this.syncQueue.length };
     }
 
     this.isSyncingQueue = true;
+    this.lastSyncQueueTimestamp = Date.now();
     let processedCount = 0;
     const config = this.getSupabaseConfig();
 
@@ -368,13 +429,54 @@ class AppStore {
         this.notify();
       }
 
-      return { success: this.syncQueue.length === 0, processedCount };
+      return {
+        success: this.syncQueue.length === 0,
+        processedCount,
+        remainingCount: this.syncQueue.length,
+      };
     } catch (err) {
       console.warn('Sync queue error:', err);
-      return { success: false, processedCount };
+      return { success: false, processedCount, remainingCount: this.syncQueue.length };
     } finally {
       this.isSyncingQueue = false;
     }
+  }
+
+  public getSyncQueue(): SyncQueueItem[] {
+    return [...this.syncQueue];
+  }
+
+  public clearSyncQueue(): void {
+    this.syncQueue = [];
+    try {
+      localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+    } catch {}
+    this.saveLocalData(true);
+    this.notify();
+  }
+
+  public getSyncQueueDetails(): {
+    total: number;
+    attendanceCount: number;
+    studentCount: number;
+    teacherCount: number;
+    logCount: number;
+    deleteCount: number;
+  } {
+    const total = this.syncQueue.length;
+    const attendanceCount = this.syncQueue.filter((q) => q.type === 'attendance' && q.action === 'upsert').length;
+    const studentCount = this.syncQueue.filter((q) => q.type === 'student' && q.action === 'upsert').length;
+    const teacherCount = this.syncQueue.filter((q) => q.type === 'teacher' || q.type === 'teacher_attendance').length;
+    const logCount = this.syncQueue.filter((q) => q.type === 'log' && q.action === 'upsert').length;
+    const deleteCount = this.syncQueue.filter((q) => q.action === 'delete').length;
+    return {
+      total,
+      attendanceCount,
+      studentCount,
+      teacherCount,
+      logCount,
+      deleteCount,
+    };
   }
 
   public subscribe(listener: () => void): () => void {
@@ -616,9 +718,13 @@ class AppStore {
     }
   }
 
-  public async syncAllToSupabase(): Promise<{ success: boolean; message: string }> {
+  public async syncAllToSupabase(): Promise<{ success: boolean; message: string; remainingQueue: number }> {
     try {
       const config = this.getSupabaseConfig();
+      if (!isSupabaseConfigured(config)) {
+        return { success: false, message: 'Supabase URL atau Key belum dikonfigurasi di Pengaturan.', remainingQueue: this.syncQueue.length };
+      }
+
       const [sRes, aRes, tRes, taRes, lRes] = await Promise.all([
         syncStudentsToSupabase(this.students, config),
         syncAttendanceToSupabase(this.attendance, config),
@@ -635,17 +741,28 @@ class AppStore {
       if (!lRes.success) errors.push(`Log: ${lRes.error || 'Gagal'}`);
 
       if (errors.length === 0) {
-        const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi siswa, ${tRes.count} guru, ${taRes.count} presensi guru, dan ${lRes.count} log ke Supabase Cloud PostgreSQL.`;
+        const hadQueue = this.syncQueue.length;
+        // Since all in-memory entities are fully upserted to Supabase, clear the offline sync queue
+        this.syncQueue = [];
+        try {
+          localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+        } catch {}
+        this.saveLocalData(true);
+        this.notify();
+
+        const queueMsg = hadQueue > 0 ? ` serta membersihkan ${hadQueue} antrian pengiriman (0 antrian tersisa)` : ' (0 antrian tersisa)';
+        const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi siswa, ${tRes.count} guru, ${taRes.count} presensi guru, dan ${lRes.count} log ke Supabase Cloud PostgreSQL${queueMsg}.`;
         this.updateSettings({ lastSupabaseSync: new Date().toISOString() });
-        return { success: true, message: msg };
+        return { success: true, message: msg, remainingQueue: 0 };
       }
 
       return {
         success: false,
-        message: `Gagal menyelaraskan data: ${errors.join(' | ')}`,
+        message: `Gagal menyelaraskan sebagian data: ${errors.join(' | ')}`,
+        remainingQueue: this.syncQueue.length,
       };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Error koneksi Supabase Cloud PostgreSQL.' };
+      return { success: false, message: err?.message || 'Error koneksi Supabase Cloud PostgreSQL.', remainingQueue: this.syncQueue.length };
     }
   }
 

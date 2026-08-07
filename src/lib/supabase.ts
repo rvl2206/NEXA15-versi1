@@ -125,6 +125,33 @@ function chunkArray<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+/**
+ * Executes async tasks with concurrency control to prevent rate limits while maximizing speed
+ */
+async function parallelBatchExecution<T>(
+  chunks: T[][],
+  fn: (chunk: T[]) => Promise<any>,
+  concurrency = 4
+): Promise<void> {
+  if (chunks.length === 0) return;
+  const executing: Promise<any>[] = [];
+  for (const chunk of chunks) {
+    const p = fn(chunk);
+    executing.push(p);
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+      // Clean up settled promises
+      for (let i = executing.length - 1; i >= 0; i--) {
+        const status = await Promise.race([executing[i].then(() => true).catch(() => true), Promise.resolve(false)]);
+        if (status) {
+          executing.splice(i, 1);
+        }
+      }
+    }
+  }
+  await Promise.all(executing);
+}
+
 export async function testSupabaseConnection(customConfig?: SupabaseConfig): Promise<{
   success: boolean;
   message: string;
@@ -230,11 +257,17 @@ export async function syncStudentsToSupabase(
       }))
       .filter((r) => r.nisn && r.nisn.length > 0);
 
-    const chunks = chunkArray(records, 50);
-    for (const chunk of chunks) {
-      const { error } = await client.from('students').upsert(chunk, { onConflict: 'nisn' });
-      if (error) throw error;
-    }
+    if (records.length === 0) return { success: true, count: 0 };
+
+    const chunks = chunkArray(records, 150);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('students').upsert(chunk, { onConflict: 'nisn' });
+        if (error) throw error;
+      },
+      5
+    );
 
     return { success: true, count: records.length };
   } catch (err: any) {
@@ -329,11 +362,15 @@ export async function syncAttendanceToSupabase(
       };
     });
 
-    const chunks = chunkArray(records, 50);
-    for (const chunk of chunks) {
-      const { error } = await client.from('attendance').upsert(chunk, { onConflict: 'id' });
-      if (error) throw error;
-    }
+    const chunks = chunkArray(records, 150);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('attendance').upsert(chunk, { onConflict: 'id' });
+        if (error) throw error;
+      },
+      5
+    );
 
     return { success: true, count: records.length };
   } catch (err: any) {
@@ -410,11 +447,17 @@ export async function syncTeachersToSupabase(
       }))
       .filter((r) => r.nip && r.nip.length > 0);
 
-    const chunks = chunkArray(records, 50);
-    for (const chunk of chunks) {
-      const { error } = await client.from('teachers').upsert(chunk, { onConflict: 'nip' });
-      if (error) throw error;
-    }
+    if (records.length === 0) return { success: true, count: 0 };
+
+    const chunks = chunkArray(records, 150);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('teachers').upsert(chunk, { onConflict: 'nip' });
+        if (error) throw error;
+      },
+      5
+    );
 
     return { success: true, count: records.length };
   } catch (err: any) {
@@ -509,11 +552,15 @@ export async function syncTeacherAttendanceToSupabase(
       };
     });
 
-    const chunks = chunkArray(records, 50);
-    for (const chunk of chunks) {
-      const { error } = await client.from('teacher_attendance').upsert(chunk, { onConflict: 'id' });
-      if (error) throw error;
-    }
+    const chunks = chunkArray(records, 150);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('teacher_attendance').upsert(chunk, { onConflict: 'id' });
+        if (error) throw error;
+      },
+      5
+    );
 
     return { success: true, count: records.length };
   } catch (err: any) {
@@ -582,11 +629,15 @@ export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: Sup
       details: l.details || '',
     }));
 
-    const chunks = chunkArray(records, 50);
-    for (const chunk of chunks) {
-      const { error } = await client.from('activity_logs').upsert(chunk, { onConflict: 'id' });
-      if (error) throw error;
-    }
+    const chunks = chunkArray(records, 150);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('activity_logs').upsert(chunk, { onConflict: 'id' });
+        if (error) throw error;
+      },
+      5
+    );
 
     return { success: true, count: records.length };
   } catch (err: any) {
@@ -851,4 +902,302 @@ BEGIN
 END $$;
 `;
 }
+
+/**
+ * Standard PostgreSQL Schema for Self-Hosted PostgreSQL / Cloud SQL (GCP) / Docker
+ */
+export function getPostgresSelfHostedSchemaSQL(): string {
+  return `-- ====================================================================
+-- NEXA15 PRESENSI DIGITAL - POSTGRESQL SELF-HOSTED & CLOUD SQL DDL
+-- Standalone Standard PostgreSQL Schema (No Supabase dependency)
+-- ====================================================================
+
+-- 1. Table: Students (Data Siswa)
+CREATE TABLE IF NOT EXISTS students (
+    nisn VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    class VARCHAR(50) NOT NULL,
+    gender VARCHAR(10) DEFAULT 'L',
+    phone VARCHAR(50),
+    parent_phone VARCHAR(50),
+    id_qr VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'aktif',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_students_class ON students(class);
+CREATE INDEX IF NOT EXISTS idx_students_id_qr ON students(id_qr);
+CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+
+-- 2. Table: Student Attendance (Presensi Siswa)
+CREATE TABLE IF NOT EXISTS attendance (
+    id VARCHAR(100) PRIMARY KEY,
+    tanggal DATE NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    nisn VARCHAR(20) NOT NULL REFERENCES students(nisn) ON UPDATE CASCADE ON DELETE RESTRICT,
+    name VARCHAR(255) NOT NULL,
+    class VARCHAR(50) NOT NULL,
+    id_qr VARCHAR(100),
+    jenis VARCHAR(20) NOT NULL, -- 'Masuk' | 'Pulang'
+    status VARCHAR(20) NOT NULL, -- 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpa'
+    petugas VARCHAR(100),
+    catatan TEXT,
+    terlambat_menit INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_tanggal ON attendance(tanggal);
+CREATE INDEX IF NOT EXISTS idx_attendance_nisn ON attendance(nisn);
+CREATE INDEX IF NOT EXISTS idx_attendance_status ON attendance(status);
+CREATE INDEX IF NOT EXISTS idx_attendance_jenis ON attendance(jenis);
+
+-- 3. Table: Teachers & Staff (Guru & Tenaga Kependidikan)
+CREATE TABLE IF NOT EXISTS teachers (
+    nip VARCHAR(30) PRIMARY KEY,
+    id VARCHAR(100),
+    nama VARCHAR(255) NOT NULL,
+    jabatan VARCHAR(100) NOT NULL,
+    id_qr VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'aktif',
+    no_hp VARCHAR(50),
+    foto TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_teachers_id_qr ON teachers(id_qr);
+CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status);
+
+-- 4. Table: Teacher Attendance (Presensi Guru & GTK)
+CREATE TABLE IF NOT EXISTS teacher_attendance (
+    id VARCHAR(100) PRIMARY KEY,
+    tanggal DATE NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    nip VARCHAR(30) NOT NULL REFERENCES teachers(nip) ON UPDATE CASCADE ON DELETE RESTRICT,
+    nama VARCHAR(255) NOT NULL,
+    jabatan VARCHAR(100) NOT NULL,
+    id_qr VARCHAR(100),
+    jenis VARCHAR(20) NOT NULL, -- 'Masuk' | 'Pulang'
+    status VARCHAR(20) NOT NULL, -- 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpa' | 'Dinas Luar'
+    petugas VARCHAR(100),
+    catatan TEXT,
+    terlambat_menit INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_teacher_att_tanggal ON teacher_attendance(tanggal);
+CREATE INDEX IF NOT EXISTS idx_teacher_att_nip ON teacher_attendance(nip);
+
+-- 5. Table: Activity Logs (Audit Trail & Log Aktivitas)
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id VARCHAR(100) PRIMARY KEY,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    user_name VARCHAR(100),
+    role VARCHAR(50),
+    action VARCHAR(255) NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON activity_logs(timestamp DESC);
+
+-- 6. Table: School Settings (Pengaturan & Konfigurasi Sekolah)
+CREATE TABLE IF NOT EXISTS school_settings (
+    id VARCHAR(50) PRIMARY KEY DEFAULT 'default',
+    school_name VARCHAR(255) NOT NULL,
+    school_npsn VARCHAR(50),
+    school_logo TEXT,
+    cutoff_time VARCHAR(10) DEFAULT '07:15',
+    auto_alpa_cutoff_time VARCHAR(10) DEFAULT '14:30',
+    enable_auto_alpa BOOLEAN DEFAULT true,
+    academic_year VARCHAR(50) DEFAULT '2026/2027',
+    enable_wa_notif BOOLEAN DEFAULT true,
+    holidays_json JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+`;
+}
+
+/**
+ * Docker Compose snippet for ready-to-run self-hosted PostgreSQL + pgAdmin
+ */
+export function getDockerComposePostgresYAML(): string {
+  return `version: '3.8'
+
+services:
+  # 1. PostgreSQL Database Server
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexa15_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexa15_presensi
+      POSTGRES_USER: nexa_admin
+      POSTGRES_PASSWORD: SecretPassword123! # Ganti dengan password kuat
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nexa_network
+
+  # 2. pgAdmin (Web GUI Management Database)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexa15_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexa15.sch.id
+      PGADMIN_DEFAULT_PASSWORD: AdminPassword123!
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - nexa_network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  nexa_network:
+    driver: bridge
+`;
+}
+
+/**
+ * Generates an executable SQL Dump (DDL + INSERT statements) from current in-memory store data
+ */
+export function generateFullSqlBackupDump(
+  students: Student[],
+  attendance: AttendanceRecord[],
+  teachers: Teacher[],
+  teacherAttendance: TeacherAttendanceRecord[],
+  logs: ActivityLog[],
+  schoolSettings?: any
+): string {
+  const escapeSql = (str: any): string => {
+    if (str === null || str === undefined) return 'NULL';
+    const s = String(str).replace(/'/g, "''");
+    return `'${s}'`;
+  };
+
+  const escapeNum = (num: any, def = 0): number => {
+    const n = Number(num);
+    return isNaN(n) ? def : n;
+  };
+
+  let sql = `-- ====================================================================
+-- NEXA15 DATABASE BACKUP DUMP (POSTGRESQL / CLOUD SQL COMPATIBLE)
+-- Generated: ${new Date().toISOString()}
+-- Total Students: ${students.length}
+-- Total Attendance: ${attendance.length}
+-- Total Teachers: ${teachers.length}
+-- Total Teacher Attendance: ${teacherAttendance.length}
+-- Total Logs: ${logs.length}
+-- ====================================================================
+
+-- 1. SCHEMA DDL CREATION
+${getPostgresSelfHostedSchemaSQL()}
+
+-- 2. DATA INSERTIONS
+`;
+
+  // Insert Students
+  if (students.length > 0) {
+    sql += `\n-- 2.1 Students Data (${students.length} rows)\n`;
+    students.forEach((s) => {
+      sql += `INSERT INTO students (nisn, name, class, gender, phone, parent_phone, id_qr, status) VALUES (${escapeSql(
+        s.nisn
+      )}, ${escapeSql(s.nama)}, ${escapeSql(s.kelas)}, ${escapeSql('L')}, ${escapeSql(
+        ''
+      )}, ${escapeSql(s.no_hp_ortu || '')}, ${escapeSql(s.id_qr || s.nisn)}, ${escapeSql(s.status || 'aktif')})
+ON CONFLICT (nisn) DO UPDATE SET 
+  name = EXCLUDED.name, 
+  class = EXCLUDED.class, 
+  gender = EXCLUDED.gender, 
+  phone = EXCLUDED.phone, 
+  parent_phone = EXCLUDED.parent_phone, 
+  id_qr = EXCLUDED.id_qr, 
+  status = EXCLUDED.status;\n`;
+    });
+  }
+
+  // Insert Teachers
+  if (teachers.length > 0) {
+    sql += `\n-- 2.2 Teachers Data (${teachers.length} rows)\n`;
+    teachers.forEach((t) => {
+      sql += `INSERT INTO teachers (nip, id, nama, jabatan, id_qr, status, no_hp, foto) VALUES (${escapeSql(
+        t.nip
+      )}, ${escapeSql(t.id || t.nip)}, ${escapeSql(t.nama)}, ${escapeSql(t.jabatan)}, ${escapeSql(
+        t.id_qr || t.nip
+      )}, ${escapeSql(t.status || 'aktif')}, ${escapeSql(t.no_hp || '')}, ${escapeSql(t.foto || '')})
+ON CONFLICT (nip) DO UPDATE SET 
+  nama = EXCLUDED.nama, 
+  jabatan = EXCLUDED.jabatan, 
+  id_qr = EXCLUDED.id_qr, 
+  status = EXCLUDED.status, 
+  no_hp = EXCLUDED.no_hp;\n`;
+    });
+  }
+
+  // Insert Student Attendance
+  if (attendance.length > 0) {
+    sql += `\n-- 2.3 Attendance Records (${attendance.length} rows)\n`;
+    attendance.forEach((a) => {
+      const ts = toValidIsoTimestamp(a.timestamp, a.tanggal);
+      sql += `INSERT INTO attendance (id, tanggal, timestamp, nisn, name, class, id_qr, jenis, status, petugas, catatan, terlambat_menit) VALUES (${escapeSql(
+        a.id
+      )}, ${escapeSql(a.tanggal)}, '${ts}', ${escapeSql(a.nisn)}, ${escapeSql(a.nama)}, ${escapeSql(
+        a.kelas
+      )}, ${escapeSql(a.id_qr || a.nisn)}, ${escapeSql(a.jenis)}, ${escapeSql(a.status)}, ${escapeSql(
+        a.petugas || ''
+      )}, ${escapeSql(a.catatan || '')}, ${escapeNum(a.terlambatMenit, 0)})
+ON CONFLICT (id) DO NOTHING;\n`;
+    });
+  }
+
+  // Insert Teacher Attendance
+  if (teacherAttendance.length > 0) {
+    sql += `\n-- 2.4 Teacher Attendance Records (${teacherAttendance.length} rows)\n`;
+    teacherAttendance.forEach((ta) => {
+      const ts = toValidIsoTimestamp(ta.timestamp, ta.tanggal);
+      sql += `INSERT INTO teacher_attendance (id, tanggal, timestamp, nip, nama, jabatan, id_qr, jenis, status, petugas, catatan, terlambat_menit) VALUES (${escapeSql(
+        ta.id
+      )}, ${escapeSql(ta.tanggal)}, '${ts}', ${escapeSql(ta.nip)}, ${escapeSql(ta.nama)}, ${escapeSql(
+        ta.jabatan
+      )}, ${escapeSql(ta.id_qr || ta.nip)}, ${escapeSql(ta.jenis)}, ${escapeSql(ta.status)}, ${escapeSql(
+        ta.petugas || ''
+      )}, ${escapeSql(ta.catatan || '')}, ${escapeNum(ta.terlambatMenit, 0)})
+ON CONFLICT (id) DO NOTHING;\n`;
+    });
+  }
+
+  // Insert Logs
+  if (logs.length > 0) {
+    sql += `\n-- 2.5 Activity Logs (${logs.length} rows)\n`;
+    logs.slice(0, 500).forEach((l) => {
+      const ts = toValidIsoTimestamp(l.timestamp);
+      sql += `INSERT INTO activity_logs (id, timestamp, user_name, role, action, details) VALUES (${escapeSql(
+        l.id
+      )}, '${ts}', ${escapeSql(l.user || '')}, ${escapeSql(l.role || '')}, ${escapeSql(
+        l.action
+      )}, ${escapeSql(l.details || '')})
+ON CONFLICT (id) DO NOTHING;\n`;
+    });
+  }
+
+  sql += `\n-- ====================================================================
+-- DUMP COMPLETED SUCCESSFULLY
+-- ====================================================================\n`;
+
+  return sql;
+}
+
 

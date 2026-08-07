@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { store, HealthCheckResult } from '../lib/store';
 import { SchoolSettings, UserRole } from '../types';
-import { testSupabaseConnection, getSupabaseSchemaSQL, getSupabaseTeacherOnlySchemaSQL } from '../lib/supabase';
+import {
+  testSupabaseConnection,
+  getSupabaseSchemaSQL,
+  getSupabaseTeacherOnlySchemaSQL,
+  getPostgresSelfHostedSchemaSQL,
+  getDockerComposePostgresYAML,
+  generateFullSqlBackupDump,
+} from '../lib/supabase';
 import { toast } from '../lib/toast';
 import { SchoolLogo } from './SchoolLogo';
 import {
@@ -50,6 +57,12 @@ import {
   Upload,
   X,
   Layers,
+  Server,
+  HardDrive,
+  Terminal,
+  ArrowRight,
+  BookOpen,
+  Download,
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -276,6 +289,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   const [copiedSupabaseSchema, setCopiedSupabaseSchema] = useState(false);
   const [copiedTeacherSchema, setCopiedTeacherSchema] = useState(false);
   const [activeSchemaTab, setActiveSchemaTab] = useState<'all' | 'teachers'>('teachers');
+  const [syncQueueInfo, setSyncQueueInfo] = useState(store.getSyncQueueDetails());
+
+  useEffect(() => {
+    const unsub = store.subscribe(() => {
+      setSyncQueueInfo(store.getSyncQueueDetails());
+    });
+    return unsub;
+  }, []);
 
   const handleTestSupabase = async () => {
     setIsTestingSupabase(true);
@@ -295,13 +316,87 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
   const handleSyncSupabase = async () => {
     setIsSyncingSupabase(true);
+    // Process offline queue first to guarantee no lingering queue items
+    await store.processPendingSyncQueue(true);
     const res = await store.syncAllToSupabase();
     setSettings(store.getSettings());
+    setSyncQueueInfo(store.getSyncQueueDetails());
     setIsSyncingSupabase(false);
     if (res.success) {
-      toast.success('Sinkronisasi Supabase', res.message);
+      toast.success('Sinkronisasi Supabase Sukses', res.message);
     } else {
       toast.error('Gagal Sinkronisasi', res.message);
+    }
+  };
+
+  const handleClearQueueOnly = () => {
+    if (confirm('Apakah Anda yakin ingin mengosongkan antrian pengiriman lokal? Seluruh data yang ada di memori saat ini tetap aman.')) {
+      store.clearSyncQueue();
+      setSyncQueueInfo(store.getSyncQueueDetails());
+      toast.success('Antrian Dikosongkan', 'Antrian pengiriman lokal berhasil dikosongkan.');
+    }
+  };
+
+  const [activeDbTab, setActiveDbTab] = useState<'supabase' | 'cloudsql' | 'docker' | 'native' | 'migration'>('supabase');
+  const [copiedPostgresSchema, setCopiedPostgresSchema] = useState(false);
+  const [copiedDockerCompose, setCopiedDockerCompose] = useState(false);
+
+  const handleCopyPostgresSchema = () => {
+    const sql = getPostgresSelfHostedSchemaSQL();
+    navigator.clipboard.writeText(sql);
+    setCopiedPostgresSchema(true);
+    toast.success('SQL PostgreSQL Disalin', 'Skema DDL standar PostgreSQL (Self-Hosted / Cloud SQL) berhasil disalin.');
+    setTimeout(() => setCopiedPostgresSchema(false), 3000);
+  };
+
+  const handleCopyDockerCompose = () => {
+    const yaml = getDockerComposePostgresYAML();
+    navigator.clipboard.writeText(yaml);
+    setCopiedDockerCompose(true);
+    toast.success('Docker Compose Disalin', 'Konfigurasi docker-compose.yml PostgreSQL + pgAdmin berhasil disalin.');
+    setTimeout(() => setCopiedDockerCompose(false), 3000);
+  };
+
+  const handleDownloadSqlDump = () => {
+    try {
+      const students = store.getStudents();
+      const attendance = store.getAttendance();
+      const teachers = store.getTeachers();
+      const teacherAttendance = store.getTeacherAttendance();
+      const logs = store.getLogs();
+      const currentSettings = store.getSettings();
+
+      const dumpSql = generateFullSqlBackupDump(students, attendance, teachers, teacherAttendance, logs, currentSettings);
+      const blob = new Blob([dumpSql], { type: 'text/sql;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `nexa15_backup_dump_${new Date().toISOString().split('T')[0]}.sql`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('SQL Dump Diunduh', 'File backup SQL dump siap di-import ke PostgreSQL / Cloud SQL / Database Mandiri!');
+    } catch (err: any) {
+      toast.error('Gagal Mengunduh SQL Dump', err?.message || 'Terjadi kesalahan saat membuat SQL dump.');
+    }
+  };
+
+  const handleDownloadDockerCompose = () => {
+    try {
+      const yaml = getDockerComposePostgresYAML();
+      const blob = new Blob([yaml], { type: 'text/yaml;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'docker-compose.yml');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Docker Compose Diunduh', 'File docker-compose.yml siap dijalankan dengan perintah docker compose up -d!');
+    } catch (err: any) {
+      toast.error('Gagal Mengunduh', err?.message || 'Terjadi kesalahan saat mengunduh docker-compose.yml.');
     }
   };
 
@@ -837,237 +932,528 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             )}
           </div>
 
-          {/* Supabase Database Integration Section */}
+          {/* Database Architecture & Storage Integration Hub */}
           <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
-            <div className="bg-gradient-to-r from-emerald-950/10 via-teal-950/10 to-emerald-950/10 dark:from-emerald-950/40 dark:to-teal-950/40 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-800 space-y-4">
+            <div className="bg-gradient-to-r from-emerald-950/10 via-slate-950/10 to-teal-950/10 dark:from-slate-950 dark:to-emerald-950/30 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-800/80 space-y-4">
+              {/* Header Title & Clarification Banner */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-md">
+                  <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-md shrink-0">
                     <Database className="w-6 h-6" />
                   </div>
                   <div>
                     <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span>Integrasi Database Supabase (Cloud PostgreSQL & Mobile Sync)</span>
+                      <span>Pusat Arsitektur Database & Panduan Transisi Sistem</span>
                       <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-full text-[10px] font-bold">
-                        Supabase Active
+                        Multi-Storage Ready
                       </span>
                     </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Hubungkan ke cloud database PostgreSQL Supabase untuk sinkronisasi otomatis multi-perangkat, aplikasi Flutter mobile, dan backup terpusat.
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                      Pilih model penyimpanan: <b>Mandiri Cloud Run</b> (0 SaaS), <b>Self-Hosted PostgreSQL</b> (VPS/Docker), <b>Google Cloud SQL</b>, atau <b>Supabase Cloud</b>.
                     </p>
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDownloadSqlDump}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Unduh seluruh data & skema sebagai file .sql siap import"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh SQL Dump (.sql)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Clarification Callout */}
+              <div className="p-3.5 bg-white dark:bg-slate-900/90 rounded-xl border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">Apakah harus tetap menggunakan Supabase setelah deploy di Cloud Run? </span>
+                  <span className="font-bold text-slate-900 dark:text-white">TIDAK WAJIB! </span>
+                  Aplikasi ini sudah berstatus <b>Self-Contained Full-Stack</b> dengan backend Express REST API dan penyimpanan lokal server. Anda bebas memilih tetap menggunakan Supabase, beralih ke Self-Hosted PostgreSQL di VPS sendiri, Cloud SQL di Google Cloud, atau berjalan 100% mandiri tanpa database eksternal.
+                </div>
+              </div>
+
+              {/* Navigation Tabs for Database Architecture */}
+              <div className="flex flex-wrap gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900/80 rounded-xl border border-slate-300 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={handleCopySupabaseSchema}
-                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+                  onClick={() => setActiveDbTab('supabase')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'supabase'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
                 >
-                  {copiedSupabaseSchema ? <Check className="w-4 h-4 text-emerald-200" /> : <Code2 className="w-4 h-4" />}
-                  <span>{copiedSupabaseSchema ? 'SQL Disalin!' : 'Salin SQL Schema Supabase'}</span>
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>1. Supabase Cloud (BaaS)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveDbTab('cloudsql')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'cloudsql'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Server className="w-3.5 h-3.5" />
+                  <span>2. Google Cloud SQL (GCP)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveDbTab('docker')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'docker'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>3. Self-Hosted PostgreSQL (Docker / VPS)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveDbTab('native')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'native'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>4. Mode Mandiri (Cloud Run Native)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveDbTab('migration')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'migration'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>5. Panduan Langkah Migrasi & Dump</span>
                 </button>
               </div>
 
-              {/* URL & Key Inputs */}
-              <div className="space-y-3 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      URL Project Supabase
-                    </label>
-                    <input
-                      type="url"
-                      value={settings.supabaseUrl || ''}
-                      onChange={(e) => setSettings({ ...settings, supabaseUrl: e.target.value })}
-                      placeholder="https://xyzcompany.supabase.co"
-                      className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      API Key Supabase (Anon / Service Key)
-                    </label>
-                    <input
-                      type="password"
-                      value={settings.supabaseKey || ''}
-                      onChange={(e) => setSettings({ ...settings, supabaseKey: e.target.value })}
-                      placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
-                      className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleTestSupabase}
-                    disabled={isTestingSupabase || !settings.supabaseUrl || !settings.supabaseKey}
-                    className="px-4 py-2 bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Zap className={`w-3.5 h-3.5 ${isTestingSupabase ? 'animate-spin text-emerald-600' : ''}`} />
-                    <span>{isTestingSupabase ? 'Menguji Koneksi...' : 'Uji Koneksi Supabase'}</span>
-                  </button>
-                </div>
-
-                {supabaseTestStatus && (
-                  <div
-                    className={`p-3 rounded-xl text-xs font-bold flex items-start gap-2 ${
-                      supabaseTestStatus.success
-                        ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-900 dark:text-emerald-200 border border-emerald-300'
-                        : 'bg-rose-100 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border border-rose-300'
-                    }`}
-                  >
-                    {supabaseTestStatus.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    )}
-                    <span className="leading-relaxed">{supabaseTestStatus.message}</span>
-                  </div>
-                )}
-
-                {/* Auto Sync Toggle & Sync Actions */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.enableSupabaseAutoSync ?? true}
-                        onChange={(e) => setSettings({ ...settings, enableSupabaseAutoSync: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-slate-600 peer-checked:bg-emerald-600"></div>
-                    </label>
+              {/* TAB 1: SUPABASE CLOUD (EXISTING FUNCTIONALITY) */}
+              {activeDbTab === 'supabase' && (
+                <div className="space-y-4 pt-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        Otomatis Sync ke Supabase saat Presensi & Data Berubah
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Setiap perubahan data siswa atau scan presensi langsung di-upsert ke tabel Supabase.
-                      </div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        URL Project Supabase
+                      </label>
+                      <input
+                        type="url"
+                        value={settings.supabaseUrl || ''}
+                        onChange={(e) => setSettings({ ...settings, supabaseUrl: e.target.value })}
+                        placeholder="https://xyzcompany.supabase.co"
+                        className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        API Key Supabase (Anon / Service Key)
+                      </label>
+                      <input
+                        type="password"
+                        value={settings.supabaseKey || ''}
+                        onChange={(e) => setSettings({ ...settings, supabaseKey: e.target.value })}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
+                        className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
+                      />
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleSyncSupabase}
-                    disabled={isSyncingSupabase || !settings.supabaseUrl || !settings.supabaseKey}
-                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                    title="Kirim seluruh data lokal ke tabel Supabase"
-                  >
-                    <UploadCloud className={`w-3.5 h-3.5 ${isSyncingSupabase ? 'animate-bounce' : ''}`} />
-                    <span>{isSyncingSupabase ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
-                  </button>
-                </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <button
+                      type="button"
+                      onClick={handleCopySupabaseSchema}
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {copiedSupabaseSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code2 className="w-3.5 h-3.5" />}
+                      <span>{copiedSupabaseSchema ? 'SQL Disalin!' : 'Salin SQL Supabase RLS'}</span>
+                    </button>
 
-                {settings.lastSupabaseSync && (
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
-                    Terakhir disinkronkan ke Supabase: {settings.lastSupabaseSync}
-                  </p>
-                )}
+                    <button
+                      type="button"
+                      onClick={handleTestSupabase}
+                      disabled={isTestingSupabase || !settings.supabaseUrl || !settings.supabaseKey}
+                      className="px-4 py-2 bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Zap className={`w-3.5 h-3.5 ${isTestingSupabase ? 'animate-spin text-emerald-600' : ''}`} />
+                      <span>{isTestingSupabase ? 'Menguji Koneksi...' : 'Uji Koneksi Supabase'}</span>
+                    </button>
+                  </div>
 
-                {/* Collapsible Supabase Guide */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowSupabaseSchema(!showSupabaseSchema)}
-                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                    <span>Panduan 3 Langkah Pemasangan Supabase Database</span>
-                    {showSupabaseSchema ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
-
-                  {showSupabaseSchema && (
-                    <div className="mt-3 p-4 bg-slate-950 text-slate-100 rounded-xl space-y-3 text-xs font-sans border border-slate-800 shadow-inner">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-                        <div>
-                          <span className="font-bold text-emerald-400 block">
-                            Panduan SQL Query Database Supabase (PostgreSQL)
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            Pilih query yang ingin Anda buat di SQL Editor Supabase:
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => setActiveSchemaTab('teachers')}
-                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                              activeSchemaTab === 'teachers'
-                                ? 'bg-emerald-600 text-white shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            Khusus Tabel Guru & GTK
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveSchemaTab('all')}
-                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                              activeSchemaTab === 'all'
-                                ? 'bg-emerald-600 text-white shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            Semua 5 Tabel (Lengkap)
-                          </button>
-                        </div>
-                      </div>
-
-                      <ol className="list-decimal pl-5 space-y-2 text-slate-300 text-[11px] leading-relaxed">
-                        <li>
-                          Buka <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline font-semibold">supabase.com</a> dan buka Dashboard Project Anda.
-                        </li>
-                        <li>
-                          Buka menu <b>SQL Editor</b> (ikon &lt;/&gt; di sebelah kiri), lalu klik tombol <b>New Query</b>.
-                        </li>
-                        <li>
-                          Klik tombol <b>{activeSchemaTab === 'teachers' ? 'Salin SQL Tabel Guru' : 'Salin SQL Lengkap'}</b> di bawah, tempelkan (Paste) ke SQL Editor Supabase, lalu klik tombol hijau <b>Run</b>.
-                        </li>
-                        <li>
-                          <b>Apakah datanya langsung masuk dengan sendirinya?</b><br />
-                          <span className="text-emerald-400 font-semibold">YA!</span> Begitu tabel dibuat, setiap Anda menambah/mengubah data guru atau saat guru scan presensi, sistem akan <b>otomatis mengirim data ke Supabase</b> secara real-time. Untuk mengirim data guru yang sudah ada saat ini, Anda cukup menekan tombol <b>Sinkronkan Sekarang</b> di atas!
-                        </li>
-                      </ol>
-
-                      {/* SQL Code Block Preview with Quick Copy */}
-                      <div className="pt-1">
-                        <div className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <Code2 className="w-3.5 h-3.5 text-emerald-400" />
-                            {activeSchemaTab === 'teachers'
-                              ? 'Query SQL: Tabel Guru (teachers) & Presensi Guru (teacher_attendance)'
-                              : 'Query SQL: Seluruh 5 Tabel Aplikasi (Siswa, Presensi, Guru, Log)'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={activeSchemaTab === 'teachers' ? handleCopyTeacherSchema : handleCopySupabaseSchema}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                          >
-                            {activeSchemaTab === 'teachers' ? (
-                              copiedTeacherSchema ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />
-                            ) : (
-                              copiedSupabaseSchema ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />
-                            )}
-                            <span>
-                              {activeSchemaTab === 'teachers'
-                                ? (copiedTeacherSchema ? 'Tersalin!' : 'Salin SQL Tabel Guru')
-                                : (copiedSupabaseSchema ? 'Tersalin!' : 'Salin SQL Seluruh Tabel')}
-                            </span>
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <pre className="max-h-64 overflow-y-auto p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-emerald-300 leading-relaxed border border-slate-800 select-all">
-                            {activeSchemaTab === 'teachers' ? getSupabaseTeacherOnlySchemaSQL() : getSupabaseSchemaSQL()}
-                          </pre>
-                        </div>
-                      </div>
+                  {supabaseTestStatus && (
+                    <div
+                      className={`p-3 rounded-xl text-xs font-bold flex items-start gap-2 ${
+                        supabaseTestStatus.success
+                          ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-900 dark:text-emerald-200 border border-emerald-300'
+                          : 'bg-rose-100 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border border-rose-300'
+                      }`}
+                    >
+                      {supabaseTestStatus.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      )}
+                      <span className="leading-relaxed">{supabaseTestStatus.message}</span>
                     </div>
                   )}
+
+                  {/* Auto Sync Toggle & Sync Actions */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settings.enableSupabaseAutoSync ?? true}
+                          onChange={(e) => setSettings({ ...settings, enableSupabaseAutoSync: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-slate-600 peer-checked:bg-emerald-600"></div>
+                      </label>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          Otomatis Sync ke Supabase saat Presensi & Data Berubah
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Setiap perubahan data siswa atau scan presensi langsung di-upsert ke tabel Supabase.
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSyncSupabase}
+                      disabled={isSyncingSupabase || !settings.supabaseUrl || !settings.supabaseKey}
+                      className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                      title="Kirim seluruh data lokal ke tabel Supabase"
+                    >
+                      <UploadCloud className={`w-3.5 h-3.5 ${isSyncingSupabase ? 'animate-bounce' : ''}`} />
+                      <span>{isSyncingSupabase ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
+                    </button>
+                  </div>
+
+                  {/* Antrian Pengiriman / Queue Status Breakdown */}
+                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <span>Status Antrian Pengiriman (Sync Queue):</span>
+                        </span>
+                        {syncQueueInfo.total > 0 ? (
+                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded-full text-[10px] font-extrabold animate-pulse">
+                            {syncQueueInfo.total} Tertunda
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 rounded-full text-[10px] font-extrabold">
+                            0 Antrian (Semua Terkirim)
+                          </span>
+                        )}
+                      </div>
+
+                      {syncQueueInfo.total > 0 && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSyncSupabase}
+                            disabled={isSyncingSupabase}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isSyncingSupabase ? 'animate-spin' : ''}`} />
+                            <span>Proses Antrian ({syncQueueInfo.total})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearQueueOnly}
+                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-slate-700 dark:text-slate-200 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
+                            title="Kosongkan daftar antrian lokal jika tidak ingin dikirim"
+                          >
+                            Kosongkan Antrian
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Presensi Siswa:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.attendanceCount} item</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Master Siswa:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.studentCount} item</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Data & Presensi Guru:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.teacherCount} item</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Log Aktivitas / Hapus:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.logCount + syncQueueInfo.deleteCount} item</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {settings.lastSupabaseSync && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                      Terakhir disinkronkan ke Supabase: {settings.lastSupabaseSync}
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
+
+              {/* TAB 2: GOOGLE CLOUD SQL (GCP NATIVE) */}
+              {activeDbTab === 'cloudsql' && (
+                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <Server className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                        Opsi 2: Google Cloud SQL (PostgreSQL di Ekosistem Google Cloud)
+                      </h5>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                        Jika Anda ingin basis data kelas enterprise yang berada dalam 1 akun Google Cloud yang sama dengan Cloud Run (tanpa layanan SaaS pihak ketiga seperti Supabase), Anda dapat menghubungkan Cloud Run ke instance <b>Google Cloud SQL (PostgreSQL 15/16)</b>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-900/50 text-xs text-blue-900 dark:text-blue-300 space-y-2">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-blue-600" />
+                      Kelebihan Menggunakan Cloud SQL bersama Cloud Run:
+                    </span>
+                    <ul className="list-disc pl-5 space-y-1 text-[11px]">
+                      <li><b>Koneksi Internal Aman:</b> Terhubung melalui Unix Domain Socket via Cloud SQL Auth Proxy bawaan Cloud Run tanpa mengekspos port database ke internet publik.</li>
+                      <li><b>Satu Tagihan GCP:</b> Tergabung langsung dalam akun Google Cloud Anda tanpa perlu mendaftar ke platform lain.</li>
+                      <li><b>Automated Daily Backup & High Availability:</b> Backup data otomatis setiap hari dengan redundansi tingkat regional GCP.</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Skema DDL Tabel PostgreSQL untuk Cloud SQL:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyPostgresSchema}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      {copiedPostgresSchema ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedPostgresSchema ? 'Tersalin!' : 'Salin DDL SQL PostgreSQL'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: SELF-HOSTED POSTGRESQL & DOCKER (ON-PREMISE / VPS) */}
+              {activeDbTab === 'docker' && (
+                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <Terminal className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                        Opsi 3: Self-Hosted PostgreSQL (Docker / VPS Sekolah / Server Lokal)
+                      </h5>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                        Cocok untuk sekolah yang memiliki server fisik sendiri (On-Premise) atau VPS murah (IDCloudHost, Niagahoster, Biznet Gio, DigitalOcean) untuk memotong ketergantungan SaaS 100%.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-lg border border-purple-200 dark:border-purple-900/50 text-xs text-purple-900 dark:text-purple-300 space-y-2">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-purple-600" />
+                      Cara Menjalankan PostgreSQL & pgAdmin Mandiri dalam 1 Menit:
+                    </span>
+                    <ol className="list-decimal pl-5 space-y-1 text-[11px]">
+                      <li>Unduh atau salin file <code>docker-compose.yml</code> di bawah ini.</li>
+                      <li>Di terminal server/VPS Anda, jalankan perintah: <code>docker compose up -d</code></li>
+                      <li>Buka browser di port <code>http://ip-server:5050</code> untuk mengakses pgAdmin GUI dan jalankan skema DDL SQL.</li>
+                    </ol>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDownloadDockerCompose}
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Unduh docker-compose.yml</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyDockerCompose}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {copiedDockerCompose ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedDockerCompose ? 'Tersalin!' : 'Salin YAML'}</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyPostgresSchema}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {copiedPostgresSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code2 className="w-3.5 h-3.5" />}
+                      <span>{copiedPostgresSchema ? 'SQL Disalin!' : 'Salin Skema DDL'}</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <pre className="max-h-48 overflow-y-auto p-3 bg-slate-950 rounded-lg text-[10px] font-mono text-purple-300 leading-relaxed border border-slate-800 select-all">
+                      {getDockerComposePostgresYAML()}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: CLOUD RUN NATIVE & STANDALONE (ZERO EXTERNAL SAAS) */}
+              {activeDbTab === 'native' && (
+                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <HardDrive className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                        Opsi 4: Mode Mandiri (Cloud Run Native Server Storage)
+                      </h5>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                        Aplikasi NEXA15 Anda <b>sudah dirancang mandiri</b> tanpa ketergantungan pada database eksternal apapun.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
+                      <span className="font-bold text-slate-900 dark:text-white block">1. Express REST API Backend</span>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Memiliki endpoint native <code>/api/attendance</code>, <code>/api/students</code>, <code>/api/teachers</code>, dan <code>/api/logs</code>.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
+                      <span className="font-bold text-slate-900 dark:text-white block">2. Server JSON Persistence</span>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Menyimpan snapshot data secara otomatis ke file <code>nexa15_server_db.json</code> di dalam container Cloud Run.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
+                      <span className="font-bold text-slate-900 dark:text-white block">3. Offline-First Browser Cache</span>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Scan QR Code dan absensi tetap berjalan secepat kilat meskipun jaringan internet sekolah terputus sementara.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: STEP-BY-STEP MIGRATION ROADMAP & SQL DUMP */}
+              {activeDbTab === 'migration' && (
+                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <BookOpen className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                        Panduan Langkah Demi Langkah Migrasi Database (Standard Migration Pattern)
+                      </h5>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                        Ikuti 5 langkah standar di bawah ini untuk memindahkan data dari penyimpanan saat ini ke database PostgreSQL / Cloud SQL mandiri tanpa kehilangan rekaman absensi:
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                      <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 1: Unduh Backup Snapshot Data (SQL Dump)</span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Klik tombol <b>"Unduh SQL Dump (.sql)"</b> di kanan atas atau tombol di bawah untuk membuat file SQL lengkap yang berisi perintah DDL pembuatan tabel dan seluruh <code>INSERT</code> data siswa, presensi, guru, dan log aktivitas saat ini.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                      <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 2: Siapkan Server Database Target</span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Jalankan instance PostgreSQL di VPS (menggunakan Docker Compose di Tab 3) atau buat instance Cloud SQL PostgreSQL di Google Cloud Console.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                      <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 3: Eksekusi File SQL Dump</span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Buka pgAdmin atau jalankan terminal: <code>psql -U nexa_admin -d nexa15_presensi -f nexa15_backup_dump.sql</code> untuk mengimpor seluruh tabel dan data sekaligus.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                      <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">4</span>
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 4: Konfigurasikan Connection String</span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Set environment variable <code>DATABASE_URL=postgresql://user:password@host:5432/dbname</code> pada service Cloud Run Anda.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                      <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">5</span>
+                      <div className="text-xs">
+                        <span className="font-bold text-emerald-800 dark:text-emerald-300 block">Langkah 5: Verifikasi Integritas Data (Health Check)</span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Jalankan fitur <b>"Pemeriksaan Kesehatan Data (Data Health Check)"</b> di bawah untuk memastikan semua NISN dan relasi rekaman absensi terhubung sempurna tanpa selisih.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={handleDownloadSqlDump}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Unduh File SQL Dump Sekarang</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyPostgresSchema}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {copiedPostgresSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedPostgresSchema ? 'DDL Disalin!' : 'Salin Hanya DDL Skema SQL'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
