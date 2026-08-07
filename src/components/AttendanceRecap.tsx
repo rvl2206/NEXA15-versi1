@@ -310,6 +310,34 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     }
   };
 
+  const handleSingleSetPulang1430 = (student: Student) => {
+    if (!student) return;
+    const res = store.recordStudentPulang1430(student, filterTanggal, currentOfficer);
+    if (res.success) {
+      handleManualRefresh();
+    }
+  };
+
+  const handleBulkSetPulang1430 = () => {
+    const countToUpdate = pairedSummaryCounts.belumPulang;
+    if (countToUpdate === 0) {
+      alert('Semua siswa yang masuk sudah memiliki rekaman scan Pulang.');
+      return;
+    }
+
+    if (
+      window.confirm(
+        `Apakah Anda ingin menyetel scan Pulang batas akhir (14:30 WIT) untuk ${countToUpdate} siswa yang belum scan pulang pada tanggal ${formatIndoDate(filterTanggal)}?`
+      )
+    ) {
+      const res = store.recordBulkStudentsPulang1430(filterTanggal, filterKelas, currentOfficer);
+      if (res.success) {
+        alert(`Berhasil! ${res.count} siswa telah dicatat presensi Pulang pada batas akhir 14:30 WIT.`);
+        handleManualRefresh();
+      }
+    }
+  };
+
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     await store.fetchFromServer();
@@ -1203,11 +1231,11 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 w-full sm:w-auto">
+      <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
+        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           <button
             onClick={() => setRecapMode('harian')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'harian'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
@@ -1219,7 +1247,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <button
             onClick={() => setRecapMode('bulanan')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'bulanan'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
@@ -1231,7 +1259,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <button
             onClick={() => setRecapMode('analisis_terlambat')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'analisis_terlambat'
                 ? 'bg-red-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
@@ -1243,7 +1271,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <button
             onClick={() => setRecapMode('semua')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'semua'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
@@ -1575,7 +1603,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       {recapMode === 'harian' && harianViewType === 'pasangan' ? (
         /* Harian Paired View Table (Jam Masuk, Jam Pulang, Status, Jumlah Waktu Terlambat) */
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                 Rekap Pasangan Waktu Masuk & Pulang Siswa ({formatIndoDate(filterTanggal)})
@@ -1585,6 +1613,17 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBulkSetPulang1430}
+                disabled={pairedSummaryCounts.belumPulang === 0}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Set otomatis scan Pulang batas akhir (14:30 WIT) untuk semua siswa yang belum/lupa scan pulang"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>⚡ Auto Pulang 14:30 ({pairedSummaryCounts.belumPulang} Siswa)</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setFilterStatusPulang('Semua')}
@@ -1688,23 +1727,44 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             <Edit3 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 ml-0.5 text-purple-600" />
                           </button>
                         ) : item.masuk ? (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
-                            className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 inline-flex items-center gap-1 transition cursor-pointer"
-                            title={`Input Scan Pulang untuk ${item.student.nama}`}
-                          >
-                            <span>Belum Scan Pulang</span>
-                          </button>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
+                              className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 inline-flex items-center gap-1 transition cursor-pointer"
+                              title={`Input Manual Scan Pulang untuk ${item.student.nama}`}
+                            >
+                              <span>Belum Pulang</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSingleSetPulang1430(item.student)}
+                              className="text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 px-2 py-0.5 rounded-md shadow-xs inline-flex items-center gap-1 transition cursor-pointer"
+                              title={`Set otomatis ${item.student.nama} pulang pada batas akhir 14:30 WIT (Lupa/Tidak sempat scan)`}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>Set 14:30</span>
+                            </button>
+                          </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
-                            className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
-                            title={`Input Presensi Pulang untuk ${item.student.nama}`}
-                          >
-                            <span>-</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
+                              className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                              title={`Input Presensi Pulang untuk ${item.student.nama}`}
+                            >
+                              <span>-</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSingleSetPulang1430(item.student)}
+                              className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded shadow-xs inline-flex items-center gap-1 transition cursor-pointer"
+                              title={`Set otomatis pulang 14:30 WIT untuk ${item.student.nama}`}
+                            >
+                              <span>Pulang 14:30</span>
+                            </button>
+                          </div>
                         )}
                       </td>
                       <td className="p-3.5">

@@ -104,6 +104,36 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const isProcessingRef = useRef<boolean>(false);
   const recentScanTimesRef = useRef<Map<string, number>>(new Map());
 
+  const handleTriggerBulkPulang1430 = () => {
+    const todayTarget = store.getTodayYyyyMmDd();
+    const dayRecords = store.getAttendance().filter((a) => store.isRecordForDate(a, todayTarget));
+    const activeStudents = store.getStudents().filter((s) => s.status === 'aktif');
+
+    const unreturnedStudents = activeStudents.filter((student) => {
+      const studentDayRecords = dayRecords.filter(
+        (a) => a.nisn === student.nisn || a.nama === student.nama
+      );
+      const hasPulang = studentDayRecords.some((a) => a.jenis === 'Pulang');
+      return !hasPulang;
+    });
+
+    if (unreturnedStudents.length === 0) {
+      alert('Semua siswa yang aktif sudah memiliki rekaman scan Pulang hari ini.');
+      return;
+    }
+
+    if (
+      window.confirm(
+        `Apakah Anda ingin menyetel scan Pulang batas akhir (14:30 WIT) untuk ${unreturnedStudents.length} siswa yang belum/lupa scan pulang hari ini?`
+      )
+    ) {
+      const res = store.recordBulkStudentsPulang1430(todayTarget, 'Semua', currentOfficer);
+      if (res.success) {
+        alert(`Berhasil! ${res.count} siswa tercatat pulang pada batas akhir pukul 14:30 WIT.`);
+      }
+    }
+  };
+
   // Countdown timer for modal when modal is active (3-second display)
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -595,7 +625,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-700'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
-                title="Otomatis tentukan Masuk/Pulang berdasarkan jam (sebelum 11:30 WIT = Masuk, setelahnya = Pulang)"
+                title="Otomatis tentukan Masuk/Pulang berdasarkan jam (sebelum 10:00 WIT = Masuk, mulai 10:00 WIT ke atas = Pulang)"
               >
                 Otomatis (Jam)
               </button>
@@ -628,8 +658,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </div>
           </div>
 
-          {/* Mode Scan Massal / Popup Mode Toggle */}
+          {/* Mode Scan Massal / Popup Mode Toggle & Auto Pulang 14:30 */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              type="button"
+              onClick={handleTriggerBulkPulang1430}
+              className="px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xs cursor-pointer active:scale-95"
+              title="Set otomatis scan Pulang 14:30 WIT untuk semua siswa yang belum/lupa scan pulang hari ini"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>⚡ Auto Pulang 14:30</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setRapidQueueMode(!rapidQueueMode)}

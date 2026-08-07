@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
       </aside>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 z-40 px-1 pt-2 pb-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex justify-around items-center text-xs shadow-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 z-40 px-2 pt-1.5 pb-2.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center justify-start overflow-x-auto no-scrollbar gap-1 text-xs shadow-2xl w-full max-w-full">
         {allowedItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -157,12 +157,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center shrink-0 min-w-[58px] px-2 py-1 rounded-xl transition-all ${
                 isActive ? 'text-cyan-400 font-extrabold bg-slate-800/90 shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? 'scale-110 text-cyan-400' : ''}`} />
-              <span className="text-[9px] truncate max-w-[58px] leading-tight font-medium">{item.label.split(' ')[0]}</span>
+              <span className="text-[9px] truncate max-w-[58px] leading-tight font-medium mt-0.5">{item.label.split(' ')[0]}</span>
             </button>
           );
         })}

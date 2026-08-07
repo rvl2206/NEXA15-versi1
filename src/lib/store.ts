@@ -877,8 +877,8 @@ class AppStore {
     } else if (forcedType === 'Pulang') {
       jenis = 'Pulang';
     } else {
-      // Auto mode: If before 11:30 WIT -> Masuk. If 11:30 WIT or later -> Pulang (or Masuk if never checked in)
-      const isAfternoonSession = currentHourWIT > 11 || (currentHourWIT === 11 && currentMinuteWIT >= 30);
+      // Auto mode: Pagi hari (Sebelum 10:00 WIT) -> Presensi Masuk. Siang/Sore hari (Mulai 10:00 WIT ke atas) -> Presensi Pulang
+      const isAfternoonSession = currentHourWIT >= 10;
       if (isAfternoonSession) {
         jenis = masukRecord && !pulangRecord ? 'Pulang' : 'Pulang';
       } else {
@@ -1280,8 +1280,8 @@ class AppStore {
     } else if (forcedType === 'Pulang') {
       jenis = 'Pulang';
     } else {
-      // Auto mode: If before 11:30 WIT -> Masuk. If 11:30 WIT or later -> Pulang
-      const isAfternoonSession = currentHourWIT > 11 || (currentHourWIT === 11 && currentMinuteWIT >= 30);
+      // Auto mode: Pagi hari (Sebelum 10:00 WIT) -> Presensi Masuk. Siang/Sore hari (Mulai 10:00 WIT ke atas) -> Presensi Pulang
+      const isAfternoonSession = currentHourWIT >= 10;
       if (isAfternoonSession) {
         jenis = masukRecord && !pulangRecord ? 'Pulang' : 'Pulang';
       } else {
@@ -1457,6 +1457,155 @@ class AppStore {
       return d.toISOString();
     }
     return new Date().toISOString();
+  }
+
+  /**
+   * Rekam Scan Pulang Otomatis 14:30 WIT untuk 1 Siswa yang belum/lupa scan pulang.
+   */
+  public recordStudentPulang1430(
+    student: Student,
+    targetDate?: string,
+    officerEmail = 'Admin'
+  ): { success: boolean; message: string; record?: AttendanceRecord } {
+    if (!student) {
+      return { success: false, message: 'Data siswa tidak valid.' };
+    }
+
+    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
+    const timestamp1430 = `${normTarget}T14:30:00+09:00`;
+
+    const studentDayRecords = this.attendance.filter(
+      (a) => (a.nisn === student.nisn || a.nama === student.nama) && this.isRecordForDate(a, normTarget)
+    );
+
+    const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
+    const existingPulang = studentDayRecords.find((a) => a.jenis === 'Pulang');
+
+    if (existingPulang) {
+      existingPulang.timestamp = timestamp1430;
+      existingPulang.catatan = 'Batas Pulang Otomatis (14:30 WIT) / Lupa Scan Pulang';
+      this.attendance = [...this.attendance];
+      this.notify();
+      syncAttendanceToSupabase([existingPulang], this.getSupabaseConfig()).catch(() => {});
+      this.addLog(
+        'PULANG_OTOMATIS_1430',
+        `Menyetel waktu scan pulang 14:30 WIT untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
+      );
+      return {
+        success: true,
+        message: `Waktu scan pulang ${student.nama} berhasil disetel ke pukul 14:30 WIT.`,
+        record: existingPulang,
+      };
+    }
+
+    const newRecord: AttendanceRecord = {
+      id: `att-autopulang-${Date.now()}-${student.nisn}`,
+      tanggal: normTarget,
+      timestamp: timestamp1430,
+      nisn: student.nisn,
+      nama: student.nama,
+      kelas: student.kelas,
+      id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
+      jenis: 'Pulang',
+      status: masukRecord?.status || 'Hadir',
+      petugas: formatPetugasRole(officerEmail),
+      catatan: 'Batas Pulang Otomatis (14:30 WIT) / Lupa Scan Pulang',
+      terlambatMenit: 0,
+    };
+
+    this.attendance.unshift(newRecord);
+    this.attendance = [...this.attendance];
+    this.notify();
+
+    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch(() => {});
+    this.addLog(
+      'PULANG_OTOMATIS_1430',
+      `Mencatat presensi pulang batas akhir (14:30 WIT) untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
+    );
+
+    return {
+      success: true,
+      message: `Presensi Pulang pukul 14:30 WIT berhasil dicatat untuk ${student.nama}.`,
+      record: newRecord,
+    };
+  }
+
+  /**
+   * Rekam Scan Pulang Otomatis 14:30 WIT secara massal untuk semua siswa yang belum scan pulang pada tanggal tertentu.
+   */
+  public recordBulkStudentsPulang1430(
+    targetDate?: string,
+    filterKelas = 'Semua',
+    officerEmail = 'Admin'
+  ): { success: boolean; count: number; updatedStudents: Student[]; message: string } {
+    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
+    const timestamp1430 = `${normTarget}T14:30:00+09:00`;
+
+    const dayRecords = this.attendance.filter((a) => this.isRecordForDate(a, normTarget));
+
+    const targetStudents = this.students.filter((s) => {
+      if (s.status === 'nonaktif') return false;
+      if (filterKelas !== 'Semua' && s.kelas !== filterKelas) return false;
+      return true;
+    });
+
+    const newRecords: AttendanceRecord[] = [];
+    const updatedStudents: Student[] = [];
+
+    targetStudents.forEach((student) => {
+      const studentDayRecords = dayRecords.filter(
+        (a) => a.nisn === student.nisn || a.nama === student.nama
+      );
+      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
+      const pulangRecord = studentDayRecords.find((a) => a.jenis === 'Pulang');
+
+      // Only process students who haven't scanned Pulang
+      if (!pulangRecord) {
+        // If student checked in (or active), record Pulang at 14:30
+        const statusToUse: AttendanceStatus = masukRecord?.status || 'Hadir';
+        const rec: AttendanceRecord = {
+          id: `att-autopulang-${Date.now()}-${student.nisn}-${Math.random().toString(36).substr(2, 4)}`,
+          tanggal: normTarget,
+          timestamp: timestamp1430,
+          nisn: student.nisn,
+          nama: student.nama,
+          kelas: student.kelas,
+          id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
+          jenis: 'Pulang',
+          status: statusToUse,
+          petugas: formatPetugasRole(officerEmail),
+          catatan: 'Batas Pulang Otomatis (14:30 WIT) / Selesai KBM',
+          terlambatMenit: 0,
+        };
+        newRecords.push(rec);
+        updatedStudents.push(student);
+      }
+    });
+
+    if (newRecords.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        updatedStudents: [],
+        message: 'Semua siswa sudah memiliki rekaman scan Pulang pada tanggal ini.',
+      };
+    }
+
+    this.attendance = [...newRecords, ...this.attendance];
+    this.notify();
+
+    syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
+    this.addLog(
+      'PULANG_OTOMATIS_1430_MASSAL',
+      `Sistem otomatis mencatat presensi pulang batas akhir (14:30 WIT) untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
+    );
+
+    return {
+      success: true,
+      count: newRecords.length,
+      updatedStudents,
+      message: `Berhasil mencatat presensi Pulang (14:30 WIT) untuk ${newRecords.length} siswa.`,
+    };
   }
 
   public async addManualAttendance(data: Partial<AttendanceRecord> & { nisn: string; nama: string; kelas: string }): Promise<AttendanceRecord> {

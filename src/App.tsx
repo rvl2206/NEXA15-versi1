@@ -167,7 +167,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
       <ToastContainer />
       {/* Top Navbar */}
       <Navbar
@@ -182,10 +182,10 @@ export function App() {
       />
 
       {/* Main Body */}
-      <div className="flex-1 flex flex-col md:flex-row pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col md:flex-row pb-20 md:pb-0 w-full max-w-full min-w-0 overflow-x-hidden">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser?.role} />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
           {renderActiveTabContent()}
         </main>
       </div>

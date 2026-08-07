@@ -97,36 +97,36 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white shadow-lg border-b border-slate-800/80 sticky top-0 z-30 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white shadow-lg border-b border-slate-800/80 sticky top-0 z-30 transition-colors w-full max-w-full">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
           {/* Brand Logo & Name */}
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab('dashboard')}>
-            <div className="relative">
+          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0" onClick={() => setActiveTab('dashboard')}>
+            <div className="relative shrink-0">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur-xs opacity-40 group-hover:opacity-80 transition duration-200"></div>
-              <SchoolLogo className="w-10 h-10 relative drop-shadow-md transition-transform group-hover:scale-105" />
+              <SchoolLogo className="w-8 h-8 sm:w-10 sm:h-10 relative drop-shadow-md transition-transform group-hover:scale-105" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-lg sm:text-xl tracking-wider text-white flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="font-extrabold text-base sm:text-xl tracking-wider text-white flex items-center gap-1">
                   <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 bg-clip-text text-transparent drop-shadow-xs font-black">NEXA15</span>
                 </h1>
                 <span className="hidden xl:inline-block px-2 py-0.5 text-[10px] font-extrabold bg-blue-500/20 text-cyan-300 rounded-md border border-cyan-400/30">
                   SMART SCHOOL
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 hidden sm:block tracking-wide">
+              <p className="text-[9px] sm:text-[11px] font-medium text-slate-400 hidden sm:block tracking-wide">
                 SMA Negeri 15 Ambon Digital Presence
               </p>
             </div>
           </div>
 
           {/* Realtime Clock & Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Online / Offline Network & Background Sync Indicators */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <div
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-xl border font-semibold transition-all ${
+                className={`flex items-center gap-1 text-[10px] sm:text-xs px-2 py-1 rounded-lg sm:rounded-xl border font-bold transition-all ${
                   isOnline
                     ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                     : 'bg-amber-500/20 text-amber-200 border-amber-400/40 animate-pulse'
@@ -139,21 +139,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 {isOnline ? (
                   <>
-                    <span className="relative flex h-2 w-2">
+                    <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-emerald-400"></span>
                     </span>
-                    <Wifi className="w-3.5 h-3.5 text-emerald-400 hidden sm:inline" />
-                    <span className="text-[11px] font-bold">Online</span>
+                    <Wifi className="w-3 h-3 text-emerald-400 hidden sm:inline" />
+                    <span className="text-[10px] sm:text-[11px] font-bold">Online</span>
                   </>
                 ) : (
                   <>
-                    <span className="relative flex h-2 w-2">
+                    <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-amber-400"></span>
                     </span>
-                    <WifiOff className="w-3.5 h-3.5 text-amber-300 hidden sm:inline" />
-                    <span className="text-[11px] font-bold">Offline</span>
+                    <WifiOff className="w-3 h-3 text-amber-300 hidden sm:inline" />
+                    <span className="text-[10px] sm:text-[11px] font-bold">Offline</span>
                   </>
                 )}
               </div>
@@ -162,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={handleForceSync}
                 disabled={isSyncing}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-xs ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs ${
                   isSyncing
                     ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40 animate-pulse'
                     : offlineQueueCount > 0
@@ -171,13 +171,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
                 title="Klik untuk menyinkronkan data presensi & siswa ke Server & Cloud"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : 'text-sky-300'}`} />
-                <span className="text-[11px]">
+                <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : 'text-sky-300'}`} />
+                <span className="text-[10px] sm:text-[11px] hidden xs:inline">
                   {isSyncing
-                    ? 'Syncing...'
+                    ? 'Sync...'
                     : offlineQueueCount > 0
-                    ? `Sinkron (${offlineQueueCount})`
-                    : 'Sinkron Data'}
+                    ? `Sync (${offlineQueueCount})`
+                    : 'Sync'}
                 </span>
               </button>
             </div>
@@ -192,17 +192,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+                className="p-1.5 sm:p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center gap-1 text-xs font-semibold cursor-pointer"
                 title={theme === 'dark' ? 'Ganti ke Mode Terang (Light Mode)' : 'Ganti ke Mode Gelap (Dark Mode)'}
               >
                 {theme === 'dark' ? (
                   <>
-                    <Sun className="w-4 h-4 text-amber-300 animate-spin-slow" />
+                    <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 animate-spin-slow" />
                     <span className="hidden lg:inline text-amber-200 text-[11px]">Terang</span>
                   </>
                 ) : (
                   <>
-                    <Moon className="w-4 h-4 text-cyan-300" />
+                    <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300" />
                     <span className="hidden lg:inline text-cyan-100 text-[11px]">Gelap</span>
                   </>
                 )}
@@ -212,7 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Setup Guide Button */}
             <button
               onClick={onOpenSetupGuide}
-              className="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 text-cyan-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl transition-all font-medium cursor-pointer"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 text-cyan-200 border border-slate-700/80 rounded-lg sm:rounded-xl transition-all font-medium cursor-pointer flex items-center gap-1"
               title="Petunjuk Penggunaan & Arsitektur Developer"
             >
               <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
@@ -223,11 +223,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser && (
               <button
                 onClick={() => setActiveTab('ai-analysis')}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border transition-all font-semibold cursor-pointer ${
+                className={`p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer flex items-center gap-1 ${
                   activeTab === 'ai-analysis'
                     ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
                     : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80'
                 }`}
+                title="Analisis AI Gemini"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 <span className="hidden md:inline text-[11px]">Analisis AI</span>
@@ -236,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* User Profile / Role */}
             {currentUser && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 border-l border-slate-800">
                 <div className="hidden sm:block text-right">
                   <div className="text-xs font-bold text-white leading-tight">{currentUser.name}</div>
                   <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
@@ -244,7 +245,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="p-2 text-amber-300 hover:text-white bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 rounded-xl transition-all cursor-pointer"
+                  className="p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 rounded-lg sm:rounded-xl transition-all cursor-pointer"
                   title="Pengaturan & Kata Sandi"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
@@ -252,10 +253,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={onLogout}
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg sm:rounded-xl transition-colors cursor-pointer"
                   title="Keluar / Switch Akun"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             )}
