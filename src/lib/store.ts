@@ -45,7 +45,17 @@ const STORAGE_KEYS = {
   TEACHERS: 'nexa15_teachers_v3',
   TEACHER_ATTENDANCE: 'nexa15_teacher_attendance_v3',
   LOGS: 'nexa15_logs_v3',
+  SYNC_QUEUE: 'nexa15_sync_queue_v3',
 };
+
+export interface SyncQueueItem {
+  id: string;
+  type: 'attendance' | 'teacher_attendance' | 'student' | 'teacher' | 'log';
+  action: 'upsert' | 'delete';
+  data: any;
+  timestamp: number;
+  retryCount: number;
+}
 
 export interface HealthCheckResult {
   status: 'healthy' | 'warning' | 'critical';
@@ -102,6 +112,8 @@ class AppStore {
   };
   private currentUser: User | null = null;
   private listeners: Array<() => void> = [];
+  private syncQueue: SyncQueueItem[] = [];
+  private isSyncingQueue = false;
 
   constructor() {
     this.init();
@@ -144,24 +156,224 @@ class AppStore {
       if (savedLogs) {
         this.logs = JSON.parse(savedLogs);
       }
+      const savedQueue = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
+      if (savedQueue) {
+        this.syncQueue = JSON.parse(savedQueue);
+      }
       this.processAutoAlpa();
     } catch (e) {
       console.warn('LocalStorage load error:', e);
     }
 
+    // Set up network & visibility listeners to ensure zero data is lost
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.processPendingSyncQueue();
+        this.fetchFromServer();
+      });
+      window.addEventListener('focus', () => {
+        if (this.syncQueue.length > 0) {
+          this.processPendingSyncQueue();
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.syncQueue.length > 0) {
+          this.processPendingSyncQueue();
+        }
+      });
+      window.addEventListener('beforeunload', () => {
+        this.saveLocalData(true);
+      });
+      // Periodic queue heartbeat check
+      setInterval(() => {
+        if (this.syncQueue.length > 0) {
+          this.processPendingSyncQueue();
+        }
+      }, 8000);
+    }
+
     // Synchronize with server automatically in background
     await this.fetchFromServer();
+    if (this.syncQueue.length > 0) {
+      this.processPendingSyncQueue();
+    }
   }
 
-  private saveLocalData() {
+  private saveTimeout: any = null;
+
+  private saveLocalData(immediate = false) {
+    const doSave = () => {
+      try {
+        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
+        localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
+        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
+        localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
+        localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+    };
+
+    if (immediate) {
+      if (this.saveTimeout) {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = null;
+      }
+      doSave();
+      return;
+    }
+
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(doSave, 80);
+  }
+
+  public enqueueSync(item: { id: string; type: SyncQueueItem['type']; action: SyncQueueItem['action']; data?: any }) {
+    const existingIndex = this.syncQueue.findIndex((q) => q.id === item.id && q.type === item.type);
+    const queueItem: SyncQueueItem = {
+      id: item.id,
+      type: item.type,
+      action: item.action,
+      data: item.data,
+      timestamp: Date.now(),
+      retryCount: 0,
+    };
+
+    if (existingIndex !== -1) {
+      this.syncQueue[existingIndex] = queueItem;
+    } else {
+      this.syncQueue.push(queueItem);
+    }
+
+    this.saveLocalData(true);
+    // Trigger background sync immediately
+    this.processPendingSyncQueue();
+  }
+
+  public async processPendingSyncQueue(force = false): Promise<{ success: boolean; processedCount: number }> {
+    if (this.isSyncingQueue || this.syncQueue.length === 0) {
+      return { success: true, processedCount: 0 };
+    }
+
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!isOnline && !force) {
+      return { success: false, processedCount: 0 };
+    }
+
+    this.isSyncingQueue = true;
+    let processedCount = 0;
+    const config = this.getSupabaseConfig();
+
     try {
-      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
-      localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
-      localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
-      localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
-      localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
+      const queueSnapshot = [...this.syncQueue];
+      const successfulIds = new Set<string>();
+
+      // 1. Process attendance items
+      const attendanceUpserts = queueSnapshot
+        .filter((q) => q.type === 'attendance' && q.action === 'upsert' && q.data)
+        .map((q) => q.data as AttendanceRecord);
+
+      if (attendanceUpserts.length > 0) {
+        const res = await syncAttendanceToSupabase(attendanceUpserts, config);
+        if (res.success) {
+          queueSnapshot
+            .filter((q) => q.type === 'attendance' && q.action === 'upsert')
+            .forEach((q) => successfulIds.add(q.id));
+          processedCount += attendanceUpserts.length;
+        }
+      }
+
+      // 2. Process teacher attendance items
+      const teacherAttUpserts = queueSnapshot
+        .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data)
+        .map((q) => q.data as TeacherAttendanceRecord);
+
+      if (teacherAttUpserts.length > 0) {
+        const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
+        if (res.success) {
+          queueSnapshot
+            .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert')
+            .forEach((q) => successfulIds.add(q.id));
+          processedCount += teacherAttUpserts.length;
+        }
+      }
+
+      // 3. Process student items
+      const studentUpserts = queueSnapshot
+        .filter((q) => q.type === 'student' && q.action === 'upsert' && q.data)
+        .map((q) => q.data as Student);
+
+      if (studentUpserts.length > 0) {
+        const res = await syncStudentsToSupabase(studentUpserts, config);
+        if (res.success) {
+          queueSnapshot
+            .filter((q) => q.type === 'student' && q.action === 'upsert')
+            .forEach((q) => successfulIds.add(q.id));
+          processedCount += studentUpserts.length;
+        }
+      }
+
+      // 4. Process teacher items
+      const teacherUpserts = queueSnapshot
+        .filter((q) => q.type === 'teacher' && q.action === 'upsert' && q.data)
+        .map((q) => q.data as Teacher);
+
+      if (teacherUpserts.length > 0) {
+        const res = await syncTeachersToSupabase(teacherUpserts, config);
+        if (res.success) {
+          queueSnapshot
+            .filter((q) => q.type === 'teacher' && q.action === 'upsert')
+            .forEach((q) => successfulIds.add(q.id));
+          processedCount += teacherUpserts.length;
+        }
+      }
+
+      // 5. Process log items
+      const logUpserts = queueSnapshot
+        .filter((q) => q.type === 'log' && q.action === 'upsert' && q.data)
+        .map((q) => q.data as ActivityLog);
+
+      if (logUpserts.length > 0) {
+        const res = await syncLogsToSupabase(logUpserts, config);
+        if (res.success) {
+          queueSnapshot
+            .filter((q) => q.type === 'log' && q.action === 'upsert')
+            .forEach((q) => successfulIds.add(q.id));
+          processedCount += logUpserts.length;
+        }
+      }
+
+      // 6. Process delete actions
+      const deleteItems = queueSnapshot.filter((q) => q.action === 'delete');
+      for (const item of deleteItems) {
+        try {
+          if (item.type === 'student') await deleteStudentFromSupabase(item.id, config);
+          else if (item.type === 'attendance') await deleteAttendanceFromSupabase(item.id, config);
+          else if (item.type === 'teacher') await deleteTeacherFromSupabase(item.id, config);
+          else if (item.type === 'teacher_attendance') await deleteTeacherAttendanceFromSupabase(item.id, config);
+          else if (item.type === 'log') await deleteLogFromSupabase(item.id, config);
+          successfulIds.add(item.id);
+          processedCount++;
+        } catch {
+          // Keep in queue for next retry
+        }
+      }
+
+      // Remove all successfully synchronized items from queue
+      if (successfulIds.size > 0) {
+        this.syncQueue = this.syncQueue.filter((q) => !successfulIds.has(q.id));
+        this.saveLocalData(true);
+        this.notify();
+      }
+
+      return { success: this.syncQueue.length === 0, processedCount };
+    } catch (err) {
+      console.warn('Sync queue error:', err);
+      return { success: false, processedCount };
+    } finally {
+      this.isSyncingQueue = false;
     }
   }
 
@@ -448,7 +660,7 @@ class AppStore {
       };
       this.students[existingIndex] = updated;
       this.notify();
-      await syncStudentsToSupabase([updated]);
+      this.enqueueSync({ id: updated.id, type: 'student', action: 'upsert', data: updated });
       this.addLog('EDIT_SISWA', `Memperbarui data siswa (mencegah duplikasi NISN): ${updated.nama} (${updated.kelas})`);
       return updated;
     }
@@ -463,8 +675,7 @@ class AppStore {
     this.students.unshift(newStudent);
     this.notify();
 
-    // Direct save to Supabase Cloud PostgreSQL
-    await syncStudentsToSupabase([newStudent]);
+    this.enqueueSync({ id: newStudent.id, type: 'student', action: 'upsert', data: newStudent });
     this.addLog('TAMBAH_SISWA', `Menambahkan siswa baru: ${newStudent.nama} (${newStudent.kelas}) - NISN: ${newStudent.nisn}`);
 
     return newStudent;
@@ -478,8 +689,7 @@ class AppStore {
     this.students[idx] = updated;
     this.notify();
 
-    // Direct save to Supabase Cloud PostgreSQL
-    await syncStudentsToSupabase([updated]);
+    this.enqueueSync({ id: updated.id, type: 'student', action: 'upsert', data: updated });
     this.addLog('EDIT_SISWA', `Memperbarui data siswa: ${updated.nama} (${updated.kelas})`);
 
     return true;
@@ -493,16 +703,17 @@ class AppStore {
     if (target && target.nisn) {
       const orphanAtts = this.attendance.filter((a) => a.nisn === target.nisn);
       if (orphanAtts.length > 0) {
-        const orphanIds = orphanAtts.map((a) => a.id);
+        orphanAtts.forEach((att) => {
+          this.enqueueSync({ id: att.id, type: 'attendance', action: 'delete' });
+        });
         this.attendance = this.attendance.filter((a) => a.nisn !== target.nisn);
-        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId, this.getSupabaseConfig())));
       }
     }
 
     this.notify();
 
     if (target) {
-      await deleteStudentFromSupabase(target.nisn || id, this.getSupabaseConfig());
+      this.enqueueSync({ id: target.id || id, type: 'student', action: 'delete' });
       this.addLog('HAPUS_SISWA', `Menghapus siswa: ${target.nama} (${target.kelas}) dari aplikasi dan database.`);
     }
     return true;
@@ -519,15 +730,18 @@ class AppStore {
     if (targetNisns.size > 0) {
       const orphanAtts = this.attendance.filter((a) => targetNisns.has(a.nisn));
       if (orphanAtts.length > 0) {
-        const orphanIds = orphanAtts.map((a) => a.id);
+        orphanAtts.forEach((att) => {
+          this.enqueueSync({ id: att.id, type: 'attendance', action: 'delete' });
+        });
         this.attendance = this.attendance.filter((a) => !targetNisns.has(a.nisn));
-        await Promise.all(orphanIds.map((attId) => deleteAttendanceFromSupabase(attId, this.getSupabaseConfig())));
       }
     }
 
     this.notify();
 
-    await Promise.all(targets.map((s) => deleteStudentFromSupabase(s.nisn || s.id, this.getSupabaseConfig())));
+    targets.forEach((s) => {
+      this.enqueueSync({ id: s.id, type: 'student', action: 'delete' });
+    });
     this.addLog('HAPUS_MASSAL_SISWA', `Menghapus ${ids.length} siswa terpilih dari aplikasi dan database.`);
     return true;
   }
@@ -538,7 +752,9 @@ class AppStore {
     this.students = [];
     this.notify();
 
-    await Promise.all(oldStudents.map((s) => deleteStudentFromSupabase(s.nisn || s.id, this.getSupabaseConfig())));
+    oldStudents.forEach((s) => {
+      this.enqueueSync({ id: s.id, type: 'student', action: 'delete' });
+    });
     this.addLog('RESET_SISWA', `Menghapus seluruh ${count} data siswa dari aplikasi dan database.`);
     return true;
   }
@@ -565,10 +781,12 @@ class AppStore {
       const oldIds = this.students.map((s) => s.id);
       this.students = formatted;
       this.notify();
-      // Hapus data lama di database agar tidak menumpuk
-      if (oldIds.length > 0) {
-        await Promise.all(oldIds.map((id) => deleteStudentFromSupabase(id)));
-      }
+      oldIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'student', action: 'delete' });
+      });
+      formatted.forEach((s) => {
+        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: s });
+      });
     } else {
       // Append mode: gabungkan & perbarui NISN yang sama tanpa menduplikasi
       const map = new Map<string, Student>();
@@ -583,9 +801,11 @@ class AppStore {
       });
       this.students = Array.from(map.values());
       this.notify();
+      this.students.forEach((s) => {
+        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: s });
+      });
     }
 
-    await syncStudentsToSupabase(this.students);
     this.addLog('IMPORT_SISWA', `Berhasil mengimpor ${formatted.length} data siswa tanpa duplikasi.`);
     return true;
   }
@@ -618,7 +838,7 @@ class AppStore {
       };
       this.teachers[existingIndex] = updated;
       this.notify();
-      syncTeachersToSupabase([updated], this.getSupabaseConfig()).catch(() => {});
+      this.enqueueSync({ id: updated.id, type: 'teacher', action: 'upsert', data: updated });
       this.addLog('EDIT_GURU', `Memperbarui data guru (mencegah duplikasi NIP): ${updated.nama} - NIP: ${updated.nip}`);
       return updated;
     }
@@ -634,7 +854,7 @@ class AppStore {
 
     this.teachers.unshift(newTeacher);
     this.notify();
-    syncTeachersToSupabase([newTeacher], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: newTeacher.id, type: 'teacher', action: 'upsert', data: newTeacher });
     this.addLog('TAMBAH_GURU', `Menambahkan guru baru: ${newTeacher.nama} (${newTeacher.jabatan}) - NIP: ${newTeacher.nip}`);
     return newTeacher;
   }
@@ -649,7 +869,7 @@ class AppStore {
     }
     this.teachers[idx] = updated;
     this.notify();
-    syncTeachersToSupabase([updated], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: updated.id, type: 'teacher', action: 'upsert', data: updated });
     this.addLog('EDIT_GURU', `Memperbarui data guru: ${updated.nama} (${updated.jabatan})`);
     return true;
   }
@@ -659,12 +879,16 @@ class AppStore {
     this.teachers = this.teachers.filter((t) => t.id !== id);
 
     if (target && target.nip) {
+      const orphanAtts = this.teacherAttendance.filter((a) => a.nip === target.nip);
+      orphanAtts.forEach((a) => {
+        this.enqueueSync({ id: a.id, type: 'teacher_attendance', action: 'delete' });
+      });
       this.teacherAttendance = this.teacherAttendance.filter((a) => a.nip !== target.nip);
     }
     this.notify();
 
     if (target) {
-      deleteTeacherFromSupabase(target.nip || id, this.getSupabaseConfig()).catch(() => {});
+      this.enqueueSync({ id: target.id || id, type: 'teacher', action: 'delete' });
       this.addLog('HAPUS_GURU', `Menghapus guru: ${target.nama} (${target.jabatan}) NIP: ${target.nip}`);
     }
     return true;
@@ -677,17 +901,28 @@ class AppStore {
 
     this.teachers = this.teachers.filter((t) => !idSet.has(t.id));
     if (targetNips.size > 0) {
+      const orphanAtts = this.teacherAttendance.filter((a) => targetNips.has(a.nip));
+      orphanAtts.forEach((a) => {
+        this.enqueueSync({ id: a.id, type: 'teacher_attendance', action: 'delete' });
+      });
       this.teacherAttendance = this.teacherAttendance.filter((a) => !targetNips.has(a.nip));
     }
     this.notify();
+    targets.forEach((t) => {
+      this.enqueueSync({ id: t.id, type: 'teacher', action: 'delete' });
+    });
     this.addLog('HAPUS_MASSAL_GURU', `Menghapus ${ids.length} data guru terpilih.`);
     return true;
   }
 
   public async deleteAllTeachers(): Promise<boolean> {
     const count = this.teachers.length;
+    const oldTeachers = [...this.teachers];
     this.teachers = [];
     this.notify();
+    oldTeachers.forEach((t) => {
+      this.enqueueSync({ id: t.id, type: 'teacher', action: 'delete' });
+    });
     this.addLog('RESET_GURU', `Menghapus seluruh ${count} data guru.`);
     return true;
   }
@@ -715,8 +950,15 @@ class AppStore {
     }));
 
     if (mode === 'replace') {
+      const oldIds = this.teachers.map((t) => t.id);
       this.teachers = formatted;
       this.notify();
+      oldIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'teacher', action: 'delete' });
+      });
+      formatted.forEach((t) => {
+        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: t });
+      });
     } else {
       const map = new Map<string, Teacher>();
       this.teachers.forEach((t) => map.set(t.nip, t));
@@ -730,6 +972,9 @@ class AppStore {
       });
       this.teachers = Array.from(map.values());
       this.notify();
+      this.teachers.forEach((t) => {
+        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: t });
+      });
     }
 
     this.addLog('IMPORT_GURU', `Berhasil mengimpor ${formatted.length} data guru tanpa duplikasi.`);
@@ -967,7 +1212,7 @@ class AppStore {
     this.teacherAttendance.unshift(newRecord);
     this.notify();
 
-    syncTeacherAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
 
     const logDetails =
       jenis === 'Pulang'
@@ -1026,6 +1271,7 @@ class AppStore {
       };
       this.teacherAttendance[existingIdx] = updated;
       this.notify();
+      this.enqueueSync({ id: updated.id, type: 'teacher_attendance', action: 'upsert', data: updated });
       this.addLog('PRESENSI_MANUAL_GURU', `Memperbarui presensi guru: ${updated.nama} (${updated.jabatan}) - ${updated.status}`);
       return updated;
     }
@@ -1048,7 +1294,7 @@ class AppStore {
     this.teacherAttendance.unshift(newRecord);
     this.notify();
 
-    syncTeacherAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
     this.addLog('PRESENSI_MANUAL_GURU', `Menambahkan presensi manual guru: ${newRecord.nama} (${newRecord.jabatan}) - ${newRecord.status}`);
     return newRecord;
   }
@@ -1061,7 +1307,7 @@ class AppStore {
     this.teacherAttendance[idx] = updated;
     this.notify();
 
-    syncTeacherAttendanceToSupabase([updated], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: updated.id, type: 'teacher_attendance', action: 'upsert', data: updated });
     this.addLog('EDIT_PRESENSI_GURU', `Memperbarui rekaman presensi guru ID: ${id} (${updated.nama})`);
     return true;
   }
@@ -1072,7 +1318,7 @@ class AppStore {
     this.notify();
 
     if (target) {
-      deleteTeacherAttendanceFromSupabase(id, this.getSupabaseConfig()).catch(() => {});
+      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
       this.addLog('HAPUS_PRESENSI_GURU', `Menghapus rekaman presensi guru: ${target.nama} (${target.tanggal})`);
     }
     return true;
@@ -1082,14 +1328,21 @@ class AppStore {
     const idSet = new Set(ids);
     this.teacherAttendance = this.teacherAttendance.filter((a) => !idSet.has(a.id));
     this.notify();
+    ids.forEach((id) => {
+      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
+    });
     this.addLog('HAPUS_MASSAL_PRESENSI_GURU', `Menghapus ${ids.length} rekaman presensi guru.`);
     return true;
   }
 
   public async clearTeacherAttendance(): Promise<boolean> {
     const count = this.teacherAttendance.length;
+    const oldIds = this.teacherAttendance.map((a) => a.id);
     this.teacherAttendance = [];
     this.notify();
+    oldIds.forEach((id) => {
+      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
+    });
     this.addLog('RESET_PRESENSI_GURU', `Menghapus seluruh ${count} rekap presensi guru.`);
     return true;
   }
@@ -1099,12 +1352,19 @@ class AppStore {
     mode: 'append' | 'replace' = 'append'
   ): Promise<boolean> {
     if (mode === 'replace') {
+      const oldIds = this.teacherAttendance.map((a) => a.id);
       const formatted: TeacherAttendanceRecord[] = records.map((r, idx) => ({
         ...r,
         id: `tch-att-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
       }));
       this.teacherAttendance = formatted;
       this.notify();
+      oldIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
+      });
+      formatted.forEach((r) => {
+        this.enqueueSync({ id: r.id, type: 'teacher_attendance', action: 'upsert', data: r });
+      });
     } else {
       const map = new Map<string, TeacherAttendanceRecord>();
       this.teacherAttendance.forEach((a) => {
@@ -1127,6 +1387,9 @@ class AppStore {
 
       this.teacherAttendance = Array.from(map.values());
       this.notify();
+      this.teacherAttendance.forEach((r) => {
+        this.enqueueSync({ id: r.id, type: 'teacher_attendance', action: 'upsert', data: r });
+      });
     }
 
     this.addLog('IMPORT_PRESENSI_GURU', `Mengimpor ${records.length} data rekap presensi guru tanpa duplikasi.`);
@@ -1332,6 +1595,7 @@ class AppStore {
 
     // If an auto-alpa record existed and this is a genuine scan, remove the auto-alpa placeholder
     if (autoAlpaRecord) {
+      this.enqueueSync({ id: autoAlpaRecord.id, type: 'attendance', action: 'delete' });
       this.attendance = this.attendance.filter((a) => a.id !== autoAlpaRecord.id);
     }
 
@@ -1376,8 +1640,7 @@ class AppStore {
     this.attendance.unshift(newRecord);
     this.notify();
 
-    // Direct save to Supabase Cloud PostgreSQL
-    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig());
+    this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
 
     const logDetails =
       jenis === 'Pulang'
@@ -1486,7 +1749,7 @@ class AppStore {
       existingPulang.catatan = 'Batas Pulang Otomatis (14:30 WIT) / Lupa Scan Pulang';
       this.attendance = [...this.attendance];
       this.notify();
-      syncAttendanceToSupabase([existingPulang], this.getSupabaseConfig()).catch(() => {});
+      this.enqueueSync({ id: existingPulang.id, type: 'attendance', action: 'upsert', data: existingPulang });
       this.addLog(
         'PULANG_OTOMATIS_1430',
         `Menyetel waktu scan pulang 14:30 WIT untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
@@ -1517,7 +1780,7 @@ class AppStore {
     this.attendance = [...this.attendance];
     this.notify();
 
-    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
     this.addLog(
       'PULANG_OTOMATIS_1430',
       `Mencatat presensi pulang batas akhir (14:30 WIT) untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
@@ -1594,7 +1857,9 @@ class AppStore {
     this.attendance = [...newRecords, ...this.attendance];
     this.notify();
 
-    syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
+    newRecords.forEach((rec) => {
+      this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
+    });
     this.addLog(
       'PULANG_OTOMATIS_1430_MASSAL',
       `Sistem otomatis mencatat presensi pulang batas akhir (14:30 WIT) untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
@@ -1640,7 +1905,7 @@ class AppStore {
       this.attendance = [...this.attendance];
       this.notify();
 
-      syncAttendanceToSupabase([updated], this.getSupabaseConfig()).catch((err) => console.warn('Background sync attendance notice:', err?.message || err));
+      this.enqueueSync({ id: updated.id, type: 'attendance', action: 'upsert', data: updated });
       this.addLog('PRESENSI_MANUAL', `Memperbarui presensi: ${updated.nama} (${updated.kelas}) - ${updated.jenis} ${updated.status}`);
       return updated;
     }
@@ -1669,6 +1934,8 @@ class AppStore {
     };
 
     if (autoAlpaIndex !== -1 && targetJenis === 'Masuk') {
+      const oldAlpa = this.attendance[autoAlpaIndex];
+      this.enqueueSync({ id: oldAlpa.id, type: 'attendance', action: 'delete' });
       this.attendance[autoAlpaIndex] = newRecord;
     } else {
       this.attendance.unshift(newRecord);
@@ -1676,7 +1943,7 @@ class AppStore {
     this.attendance = [...this.attendance];
     this.notify();
 
-    syncAttendanceToSupabase([newRecord], this.getSupabaseConfig()).catch((err) => console.warn('Background sync attendance notice:', err?.message || err));
+    this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
     this.addLog('PRESENSI_MANUAL', `Menambahkan presensi manual: ${newRecord.nama} (${newRecord.kelas}) - ${newRecord.jenis} ${newRecord.status}`);
     return newRecord;
   }
@@ -1703,7 +1970,7 @@ class AppStore {
     this.attendance = [...this.attendance];
     this.notify();
 
-    syncAttendanceToSupabase([updated], this.getSupabaseConfig()).catch((err) => console.warn('Background sync attendance notice:', err?.message || err));
+    this.enqueueSync({ id: updated.id, type: 'attendance', action: 'upsert', data: updated });
     this.addLog('EDIT_PRESENSI', `Memperbarui rekaman presensi ${updated.nama} (${updated.tanggal}): ${updated.jenis} - ${updated.status} (${data.timestamp ? 'Waktu diubah' : ''})`);
     return true;
   }
@@ -1714,7 +1981,7 @@ class AppStore {
     this.notify();
 
     if (target) {
-      deleteAttendanceFromSupabase(id).catch((err) => console.warn('Background delete attendance notice:', err?.message || err));
+      this.enqueueSync({ id, type: 'attendance', action: 'delete' });
       this.addLog('HAPUS_PRESENSI', `Menghapus rekaman presensi: ${target.nama} (${target.tanggal}) dari aplikasi dan database.`);
     }
     return true;
@@ -1725,7 +1992,9 @@ class AppStore {
     this.attendance = this.attendance.filter((a) => !idSet.has(a.id));
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteAttendanceFromSupabase(id)));
+    ids.forEach((id) => {
+      this.enqueueSync({ id, type: 'attendance', action: 'delete' });
+    });
     this.addLog('HAPUS_MASSAL_PRESENSI', `Menghapus ${ids.length} rekaman presensi dari aplikasi dan database.`);
     return true;
   }
@@ -1736,7 +2005,9 @@ class AppStore {
     this.attendance = [];
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteAttendanceFromSupabase(id)));
+    ids.forEach((id) => {
+      this.enqueueSync({ id, type: 'attendance', action: 'delete' });
+    });
     this.addLog('RESET_PRESENSI', `Menghapus seluruh ${count} rekap presensi dari aplikasi dan database.`);
     return true;
   }
@@ -1753,9 +2024,12 @@ class AppStore {
       }));
       this.attendance = formatted;
       this.notify();
-      if (oldIds.length > 0) {
-        await Promise.all(oldIds.map((id) => deleteAttendanceFromSupabase(id)));
-      }
+      oldIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'attendance', action: 'delete' });
+      });
+      formatted.forEach((r) => {
+        this.enqueueSync({ id: r.id, type: 'attendance', action: 'upsert', data: r });
+      });
     } else {
       // Append mode dengan pencegahan duplikasi berdasarkan NISN + Tanggal + Jenis
       const map = new Map<string, AttendanceRecord>();
@@ -1779,9 +2053,11 @@ class AppStore {
 
       this.attendance = Array.from(map.values());
       this.notify();
+      this.attendance.forEach((r) => {
+        this.enqueueSync({ id: r.id, type: 'attendance', action: 'upsert', data: r });
+      });
     }
 
-    await syncAttendanceToSupabase(this.attendance, this.getSupabaseConfig());
     this.addLog('IMPORT_PRESENSI', `Mengimpor ${records.length} data rekap presensi tanpa duplikasi.`);
     return true;
   }
@@ -1802,7 +2078,7 @@ class AppStore {
     }
     this.notify();
 
-    syncLogsToSupabase([newLog], this.getSupabaseConfig()).catch(() => {});
+    this.enqueueSync({ id: newLog.id, type: 'log', action: 'upsert', data: newLog });
   }
 
   public async deleteSelectedLogs(ids: string[]): Promise<boolean> {
@@ -1810,7 +2086,9 @@ class AppStore {
     this.logs = this.logs.filter((l) => !idSet.has(l.id));
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteLogFromSupabase(id, this.getSupabaseConfig())));
+    ids.forEach((id) => {
+      this.enqueueSync({ id, type: 'log', action: 'delete' });
+    });
     return true;
   }
 
@@ -1819,7 +2097,9 @@ class AppStore {
     this.logs = [];
     this.notify();
 
-    await Promise.all(ids.map((id) => deleteLogFromSupabase(id)));
+    ids.forEach((id) => {
+      this.enqueueSync({ id, type: 'log', action: 'delete' });
+    });
     return true;
   }
 
@@ -2178,11 +2458,20 @@ class AppStore {
   public async clearAllDatabase(): Promise<void> {
     const studentIds = this.students.map((s) => s.id);
     const attendanceIds = this.attendance.map((a) => a.id);
+    const teacherIds = this.teachers.map((t) => t.id);
+    const teacherAttIds = this.teacherAttendance.map((a) => a.id);
     const logIds = this.logs.map((l) => l.id);
 
     this.students = [];
     this.attendance = [];
+    this.teachers = [];
+    this.teacherAttendance = [];
     this.logs = [];
+    this.syncQueue = [];
+    try {
+      localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+    } catch {}
+    this.saveLocalData(true);
     this.notify();
 
     if (studentIds.length > 0) {
@@ -2190,6 +2479,12 @@ class AppStore {
     }
     if (attendanceIds.length > 0) {
       await Promise.all(attendanceIds.map((id) => deleteAttendanceFromSupabase(id)));
+    }
+    if (teacherIds.length > 0) {
+      await Promise.all(teacherIds.map((id) => deleteTeacherFromSupabase(id, this.getSupabaseConfig())));
+    }
+    if (teacherAttIds.length > 0) {
+      await Promise.all(teacherAttIds.map((id) => deleteTeacherAttendanceFromSupabase(id, this.getSupabaseConfig())));
     }
     if (logIds.length > 0) {
       await Promise.all(logIds.map((id) => deleteLogFromSupabase(id)));
@@ -2203,28 +2498,16 @@ class AppStore {
   }
 
   public getOfflineQueueCount(): number {
-    return 0;
+    return this.syncQueue.length;
   }
 
   public async processOfflineQueue(): Promise<boolean> {
-    return true;
+    const res = await this.processPendingSyncQueue(true);
+    return res.success;
   }
 
   public async syncAllToServer(): Promise<void> {
     await this.syncAllToSupabase();
-  }
-
-  // Stubs for Google Apps Script for UI safety
-  public async testAppsScriptConnection(): Promise<any> {
-    return { success: false, message: 'Google Apps Script telah dinonaktifkan. Sistem sekarang menggunakan Supabase Cloud PostgreSQL secara eksklusif.' };
-  }
-
-  public async pushToAppsScript(): Promise<any> {
-    return { success: false, message: 'Google Apps Script telah dinonaktifkan. Data tersimpan di Supabase Cloud PostgreSQL.' };
-  }
-
-  public async pullFromAppsScript(): Promise<any> {
-    return { success: false, message: 'Google Apps Script telah dinonaktifkan.' };
   }
 
   public createManualBackup() {

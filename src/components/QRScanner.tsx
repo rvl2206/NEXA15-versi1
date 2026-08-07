@@ -47,7 +47,10 @@ import {
   XCircle,
   Info,
   Radio,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
+import { toast } from '../lib/toast';
 
 interface QRScannerProps {
   currentOfficer: string;
@@ -58,6 +61,7 @@ export type ScanTargetMode = 'siswa' | 'guru';
 interface ScanOutcome {
   success: boolean;
   isDuplicate?: boolean;
+  isOffline?: boolean;
   targetMode?: ScanTargetMode;
   student?: Student;
   teacher?: Teacher;
@@ -76,6 +80,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<ScanOutcome | null>(null);
+
+  // Network Status State
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [offlineQueueCount, setOfflineQueueCount] = useState<number>(store.getOfflineQueueCount());
+  const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(false);
 
   // Scan Feed / History for current session
   const [scanFeed, setScanFeed] = useState<ScanOutcome[]>([]);
@@ -156,24 +165,54 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     };
   }, [showModal, modalDuration, rapidQueueMode]);
 
-  // Load student & teacher list & fetch cameras
+  // Load student & teacher list & fetch cameras & setup network listeners
   useEffect(() => {
     setStudentsList(store.getStudents());
     setTeachersList(store.getTeachers());
     store.fetchFromServer();
 
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success('Koneksi Internet Pulih', 'Perangkat kembali online. Sinkronisasi dengan Supabase Cloud aktif.', 4000);
+      store.fetchFromServer();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning('Koneksi Internet Terputus', 'Perangkat beralih ke Mode Offline. Scan presensi akan disimpan secara lokal.', 6000);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     const unsubscribe = store.subscribe(() => {
       setStudentsList(store.getStudents());
       setTeachersList(store.getTeachers());
+      setOfflineQueueCount(store.getOfflineQueueCount());
     });
 
     fetchAvailableCameras();
 
     return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       unsubscribe();
       stopCamera();
     };
   }, []);
+
+  const handleManualCheckConnection = async () => {
+    setIsCheckingConnection(true);
+    const onlineState = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    setIsOnline(onlineState);
+    if (onlineState) {
+      await store.fetchFromServer();
+      toast.success('Koneksi Cloud Normal', 'Perangkat terhubung dengan database Supabase Cloud PostgreSQL.');
+    } else {
+      toast.warning('Koneksi Masih Terputus', 'Perangkat masih offline. Hasil scan tetap disimpan secara aman di cache lokal.');
+    }
+    setIsCheckingConnection(false);
+  };
 
   // Listen for USB/Bluetooth Hardware Barcode & QR Scanner Gun
   useEffect(() => {
@@ -237,12 +276,26 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }
   };
 
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const getAudioContext = () => {
+    if (!audioCtxRef.current) {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        audioCtxRef.current = new AudioCtx();
+      }
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+    return audioCtxRef.current;
+  };
+
   const playSuccessSound = () => {
     if (!soundEnabled) return;
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const now = ctx.currentTime;
 
       // Double upbeat chime: C5 (523.25Hz) -> G5 (783.99Hz)
@@ -271,9 +324,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const playErrorSound = () => {
     if (!soundEnabled) return;
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       const now = ctx.currentTime;
 
       // Unmistakable rejection / duplicate warning buzz
@@ -311,12 +363,29 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       return;
     }
 
+    // Keep map bounded to prevent memory growth
+    if (recentScanTimesRef.current.size > 200) {
+      const cutoff = now - 60000;
+      for (const [key, t] of recentScanTimesRef.current.entries()) {
+        if (t < cutoff) recentScanTimesRef.current.delete(key);
+      }
+    }
+
     // 2. Atomic frame processing lock
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
     recentScanTimesRef.current.set(raw, now);
     setLastScannedQR(raw);
+
+    const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+    if (currentlyOffline) {
+      toast.warning(
+        'Mode Offline: Disimpan di Cache Lokal',
+        'Koneksi internet terputus. Data presensi tetap tersimpan aman di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
+        5000
+      );
+    }
 
     // Visual flash effect
     setScanFlash(true);
@@ -343,6 +412,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       const outcome: ScanOutcome = {
         success: result.success,
         isDuplicate: result.isDuplicate,
+        isOffline: currentlyOffline,
         targetMode: 'guru',
         teacher: result.teacher,
         teacherRecord: result.record,
@@ -372,6 +442,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       const outcome: ScanOutcome = {
         success: result.success,
         isDuplicate: result.isDuplicate,
+        isOffline: currentlyOffline,
         targetMode: 'siswa',
         student: result.student,
         record: result.record,
@@ -402,6 +473,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     store.updateStudent(studentId, { id_qr: codeToConnect });
     const result = store.recordScan(codeToConnect, codeToConnect, codeToConnect, currentOfficer);
 
+    const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+    if (currentlyOffline) {
+      toast.warning(
+        'Mode Offline: Disimpan di Cache Lokal',
+        'Koneksi internet terputus. Data presensi disimpan di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
+        5000
+      );
+    }
+
     if (result.success) {
       playSuccessSound();
     } else {
@@ -418,6 +498,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     const outcome: ScanOutcome = {
       success: result.success,
+      isOffline: currentlyOffline,
       targetMode: 'siswa',
       student: result.student,
       record: result.record,
@@ -444,6 +525,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       currentOfficer
     );
 
+    const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+    if (currentlyOffline) {
+      toast.warning(
+        'Mode Offline: Disimpan di Cache Lokal',
+        'Koneksi internet terputus. Data presensi disimpan di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
+        5000
+      );
+    }
+
     if (result.success) {
       playSuccessSound();
     } else {
@@ -460,6 +550,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     const outcome: ScanOutcome = {
       success: result.success,
+      isOffline: currentlyOffline,
       targetMode: 'guru',
       teacher: result.teacher,
       teacherRecord: result.record,
@@ -563,6 +654,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   <ShieldCheck className="w-3 h-3" />
                   Anti Scan Ganda Aktif
                 </span>
+                {isOnline ? (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <Wifi className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>Database Cloud Online</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-500/40 animate-pulse">
+                    <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    <span>Mode Offline (Internet Terputus)</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {scanTargetMode === 'guru'
@@ -607,6 +713,45 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </button>
           </div>
         </div>
+
+        {/* Prominent Network Offline Warning Banner */}
+        {!isOnline && (
+          <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-400/80 dark:border-amber-600/80 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-500/30 flex-shrink-0 animate-pulse">
+                  <WifiOff className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-black text-xs sm:text-sm text-amber-950 dark:text-amber-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span>Peringatan: Koneksi Internet Terputus (Mode Offline Aktif)</span>
+                    </h3>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/25 text-amber-900 dark:text-amber-200 border border-amber-400/50">
+                      Presensi Disimpan di Cache Lokal
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                    Aplikasi presensi mengandalkan koneksi database remote Supabase Cloud PostgreSQL. Karena internet terputus, Anda tetap dapat melakukan scan QR — data akan disimpan sementara di memori lokal browser dan otomatis disinkronkan ke server cloud saat internet terhubung kembali.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={handleManualCheckConnection}
+                  disabled={isCheckingConnection}
+                  className="px-3.5 py-2 text-xs font-extrabold bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Cek apakah koneksi internet sudah aktif kembali"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isCheckingConnection ? 'animate-spin' : ''}`} />
+                  <span>{isCheckingConnection ? 'Memeriksa...' : 'Cek Status Jaringan'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scan Type & Queue Mode Control Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -717,6 +862,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 {isCameraActive ? 'Kamera Aktif & Siap Scan' : 'Kamera Siaga (Off)'}
               </span>
+              {isOnline ? (
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                  <Wifi className="w-3 h-3" />
+                  <span>Cloud Online</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/80 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-700 animate-pulse">
+                  <WifiOff className="w-3 h-3" />
+                  <span>Offline Mode</span>
+                </span>
+              )}
             </div>
 
             {/* Camera Controls & Selector */}
@@ -763,6 +919,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           >
             {/* Target element for html5-qrcode */}
             <div id="reader" className="w-full h-full"></div>
+
+            {/* Offline Viewfinder Warning Overlay Badge */}
+            {!isOnline && isCameraActive && (
+              <div className="absolute top-3 inset-x-3 z-30 pointer-events-none">
+                <div className="bg-amber-950/90 text-amber-200 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/60 shadow-lg flex items-center justify-center gap-2 text-center text-[11px] font-extrabold tracking-wide animate-pulse">
+                  <WifiOff className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <span>MODE OFFLINE: KONEKSI TERPUTUS • SCAN DISIMPAN LOKAL</span>
+                </div>
+              </div>
+            )}
 
             {/* Flash / Scan feedback indicator ring */}
             {scanFlash && (
@@ -1108,6 +1274,24 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   )}
                 </div>
 
+                {/* Network sync indicator in result card */}
+                {scanResult.isOffline ? (
+                  <div className="mt-3 p-2.5 bg-amber-100/90 dark:bg-amber-950/70 rounded-xl border border-amber-300 dark:border-amber-700/80 text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2">
+                    <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-black text-[10px] uppercase tracking-wider block">Mode Offline: Disimpan di Cache Lokal</span>
+                      <span className="text-[11px] text-slate-700 dark:text-slate-300">
+                        Koneksi internet terputus. Presensi diamankan di memori lokal dan akan disinkronkan otomatis ke database cloud saat online.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2.5 text-[10px] text-emerald-700 dark:text-emerald-300 flex items-center gap-1 font-bold">
+                    <Wifi className="w-3 h-3 text-emerald-500" />
+                    <span>Tersinkronisasi langsung dengan Database Cloud Supabase PostgreSQL</span>
+                  </div>
+                )}
+
                 {/* Send WhatsApp Notification Option for Students */}
                 {scanResult.student && scanResult.success && (
                   <button
@@ -1210,13 +1394,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                         <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                       )}
                       <div className="truncate">
-                        <span className="font-extrabold text-slate-900 dark:text-white truncate block">
-                          {item.teacher
-                            ? item.teacher.nama
-                            : item.student
-                            ? item.student.nama
-                            : item.scannedCode}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-extrabold text-slate-900 dark:text-white truncate block">
+                            {item.teacher
+                              ? item.teacher.nama
+                              : item.student
+                              ? item.student.nama
+                              : item.scannedCode}
+                          </span>
+                          {item.isOffline && (
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-200/80 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-0.5">
+                              <WifiOff className="w-2.5 h-2.5" />
+                              <span>Lokal</span>
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
                           {item.teacher
                             ? `NIP: ${item.teacher.nip} • ${item.teacher.jabatan}`
@@ -1447,6 +1639,19 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       </>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Offline Storage Notice in Modal */}
+              {scanResult.isOffline && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-2xl border border-amber-300 dark:border-amber-700 text-[11px] text-amber-900 dark:text-amber-200 space-y-1">
+                  <div className="flex items-center gap-1.5 font-extrabold">
+                    <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <span>Tersimpan di Cache Lokal (Mode Offline)</span>
+                  </div>
+                  <p className="leading-relaxed text-[10.5px]">
+                    Koneksi internet terputus saat pemindaian. Data presensi disimpan di memori browser dan akan otomatis disinkronkan ke Supabase Cloud saat jaringan pulih.
+                  </p>
                 </div>
               )}
 

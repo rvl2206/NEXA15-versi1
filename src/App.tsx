@@ -15,14 +15,14 @@ import { TeacherAttendanceRecap } from './components/TeacherAttendanceRecap';
 import { AIAnalysis } from './components/AIAnalysis';
 import { ActivityLogs } from './components/ActivityLogs';
 import { SettingsPage } from './components/SettingsPage';
-import { SetupGuideModal } from './components/SetupGuideModal';
 import { ToastContainer } from './components/ToastContainer';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => store.getCurrentUser());
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [isSetupGuideOpen, setIsSetupGuideOpen] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [settings, setSettings] = useState<SchoolSettings>(store.getSettings());
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -67,6 +67,7 @@ export function App() {
       setActiveTab(allowed[0]);
     }
   }, [currentUser, activeTab]);
+
   useEffect(() => {
     if (!currentUser) return;
 
@@ -89,14 +90,7 @@ export function App() {
       }, INACTIVITY_TIMEOUT_MS);
     };
 
-    const activityEvents: (keyof WindowEventMap)[] = [
-      'mousemove',
-      'keydown',
-      'click',
-      'scroll',
-      'touchstart',
-      'pointerdown',
-    ];
+    const activityEvents: (keyof WindowEventMap)[] = ['keydown', 'click', 'touchstart'];
 
     resetInactivityTimer();
 
@@ -120,7 +114,6 @@ export function App() {
   const handleLoginSuccess = (user: User) => {
     store.setCurrentUser(user);
     setCurrentUser(user);
-    // Auto switch tab based on role
     if (user.role === 'Guru') {
       setActiveTab('scan');
     } else {
@@ -134,7 +127,6 @@ export function App() {
       <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
         <ToastContainer />
         <LoginModal onLogin={handleLoginSuccess} />
-        <SetupGuideModal isOpen={isSetupGuideOpen} onClose={() => setIsSetupGuideOpen(false)} />
       </div>
     );
   }
@@ -142,7 +134,7 @@ export function App() {
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigateTab={setActiveTab} />;
       case 'scan':
         return <QRScanner currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'students':
@@ -162,7 +154,7 @@ export function App() {
       case 'settings':
         return <SettingsPage userRole={currentUser?.role} />;
       default:
-        return <Dashboard />;
+        return <Dashboard onNavigateTab={setActiveTab} />;
     }
   };
 
@@ -173,25 +165,35 @@ export function App() {
       <Navbar
         currentUser={currentUser}
         onLogout={handleLogout}
-        onOpenSetupGuide={() => setIsSetupGuideOpen(true)}
         settings={settings}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         theme={theme}
         onToggleTheme={toggleTheme}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
       />
 
       {/* Main Body */}
-      <div className="flex-1 flex flex-col md:flex-row pb-20 md:pb-0 w-full max-w-full min-w-0 overflow-x-hidden">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser?.role} />
+      <div className="flex-1 flex flex-col md:flex-row w-full max-w-full min-w-0 overflow-x-hidden">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          userRole={currentUser?.role}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
 
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
           {renderActiveTabContent()}
         </main>
       </div>
-
-      {/* Developer & User Setup Guide Modal */}
-      <SetupGuideModal isOpen={isSetupGuideOpen} onClose={() => setIsSetupGuideOpen(false)} />
     </div>
   );
 }

@@ -37,7 +37,7 @@ export const ActivityLogs: React.FC = () => {
 
   // Auto-refresh state
   const [isAutoRefresh, setIsAutoRefresh] = useState<boolean>(false);
-  const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(10);
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(30);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
   const [isRefreshingAnim, setIsRefreshingAnim] = useState<boolean>(false);
 

@@ -7,10 +7,10 @@ import { GoogleGenAI } from "@google/genai";
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// Enable CORS for Flutter mobile/web apps
+// Enable CORS for mobile and web requests
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -27,6 +27,8 @@ const DB_FILE = path.join(process.cwd(), "nexa15_server_db.json");
 interface ServerDatabase {
   students: any[];
   attendance: any[];
+  teachers: any[];
+  teacherAttendance: any[];
   logs: any[];
   settings: any | null;
   passwords: any | null;
@@ -35,23 +37,12 @@ interface ServerDatabase {
 let serverData: ServerDatabase = {
   students: [],
   attendance: [],
+  teachers: [],
+  teacherAttendance: [],
   logs: [],
   settings: null,
   passwords: null,
 };
-
-let sseClients: express.Response[] = [];
-
-function broadcastRealtimeUpdate(payload: any = { type: "SYNC_UPDATE" }) {
-  const data = JSON.stringify({ ...payload, timestamp: Date.now() });
-  sseClients.forEach((client) => {
-    try {
-      client.write(`data: ${data}\n\n`);
-    } catch {
-      // client disconnected
-    }
-  });
-}
 
 // Load initial database
 function loadServerData() {
@@ -63,6 +54,8 @@ function loadServerData() {
         serverData = {
           students: Array.isArray(parsed.students) ? parsed.students : [],
           attendance: Array.isArray(parsed.attendance) ? parsed.attendance : [],
+          teachers: Array.isArray(parsed.teachers) ? parsed.teachers : [],
+          teacherAttendance: Array.isArray(parsed.teacherAttendance) ? parsed.teacherAttendance : [],
           logs: Array.isArray(parsed.logs) ? parsed.logs : [],
           settings: parsed.settings || null,
           passwords: parsed.passwords || null,
@@ -76,22 +69,21 @@ function loadServerData() {
   }
 }
 
+let saveTimeout: NodeJS.Timeout | null = null;
 function saveServerData() {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(serverData, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Error writing server database file:", err);
-  }
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(serverData, null, 2), "utf-8");
+    } catch (err) {
+      console.error("Error writing server database file:", err);
+    }
+  }, 100);
 }
 
 loadServerData();
 
-// Clean disconnected SSE clients periodically
-setInterval(() => {
-  sseClients = sseClients.filter((client) => !client.writableEnded);
-}, 30000);
-
-// API Routes
+// Health Check API
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -116,21 +108,6 @@ app.get("/api/supabase/status", (_req, res) => {
   });
 });
 
-// SSE endpoint for real-time synchronization across all roles
-app.get("/api/events", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-
-  res.write(`data: ${JSON.stringify({ type: "CONNECTED", timestamp: Date.now() })}\n\n`);
-  sseClients.push(res);
-
-  req.on("close", () => {
-    sseClients = sseClients.filter((c) => c !== res);
-  });
-});
-
 // Attendance API
 app.get("/api/attendance", (_req, res) => {
   res.json(serverData.attendance || []);
@@ -149,7 +126,6 @@ app.post("/api/attendance", (req, res) => {
     serverData.attendance.unshift(record);
   }
   saveServerData();
-  broadcastRealtimeUpdate({ type: "ATTENDANCE_UPDATED" });
   res.json({ success: true, count: serverData.attendance.length });
 });
 
@@ -174,7 +150,6 @@ app.post("/api/attendance/sync", (req, res) => {
   }
 
   saveServerData();
-  broadcastRealtimeUpdate({ type: "ATTENDANCE_SYNCED" });
   res.json({ success: true, count: serverData.attendance.length });
 });
 
@@ -184,7 +159,6 @@ app.post("/api/attendance/delete-multiple", (req, res) => {
     const set = new Set(ids);
     serverData.attendance = serverData.attendance.filter((a) => !set.has(a.id));
     saveServerData();
-    broadcastRealtimeUpdate({ type: "ATTENDANCE_DELETED" });
   }
   res.json({ success: true, count: serverData.attendance.length });
 });
@@ -193,14 +167,12 @@ app.delete("/api/attendance/:id", (req, res) => {
   const { id } = req.params;
   serverData.attendance = serverData.attendance.filter((a) => a.id !== id);
   saveServerData();
-  broadcastRealtimeUpdate({ type: "ATTENDANCE_DELETED" });
   res.json({ success: true });
 });
 
 app.post("/api/attendance/clear", (_req, res) => {
   serverData.attendance = [];
   saveServerData();
-  broadcastRealtimeUpdate({ type: "ATTENDANCE_CLEARED" });
   res.json({ success: true });
 });
 
@@ -235,14 +207,103 @@ app.post("/api/students/sync", (req, res) => {
   }
 
   saveServerData();
-  broadcastRealtimeUpdate({ type: "STUDENTS_SYNCED" });
   res.json({ success: true, count: serverData.students.length });
 });
 
 app.post("/api/students/clear", (_req, res) => {
   serverData.students = [];
   saveServerData();
-  broadcastRealtimeUpdate({ type: "STUDENTS_CLEARED" });
+  res.json({ success: true });
+});
+
+// Teachers API
+app.get("/api/teachers", (_req, res) => {
+  res.json(serverData.teachers || []);
+});
+
+app.post("/api/teachers/sync", (req, res) => {
+  const { teachers, mode } = req.body;
+  if (!Array.isArray(teachers)) {
+    res.status(400).json({ error: "teachers must be an array" });
+    return;
+  }
+
+  if (mode === "replace") {
+    serverData.teachers = teachers;
+  } else {
+    const map = new Map<string, any>();
+    serverData.teachers.forEach((t) => {
+      if (t.id) map.set(t.id, t);
+      if (t.nip) map.set("nip-" + t.nip, t);
+    });
+    teachers.forEach((t) => {
+      if (!t) return;
+      const key = t.id || (t.nip ? "nip-" + t.nip : null);
+      if (key) {
+        map.set(key, t);
+      }
+    });
+    serverData.teachers = Array.from(map.values());
+  }
+
+  saveServerData();
+  res.json({ success: true, count: serverData.teachers.length });
+});
+
+app.post("/api/teachers/clear", (_req, res) => {
+  serverData.teachers = [];
+  saveServerData();
+  res.json({ success: true });
+});
+
+// Teacher Attendance API
+app.get("/api/teacher-attendance", (_req, res) => {
+  res.json(serverData.teacherAttendance || []);
+});
+
+app.post("/api/teacher-attendance", (req, res) => {
+  const record = req.body;
+  if (!record || !record.id) {
+    res.status(400).json({ error: "Invalid teacher attendance record" });
+    return;
+  }
+  const idx = serverData.teacherAttendance.findIndex((a) => a.id === record.id);
+  if (idx !== -1) {
+    serverData.teacherAttendance[idx] = { ...serverData.teacherAttendance[idx], ...record };
+  } else {
+    serverData.teacherAttendance.unshift(record);
+  }
+  saveServerData();
+  res.json({ success: true, count: serverData.teacherAttendance.length });
+});
+
+app.post("/api/teacher-attendance/sync", (req, res) => {
+  const { attendance, mode } = req.body;
+  if (!Array.isArray(attendance)) {
+    res.status(400).json({ error: "attendance must be an array" });
+    return;
+  }
+
+  if (mode === "replace") {
+    serverData.teacherAttendance = attendance;
+  } else {
+    const map = new Map<string, any>();
+    serverData.teacherAttendance.forEach((r) => map.set(r.id, r));
+    attendance.forEach((r) => {
+      if (r && r.id) {
+        map.set(r.id, r);
+      }
+    });
+    serverData.teacherAttendance = Array.from(map.values());
+  }
+
+  saveServerData();
+  res.json({ success: true, count: serverData.teacherAttendance.length });
+});
+
+app.post("/api/teacher-attendance/clear", (_req, res) => {
+  serverData.teacherAttendance = [];
+  saveServerData();
   res.json({ success: true });
 });
 
@@ -251,12 +312,13 @@ app.post("/api/database/clear-all", (_req, res) => {
   serverData = {
     students: [],
     attendance: [],
+    teachers: [],
+    teacherAttendance: [],
     logs: [],
     settings: null,
     passwords: null,
   };
   saveServerData();
-  broadcastRealtimeUpdate({ type: "DATABASE_CLEARED" });
   res.json({ success: true });
 });
 
@@ -269,11 +331,10 @@ app.post("/api/logs", (req, res) => {
   const log = req.body;
   if (log && log.id) {
     serverData.logs.unshift(log);
-    if (serverData.logs.length > 2000) {
-      serverData.logs = serverData.logs.slice(0, 2000);
+    if (serverData.logs.length > 1000) {
+      serverData.logs = serverData.logs.slice(0, 1000);
     }
     saveServerData();
-    broadcastRealtimeUpdate({ type: "LOG_ADDED" });
   }
   res.json({ success: true, count: serverData.logs.length });
 });
@@ -299,18 +360,6 @@ app.post("/api/logs/sync", (req, res) => {
   }
 
   saveServerData();
-  broadcastRealtimeUpdate({ type: "LOGS_SYNCED" });
-  res.json({ success: true, count: serverData.logs.length });
-});
-
-app.post("/api/logs/delete-multiple", (req, res) => {
-  const { ids } = req.body;
-  if (Array.isArray(ids)) {
-    const set = new Set(ids);
-    serverData.logs = serverData.logs.filter((l) => !set.has(l.id));
-    saveServerData();
-    broadcastRealtimeUpdate({ type: "LOGS_DELETED" });
-  }
   res.json({ success: true, count: serverData.logs.length });
 });
 
@@ -318,14 +367,12 @@ app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
   serverData.logs = serverData.logs.filter((l) => l.id !== id);
   saveServerData();
-  broadcastRealtimeUpdate({ type: "LOGS_DELETED" });
   res.json({ success: true });
 });
 
 app.post("/api/logs/clear", (_req, res) => {
   serverData.logs = [];
   saveServerData();
-  broadcastRealtimeUpdate({ type: "LOGS_CLEARED" });
   res.json({ success: true });
 });
 
@@ -339,22 +386,6 @@ app.post("/api/settings", (req, res) => {
   if (settings) {
     serverData.settings = settings;
     saveServerData();
-    broadcastRealtimeUpdate({ type: "SETTINGS_UPDATED" });
-  }
-  res.json({ success: true });
-});
-
-// Passwords API
-app.get("/api/passwords", (_req, res) => {
-  res.json(serverData.passwords || null);
-});
-
-app.post("/api/passwords", (req, res) => {
-  const passwords = req.body;
-  if (passwords) {
-    serverData.passwords = passwords;
-    saveServerData();
-    broadcastRealtimeUpdate({ type: "PASSWORDS_UPDATED" });
   }
   res.json({ success: true });
 });
