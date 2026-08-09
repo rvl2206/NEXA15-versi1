@@ -927,6 +927,127 @@ class AppStore {
     return true;
   }
 
+  public getStudentById(id: string): Student | undefined {
+    if (!id) return undefined;
+    const cleanId = String(id).trim();
+    return this.students.find((s) => s.id === cleanId);
+  }
+
+  public getStudentByNisn(nisn: string): Student | undefined {
+    if (!nisn) return undefined;
+    const cleanNisn = String(nisn).trim();
+    return this.students.find((s) => s.nisn && s.nisn.trim() === cleanNisn);
+  }
+
+  /**
+   * Pengenalan Akurat & Bebas Tabrakan Identitas Siswa dari Hasil Pindai QR / Barcode.
+   * Menggunakan pencarian hierarkis berbasis kecocokan eksak (Exact Match) pada NISN dan ID_QR,
+   * serta mem-parsing format terstruktur (NPSN.NISN.NAMA atau JSON) tanpa substring matching longgar
+   * sehingga tidak akan ada 2 siswa berbeda yang dianggap orang yang sama.
+   */
+  public findStudentByScannedCode(scannedText: string): Student | undefined {
+    if (!scannedText) return undefined;
+    const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
+    if (!cleanText) return undefined;
+
+    // 1. Exact Match pada ID_QR (case-insensitive & trimmed)
+    const exactQr = this.students.find(
+      (s) => s.id_qr && s.id_qr.trim().toLowerCase() === cleanText.toLowerCase()
+    );
+    if (exactQr) return exactQr;
+
+    // 2. Exact Match pada NISN
+    const exactNisn = this.students.find(
+      (s) => s.nisn && s.nisn.trim() === cleanText
+    );
+    if (exactNisn) return exactNisn;
+
+    // 3. Exact Match pada Document ID
+    const exactId = this.students.find((s) => s.id === cleanText);
+    if (exactId) return exactId;
+
+    // 4. Parsing Format Terstruktur Berpemisah Titik (Contoh: "69933068.3080370790.DADANG BUAMONA" atau "69933068.3080370790")
+    if (cleanText.includes('.')) {
+      const parts = cleanText.split('.').map((p) => p.trim()).filter(Boolean);
+
+      // Kasus A: Dimulai dengan NPSN / Prefix -> parts[1] adalah NISN
+      if (parts.length >= 2) {
+        const potentialNisn1 = parts[1];
+        if (potentialNisn1 && potentialNisn1.length >= 3) {
+          const matchByPart1 = this.students.find(
+            (s) => s.nisn && s.nisn.trim() === potentialNisn1
+          );
+          if (matchByPart1) return matchByPart1;
+        }
+
+        // Kasus B: parts[0] langsung berisi NISN (misal: "3080370790.DADANG BUAMONA")
+        const potentialNisn0 = parts[0];
+        if (potentialNisn0 && potentialNisn0.length >= 3) {
+          const matchByPart0 = this.students.find(
+            (s) => s.nisn && s.nisn.trim() === potentialNisn0
+          );
+          if (matchByPart0) return matchByPart0;
+        }
+      }
+
+      // Kasus C: Pencocokan dengan nama lengkap tertera di QR (parts[2...])
+      if (parts.length >= 3) {
+        const parsedName = parts.slice(2).join('.').trim().toLowerCase();
+        if (parsedName) {
+          const matchByNameExact = this.students.find(
+            (s) => s.nama && s.nama.trim().toLowerCase() === parsedName
+          );
+          if (matchByNameExact) return matchByNameExact;
+        }
+      }
+    }
+
+    // 5. Parsing Format JSON (Contoh: {"nisn": "3080370790", "id_qr": "..."})
+    if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(cleanText);
+        if (parsed.nisn) {
+          const s = this.students.find((st) => st.nisn && st.nisn.trim() === String(parsed.nisn).trim());
+          if (s) return s;
+        }
+        if (parsed.id_qr) {
+          const s = this.students.find((st) => st.id_qr && st.id_qr.trim().toLowerCase() === String(parsed.id_qr).trim().toLowerCase());
+          if (s) return s;
+        }
+        if (parsed.id) {
+          const s = this.students.find((st) => st.id === String(parsed.id).trim());
+          if (s) return s;
+        }
+      } catch {
+        // Abaikan jika bukan JSON valid
+      }
+    }
+
+    // 6. Parsing URL Search Params jika format berupa tautan
+    if (cleanText.includes('?') || cleanText.includes('&')) {
+      try {
+        const queryIdx = cleanText.indexOf('?');
+        const queryStr = queryIdx !== -1 ? cleanText.substring(queryIdx + 1) : cleanText;
+        const params = new URLSearchParams(queryStr);
+        const qNisn = params.get('nisn') || params.get('id_qr');
+        if (qNisn) {
+          const matchQuery = this.students.find(
+            (s) => (s.nisn && s.nisn.trim() === qNisn.trim()) || (s.id_qr && s.id_qr.trim().toLowerCase() === qNisn.trim().toLowerCase())
+          );
+          if (matchQuery) return matchQuery;
+        }
+      } catch {}
+    }
+
+    // 7. Pencocokan Eksak Nama Lengkap Siswa (Strict Full Exact Match, Bukan Substring)
+    const exactNameMatch = this.students.find(
+      (s) => s.nama && s.nama.trim().toLowerCase() === cleanText.toLowerCase()
+    );
+    if (exactNameMatch) return exactNameMatch;
+
+    return undefined;
+  }
+
   // ==========================================
   // TEACHER (GURU & STAF) DATA MANAGEMENT
   // ==========================================
@@ -939,6 +1060,96 @@ class AppStore {
     if (!nip) return undefined;
     const clean = String(nip).trim();
     return this.teachers.find((t) => t.nip === clean);
+  }
+
+  public getTeacherById(id: string): Teacher | undefined {
+    if (!id) return undefined;
+    const cleanId = String(id).trim();
+    return this.teachers.find((t) => t.id === cleanId);
+  }
+
+  /**
+   * Pengenalan Akurat Guru & Staf dari Hasil Pindai QR / Barcode
+   */
+  public findTeacherByScannedCode(scannedText: string): Teacher | undefined {
+    if (!scannedText) return undefined;
+    const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
+    if (!cleanText) return undefined;
+
+    // 1. Exact Match pada ID_QR
+    const exactQr = this.teachers.find(
+      (t) => t.id_qr && t.id_qr.trim().toLowerCase() === cleanText.toLowerCase()
+    );
+    if (exactQr) return exactQr;
+
+    // 2. Exact Match pada NIP
+    const exactNip = this.teachers.find(
+      (t) => t.nip && t.nip.trim() === cleanText
+    );
+    if (exactNip) return exactNip;
+
+    // 3. Exact Match pada Document ID
+    const exactId = this.teachers.find((t) => t.id === cleanText);
+    if (exactId) return exactId;
+
+    // 4. Parsing Format Terstruktur Titik (Contoh: "69933068.198501012010011001" atau "69933068.198501012010011001.NAMA")
+    if (cleanText.includes('.')) {
+      const parts = cleanText.split('.').map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const potentialNip1 = parts[1];
+        if (potentialNip1 && potentialNip1.length >= 3) {
+          const matchByPart1 = this.teachers.find(
+            (t) => t.nip && t.nip.trim() === potentialNip1
+          );
+          if (matchByPart1) return matchByPart1;
+        }
+
+        const potentialNip0 = parts[0];
+        if (potentialNip0 && potentialNip0.length >= 3) {
+          const matchByPart0 = this.teachers.find(
+            (t) => t.nip && t.nip.trim() === potentialNip0
+          );
+          if (matchByPart0) return matchByPart0;
+        }
+      }
+
+      if (parts.length >= 3) {
+        const parsedName = parts.slice(2).join('.').trim().toLowerCase();
+        if (parsedName) {
+          const matchByNameExact = this.teachers.find(
+            (t) => t.nama && t.nama.trim().toLowerCase() === parsedName
+          );
+          if (matchByNameExact) return matchByNameExact;
+        }
+      }
+    }
+
+    // 5. Parsing Format JSON
+    if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(cleanText);
+        if (parsed.nip) {
+          const t = this.teachers.find((th) => th.nip && th.nip.trim() === String(parsed.nip).trim());
+          if (t) return t;
+        }
+        if (parsed.id_qr) {
+          const t = this.teachers.find((th) => th.id_qr && th.id_qr.trim().toLowerCase() === String(parsed.id_qr).trim().toLowerCase());
+          if (t) return t;
+        }
+        if (parsed.id) {
+          const t = this.teachers.find((th) => th.id === String(parsed.id).trim());
+          if (t) return t;
+        }
+      } catch {}
+    }
+
+    // 6. Strict Exact Full Name Match
+    const exactNameMatch = this.teachers.find(
+      (t) => t.nama && t.nama.trim().toLowerCase() === cleanText.toLowerCase()
+    );
+    if (exactNameMatch) return exactNameMatch;
+
+    return undefined;
   }
 
   public async addTeacher(teacherData: Omit<Teacher, 'id' | 'createdAt'>): Promise<Teacher> {
@@ -1168,23 +1379,8 @@ class AppStore {
       return { success: false, message: 'Kode QR Guru tidak terbaca atau kosong.' };
     }
 
-    // Match teacher by NIP, ID_QR, or Nama
-    let matchedTeacher = this.teachers.find(
-      (t) =>
-        t.nip === cleanText ||
-        t.id_qr === cleanText ||
-        cleanText.includes(t.nip) ||
-        cleanText.toLowerCase().includes(t.nama.toLowerCase())
-    );
-
-    if (!matchedTeacher) {
-      // Try parsing standard 69933068.NIP or similar
-      const parts = cleanText.split('.');
-      if (parts.length >= 2) {
-        const parsedNip = parts[1];
-        matchedTeacher = this.teachers.find((t) => t.nip === parsedNip);
-      }
-    }
+    // Match teacher accurately using strict hierarchical lookup without false collisions
+    const matchedTeacher = this.findTeacherByScannedCode(cleanText);
 
     if (!matchedTeacher) {
       return {
@@ -1223,10 +1419,17 @@ class AppStore {
       // Fallback
     }
 
-    // Check existing scans today for this teacher
-    const teacherTodayRecords = this.teacherAttendance.filter(
-      (a) => a.nip === matchedTeacher!.nip && this.isTeacherRecordForToday(a)
-    );
+    // Check existing scans today for this teacher strictly by NIP or ID_QR
+    const teacherTodayRecords = this.teacherAttendance.filter((a) => {
+      if (!this.isTeacherRecordForToday(a)) return false;
+      if (matchedTeacher.nip && a.nip) {
+        return a.nip.trim() === matchedTeacher.nip.trim();
+      }
+      if (matchedTeacher.id_qr && a.id_qr) {
+        return a.id_qr.trim().toLowerCase() === matchedTeacher.id_qr.trim().toLowerCase();
+      }
+      return a.nama.trim().toLowerCase() === matchedTeacher.nama.trim().toLowerCase();
+    });
 
     const masukRecord = teacherTodayRecords.find((a) => a.jenis === 'Masuk');
     const pulangRecord = teacherTodayRecords.find((a) => a.jenis === 'Pulang');
@@ -1579,23 +1782,8 @@ class AppStore {
       return { success: false, message: 'Kode QR tidak terbaca atau kosong.' };
     }
 
-    // Match student by ID_QR, NISN, or Name
-    let matchedStudent = this.students.find(
-      (s) =>
-        s.id_qr === cleanText ||
-        s.nisn === cleanText ||
-        cleanText.includes(s.nisn) ||
-        cleanText.toLowerCase().includes(s.nama.toLowerCase())
-    );
-
-    if (!matchedStudent) {
-      // Try parsing standard 69933068.NISN.NAMA
-      const parts = cleanText.split('.');
-      if (parts.length >= 2) {
-        const parsedNISN = parts[1];
-        matchedStudent = this.students.find((s) => s.nisn === parsedNISN);
-      }
-    }
+    // Match student accurately using strict hierarchical lookup without false collisions
+    const matchedStudent = this.findStudentByScannedCode(cleanText);
 
     if (!matchedStudent) {
       return {
@@ -1634,10 +1822,20 @@ class AppStore {
       // Fallback
     }
 
-    // Check existing scans today
-    const studentTodayRecords = this.attendance.filter(
-      (a) => (a.nisn === matchedStudent!.nisn || a.nama === matchedStudent!.nama) && this.isRecordForToday(a)
-    );
+    // Check existing scans today strictly by student unique identity (NISN, ID_QR, or exact Nama + Kelas)
+    const studentTodayRecords = this.attendance.filter((a) => {
+      if (!this.isRecordForToday(a)) return false;
+      if (matchedStudent.nisn && a.nisn) {
+        return a.nisn.trim() === matchedStudent.nisn.trim();
+      }
+      if (matchedStudent.id_qr && a.id_qr) {
+        return a.id_qr.trim().toLowerCase() === matchedStudent.id_qr.trim().toLowerCase();
+      }
+      return (
+        a.nama.trim().toLowerCase() === matchedStudent.nama.trim().toLowerCase() &&
+        a.kelas.trim().toLowerCase() === matchedStudent.kelas.trim().toLowerCase()
+      );
+    });
 
     // Identify auto-alpa records (which can be replaced if a student scans Masuk)
     const autoAlpaRecord = studentTodayRecords.find(
@@ -1855,7 +2053,11 @@ class AppStore {
     const timestamp1430 = `${normTarget}T14:30:00+09:00`;
 
     const studentDayRecords = this.attendance.filter(
-      (a) => (a.nisn === student.nisn || a.nama === student.nama) && this.isRecordForDate(a, normTarget)
+      (a) =>
+        ((student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
+          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
+          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())) &&
+        this.isRecordForDate(a, normTarget)
     );
 
     const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
@@ -1934,7 +2136,10 @@ class AppStore {
 
     targetStudents.forEach((student) => {
       const studentDayRecords = dayRecords.filter(
-        (a) => a.nisn === student.nisn || a.nama === student.nama
+        (a) =>
+          (student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
+          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
+          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())
       );
       const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
       const pulangRecord = studentDayRecords.find((a) => a.jenis === 'Pulang');
@@ -1997,12 +2202,12 @@ class AppStore {
     const finalTimestamp = data.timestamp || this.buildIsoTimestamp(normTarget, '07:00');
 
     // Antisipasi data ganda: Cek apakah sudah ada rekaman presensi dengan NISN, Tanggal, & Jenis yang sama
-    const existingIdx = this.attendance.findIndex(
-      (a) =>
-        ((a.nisn && a.nisn === data.nisn) || (a.nama && a.nama === data.nama)) &&
-        this.isRecordForDate(a, normTarget) &&
-        a.jenis === targetJenis
-    );
+    const existingIdx = this.attendance.findIndex((a) => {
+      const matchIdentity = data.nisn && a.nisn
+        ? a.nisn.trim() === data.nisn.trim()
+        : (a.nama.trim().toLowerCase() === data.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === data.kelas.trim().toLowerCase());
+      return matchIdentity && this.isRecordForDate(a, normTarget) && a.jenis === targetJenis;
+    });
 
     if (existingIdx !== -1) {
       const existing = this.attendance[existingIdx];
@@ -2029,7 +2234,9 @@ class AppStore {
 
     // Replace auto-alpa record if exists
     const autoAlpaIndex = this.attendance.findIndex((a) => {
-      const matchIdentity = (a.nisn && a.nisn === data.nisn) || (a.nama && a.nama === data.nama);
+      const matchIdentity = data.nisn && a.nisn
+        ? a.nisn.trim() === data.nisn.trim()
+        : (a.nama.trim().toLowerCase() === data.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === data.kelas.trim().toLowerCase());
       const matchDate = this.isRecordForDate(a, normTarget);
       const isAutoAlpa = a.id.startsWith('att-autoalpa') || a.petugas?.includes('Otopresensi') || (a.status === 'Alpa' && a.jenis === 'Masuk');
       return matchIdentity && matchDate && isAutoAlpa;

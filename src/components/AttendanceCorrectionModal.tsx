@@ -120,9 +120,14 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
       activeStudent = initialStudent;
       setSelectedStudentId(initialStudent.id);
     } else if (initialRecord) {
-      activeStudent = allStudents.find(
-        (s) => s.nisn === initialRecord.nisn || s.id_qr === initialRecord.id_qr || s.nama === initialRecord.nama
-      );
+      activeStudent = allStudents.find((s) => {
+        if (initialRecord.nisn && s.nisn) return s.nisn.trim() === initialRecord.nisn.trim();
+        if (initialRecord.id_qr && s.id_qr) return s.id_qr.trim().toLowerCase() === initialRecord.id_qr.trim().toLowerCase();
+        return (
+          s.nama.trim().toLowerCase() === initialRecord.nama.trim().toLowerCase() &&
+          s.kelas.trim().toLowerCase() === initialRecord.kelas.trim().toLowerCase()
+        );
+      });
       if (activeStudent) setSelectedStudentId(activeStudent.id);
     } else if (allStudents.length > 0) {
       activeStudent = allStudents[0];
@@ -141,7 +146,9 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
       // Find if student already has a record on targetDate for activeType
       const allAttendance = store.getAttendance();
       const rec = allAttendance.find((a) => {
-        const matchIdentity = (a.nisn && a.nisn === activeStudent?.nisn) || (a.nama && a.nama === activeStudent?.nama);
+        const matchIdentity = activeStudent?.nisn && a.nisn
+          ? a.nisn.trim() === activeStudent.nisn.trim()
+          : (a.nama.trim().toLowerCase() === activeStudent?.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === activeStudent?.kelas.trim().toLowerCase());
         const matchDate = store.isRecordForDate(a, targetDate);
         return matchIdentity && matchDate && a.jenis === activeType;
       });
@@ -170,7 +177,9 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     const normDate = store.normalizeToYyyyMmDd(tanggal);
     const allAttendance = store.getAttendance();
     const studentRecords = allAttendance.filter((a) => {
-      const matchIdentity = (a.nisn && a.nisn === currentStudent.nisn) || (a.nama && a.nama === currentStudent.nama);
+      const matchIdentity = currentStudent.nisn && a.nisn
+        ? a.nisn.trim() === currentStudent.nisn.trim()
+        : (a.nama.trim().toLowerCase() === currentStudent.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === currentStudent.kelas.trim().toLowerCase());
       const matchDate = store.isRecordForDate(a, normDate);
       return matchIdentity && matchDate;
     });
