@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { store } from '../lib/store';
+import { store, isGenericQrCode } from '../lib/store';
 import { Student, UserRole, AttendanceRecord } from '../types';
 import { exportStudentListToExcel, exportStudentListToCSV, downloadStudentImportTemplate, parseStudentImportFile, printElement, getWhatsAppLink, generateWhatsAppMessage } from '../lib/exportUtils';
 import { SchoolLogo } from './SchoolLogo';
@@ -260,13 +260,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       const isToday = store.isRecordForToday(a);
       const nisn = (a.nisn || '').trim();
       const idQr = (a.id_qr || '').trim();
-      const nama = (a.nama || '').trim().toLowerCase();
+      const namaKelas = `${(a.nama || '').trim().toLowerCase()}_${(a.kelas || '').trim().toLowerCase()}`;
 
       const targetMap = isToday ? todayMap : fallbackMap;
 
       if (nisn && !targetMap.has(`nisn:${nisn}`)) targetMap.set(`nisn:${nisn}`, a);
-      if (idQr && !targetMap.has(`qr:${idQr}`)) targetMap.set(`qr:${idQr}`, a);
-      if (nama && !targetMap.has(`nama:${nama}`)) targetMap.set(`nama:${nama}`, a);
+      if (idQr && !isGenericQrCode(idQr) && !targetMap.has(`qr:${idQr.toLowerCase()}`)) targetMap.set(`qr:${idQr.toLowerCase()}`, a);
+      if (namaKelas && !targetMap.has(`namakelas:${namaKelas}`)) targetMap.set(`namakelas:${namaKelas}`, a);
     }
 
     return { todayMap, fallbackMap };
@@ -275,17 +275,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const getStudentTodayAttendance = (student: Student): AttendanceRecord | undefined => {
     const targetNisn = (student.nisn || '').trim();
     const targetQr = (student.id_qr || '').trim();
-    const targetNama = (student.nama || '').trim().toLowerCase();
+    const targetNamaKelas = `${(student.nama || '').trim().toLowerCase()}_${(student.kelas || '').trim().toLowerCase()}`;
 
     const { todayMap, fallbackMap } = todayAttendanceMap;
 
     if (targetNisn && todayMap.has(`nisn:${targetNisn}`)) return todayMap.get(`nisn:${targetNisn}`);
-    if (targetQr && todayMap.has(`qr:${targetQr}`)) return todayMap.get(`qr:${targetQr}`);
-    if (targetNama && todayMap.has(`nama:${targetNama}`)) return todayMap.get(`nama:${targetNama}`);
+    if (targetQr && !isGenericQrCode(targetQr) && todayMap.has(`qr:${targetQr.toLowerCase()}`)) return todayMap.get(`qr:${targetQr.toLowerCase()}`);
+    if (targetNamaKelas && todayMap.has(`namakelas:${targetNamaKelas}`)) return todayMap.get(`namakelas:${targetNamaKelas}`);
 
     if (targetNisn && fallbackMap.has(`nisn:${targetNisn}`)) return fallbackMap.get(`nisn:${targetNisn}`);
-    if (targetQr && fallbackMap.has(`qr:${targetQr}`)) return fallbackMap.get(`qr:${targetQr}`);
-    if (targetNama && fallbackMap.has(`nama:${targetNama}`)) return fallbackMap.get(`nama:${targetNama}`);
+    if (targetQr && !isGenericQrCode(targetQr) && fallbackMap.has(`qr:${targetQr.toLowerCase()}`)) return fallbackMap.get(`qr:${targetQr.toLowerCase()}`);
+    if (targetNamaKelas && fallbackMap.has(`namakelas:${targetNamaKelas}`)) return fallbackMap.get(`namakelas:${targetNamaKelas}`);
 
     return undefined;
   };
