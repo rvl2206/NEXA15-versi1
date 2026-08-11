@@ -12,6 +12,7 @@ import { DigitalCardTemplate } from './components/DigitalCardTemplate';
 import { AttendanceRecap } from './components/AttendanceRecap';
 import { TeacherManagement } from './components/TeacherManagement';
 import { TeacherAttendanceRecap } from './components/TeacherAttendanceRecap';
+import { WaliKelasDispatch } from './components/WaliKelasDispatch';
 import { AIAnalysis } from './components/AIAnalysis';
 import { ActivityLogs } from './components/ActivityLogs';
 import { SettingsPage } from './components/SettingsPage';
@@ -57,9 +58,9 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return;
     const rolePermissions: Record<UserRole, string[]> = {
-      Admin: ['dashboard', 'scan', 'recap', 'teacher-recap', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
-      Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'students', 'teachers', 'card-template'],
-      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'students', 'teachers', 'ai-analysis', 'logs', 'settings'],
+      Admin: ['dashboard', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
+      Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template'],
+      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'ai-analysis', 'logs', 'settings'],
     };
 
     const allowed = rolePermissions[currentUser.role] || rolePermissions.Admin;
@@ -147,6 +148,16 @@ export function App() {
         return <AttendanceRecap currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'teacher-recap':
         return <TeacherAttendanceRecap userRole={currentUser?.role} currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
+      case 'wali-kelas-dispatch':
+        return (
+          <WaliKelasDispatch
+            students={store.getStudents()}
+            teachers={store.getTeachers()}
+            attendance={store.getAttendance()}
+            settings={settings}
+            currentUserRole={currentUser?.role}
+          />
+        );
       case 'ai-analysis':
         return <AIAnalysis />;
       case 'logs':

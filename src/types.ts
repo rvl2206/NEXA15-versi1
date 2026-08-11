@@ -30,6 +30,7 @@ export interface Teacher {
   nama: string; // Nama Lengkap Guru & Gelar
   jabatan: string; // Jabatan / Mata Pelajaran (e.g. Guru Matematika, Kepala Sekolah)
   id_qr?: string; // QR Code Identifier
+  wali_kelas?: string; // e.g. "X-1", "XI IPA 1", "XII MIPA 2"
   status: 'aktif' | 'nonaktif';
   no_hp?: string;
   foto?: string;
@@ -101,6 +102,44 @@ export interface SchoolSettings {
   enableSupabaseAutoSync?: boolean;
   lastSupabaseSync?: string;
   holidays?: Holiday[];
+  homeroomAssignments?: Record<string, { teacherName: string; teacherNip?: string; phone?: string }>;
+  waTemplateWaliKelas?: string;
+  problemThresholdAlpa?: number; // default: 2
+  problemThresholdTerlambat?: number; // default: 3
+  problemThresholdMinRate?: number; // default: 75
+}
+
+export interface HomeroomAssignment {
+  kelas: string;
+  teacherNip?: string;
+  teacherName?: string;
+  phone?: string;
+}
+
+export interface ProblematicStudentDispatch {
+  id: string;
+  studentId?: string;
+  studentName: string;
+  nisn: string;
+  kelas: string;
+  waliKelasName: string;
+  waliKelasPhone?: string;
+  waliKelasNip?: string;
+  riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian';
+  alpaCount: number;
+  terlambatCount: number;
+  sakitCount: number;
+  izinCount: number;
+  attendanceRate: number;
+  reasons: string[];
+  notes?: string;
+  aiRecommendation?: string;
+  dispatchedAt: string; // ISO date string
+  dispatchedBy: string;
+  channel: 'WhatsApp' | 'Cetak Lembar Disposisi' | 'Sistem Internal';
+  status: 'Terkirim' | 'Menunggu Tindak Lanjut' | 'Selesai / Ditangani';
+  tindakLanjutNotes?: string;
+  resolvedAt?: string;
 }
 
 export interface FilterOptions {

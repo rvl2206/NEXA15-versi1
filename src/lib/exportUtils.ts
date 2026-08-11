@@ -1896,5 +1896,71 @@ export function exportTeacherAttendanceToPDF(
   doc.save(`Rekap_Presensi_Guru_${schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
+/**
+ * Ekspor Data Siswa Bermasalah ke File Excel untuk Arsip Wali Kelas & BK
+ */
+export function exportProblematicStudentsToExcel(
+  items: Array<{
+    student: Student;
+    waliKelas: { name: string; nip?: string; phone?: string };
+    totalDays: number;
+    hadirCount: number;
+    terlambatCount: number;
+    sakitCount: number;
+    izinCount: number;
+    alpaCount: number;
+    attendanceRate: number;
+    riskLevel: string;
+    reasons: string[];
+    aiRecommendation?: string;
+  }>,
+  schoolName = 'SMA NEGERI 15 AMBON'
+) {
+  const data = items.map((item, index) => ({
+    No: index + 1,
+    'Nama Siswa': item.student.nama,
+    NISN: item.student.nisn,
+    Kelas: item.student.kelas,
+    'Wali Kelas': item.waliKelas.name,
+    'No HP Wali Kelas': item.waliKelas.phone || '-',
+    'No HP Orang Tua': item.student.no_hp_ortu || '-',
+    'Tingkat Risiko': item.riskLevel,
+    'Persentase Kehadiran': `${item.attendanceRate}%`,
+    'Alpa (Tanpa Ket.)': item.alpaCount,
+    'Terlambat (Kali)': item.terlambatCount,
+    'Sakit (Hari)': item.sakitCount,
+    'Izin (Hari)': item.izinCount,
+    'Hadir Tepat Waktu': item.hadirCount,
+    'Indikasi / Alasan': item.reasons.join('; '),
+    'Rekomendasi Tindak Lanjut': item.aiRecommendation || '-',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  worksheet['!cols'] = [
+    { wch: 6 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 15 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 45 },
+    { wch: 45 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Siswa Bermasalah');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(workbook, `Data_Siswa_Bermasalah_${schoolName.replace(/\s+/g, '_')}_${dateStr}.xlsx`);
+}
+
+
 
 

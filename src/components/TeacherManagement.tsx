@@ -87,6 +87,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     nama: '',
     nip: '',
     jabatan: '',
+    wali_kelas: '',
+    no_hp: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
   });
   const [formError, setFormError] = useState('');
@@ -175,6 +177,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       nama: '',
       nip: '',
       jabatan: '',
+      wali_kelas: '',
+      no_hp: '',
       status: 'aktif',
     });
     setFormError('');
@@ -187,6 +191,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       nama: teacher.nama,
       nip: teacher.nip,
       jabatan: teacher.jabatan,
+      wali_kelas: teacher.wali_kelas || '',
+      no_hp: teacher.no_hp || '',
       status: teacher.status || 'aktif',
     });
     setFormError('');
@@ -212,6 +218,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       nama: formData.nama.trim(),
       nip: cleanNip,
       jabatan: formData.jabatan.trim() || 'Guru Mata Pelajaran',
+      wali_kelas: formData.wali_kelas.trim() || undefined,
+      no_hp: formData.no_hp.trim() || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -242,6 +250,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       nama: formData.nama.trim(),
       nip: cleanNip,
       jabatan: formData.jabatan.trim() || 'Guru Mata Pelajaran',
+      wali_kelas: formData.wali_kelas.trim() || undefined,
+      no_hp: formData.no_hp.trim() || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -896,6 +906,33 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Wali Kelas (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: X-1 / XI IPA 1"
+                    value={formData.wali_kelas}
+                    onChange={(e) => setFormData({ ...formData, wali_kelas: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    No. HP / WA (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    value={formData.no_hp}
+                    onChange={(e) => setFormData({ ...formData, no_hp: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                </div>
               </div>
 
               <div>

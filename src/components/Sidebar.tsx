@@ -86,6 +86,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: 'Guru',
           badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
         },
+        {
+          id: 'wali-kelas-dispatch',
+          label: 'Disposisi Siswa ke Wali Kelas',
+          icon: ShieldAlert,
+          roles: ['Admin', 'Guru', 'Kepala Sekolah'],
+          badge: 'Wali Kelas',
+          badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-400/30',
+        },
       ],
     },
     {

@@ -11,6 +11,8 @@ import {
   User,
   Holiday,
   MissingAttendanceLogItem,
+  ProblematicStudentDispatch,
+  HomeroomAssignment,
 } from '../types';
 import { toast } from './toast';
 import { INITIAL_TEACHERS } from './seedData';
@@ -46,6 +48,7 @@ const STORAGE_KEYS = {
   TEACHER_ATTENDANCE: 'nexa15_teacher_attendance_v3',
   LOGS: 'nexa15_logs_v3',
   SYNC_QUEUE: 'nexa15_sync_queue_v3',
+  DISPATCHES: 'nexa15_dispatches_v3',
 };
 
 export interface SyncQueueItem {
@@ -92,6 +95,11 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ⏰ *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
   waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
   waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: ❌ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+  waTemplateWaliKelas: 'Yth. Bapak/Ibu Wali Kelas *{kelas}* (*{wali_kelas}*),\n\nBerikut kami teruskan *Laporan Disposisi Siswa Butuh Perhatian Khusus / Bermasalah* dari Tim Kedisiplinan & Presensi Digital *{sekolah}*:\n\n👤 *Nama Siswa:* {nama}\n🔢 *NISN:* {nisn}\n🏫 *Kelas:* {kelas}\n📱 *No. HP/WA Ortu:* {no_hp_ortu}\n\n📊 *Catatan Kehadiran & Rekam Kedisiplinan:*\n• 📈 Persentase Kehadiran: *{persentase_kehadiran}*\n• ❌ Jumlah Alpa (Tanpa Keterangan): *{alpa} hari*\n• ⏰ Jumlah Keterlambatan: *{terlambat} kali*\n• 🩺 Jumlah Sakit/Izin: *{sakit_izin} hari*\n\n🚨 *Indikasi Masalah:*\n{alasan_masalah}\n\n💡 *Rekomendasi Tindak Lanjut Wali Kelas & BK:*\n{rekomendasi}\n\n📝 *Catatan Tambahan Petugas:*\n{catatan_petugas}\n\nMohon Bapak/Ibu Wali Kelas dapat segera menindaklanjuti dengan pembinaan internal, koordinasi Guru BK, serta pemanggilan Orang Tua / Wali murid ke sekolah jika diperlukan.\n\nTerima kasih atas dedikasi dan kerja sama Bapak/Ibu.\n_Tim Presensi & Kesiswaan {sekolah}_\n📅 {tanggal}',
+  problemThresholdAlpa: 2,
+  problemThresholdTerlambat: 3,
+  problemThresholdMinRate: 75,
+  homeroomAssignments: {},
   supabaseUrl: 'https://tpxyvbfbahsjssqwubfl.supabase.co',
   supabaseKey: 'sb_publishable_oH-2538e28kbMbpk8ESZ7w_LpeIn1Jh',
   enableSupabaseAutoSync: true,
@@ -157,6 +165,7 @@ class AppStore {
   private teachers: Teacher[] = [];
   private teacherAttendance: TeacherAttendanceRecord[] = [];
   private logs: ActivityLog[] = [];
+  private dispatches: ProblematicStudentDispatch[] = [];
   private settings: SchoolSettings = DEFAULT_SETTINGS;
   private passwords: Record<string, string> = {
     'usr-admin': 'AdminNexa15!',
@@ -212,6 +221,10 @@ class AppStore {
       const savedQueue = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
       if (savedQueue) {
         this.syncQueue = JSON.parse(savedQueue);
+      }
+      const savedDispatches = localStorage.getItem(STORAGE_KEYS.DISPATCHES);
+      if (savedDispatches) {
+        this.dispatches = JSON.parse(savedDispatches);
       }
       this.processAutoAlpa();
       this.sanitizeData();
@@ -360,6 +373,7 @@ class AppStore {
         localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
         localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
         localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
+        localStorage.setItem(STORAGE_KEYS.DISPATCHES, JSON.stringify(this.dispatches));
       } catch (e) {
         console.warn('LocalStorage save error:', e);
       }
@@ -2981,6 +2995,447 @@ class AppStore {
 
   public restoreFromBrowserBackup() {
     this.fetchFromServer();
+  }
+
+  // ==========================================
+  // WALI KELAS & PROBLEMATIC STUDENT DISPATCH
+  // ==========================================
+
+  public getDispatches(): ProblematicStudentDispatch[] {
+    return [...this.dispatches];
+  }
+
+  public addDispatch(
+    data: Omit<ProblematicStudentDispatch, 'id' | 'dispatchedAt'>
+  ): ProblematicStudentDispatch {
+    const newDispatch: ProblematicStudentDispatch = {
+      ...data,
+      id: `dsp-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      dispatchedAt: new Date().toISOString(),
+    };
+
+    // Remove any existing active pending dispatch for the exact same student if re-dispatching
+    this.dispatches = [newDispatch, ...this.dispatches.filter((d) => d.nisn !== newDispatch.nisn || d.status === 'Selesai / Ditangani')];
+    this.saveLocalData();
+    this.notify();
+    this.addLog(
+      'DISPOSISI_WALI_KELAS',
+      `Data siswa bermasalah ${newDispatch.studentName} (${newDispatch.kelas}) dikirim ke Wali Kelas ${newDispatch.waliKelasName} via ${newDispatch.channel}.`
+    );
+    return newDispatch;
+  }
+
+  public updateDispatchStatus(
+    id: string,
+    status: ProblematicStudentDispatch['status'],
+    tindakLanjutNotes?: string
+  ): boolean {
+    const idx = this.dispatches.findIndex((d) => d.id === id);
+    if (idx === -1) return false;
+
+    this.dispatches[idx] = {
+      ...this.dispatches[idx],
+      status,
+      tindakLanjutNotes: tindakLanjutNotes !== undefined ? tindakLanjutNotes : this.dispatches[idx].tindakLanjutNotes,
+      resolvedAt: status === 'Selesai / Ditangani' ? new Date().toISOString() : this.dispatches[idx].resolvedAt,
+    };
+
+    this.saveLocalData();
+    this.notify();
+    this.addLog(
+      'UPDATE_DISPOSISI',
+      `Status disposisi siswa ${this.dispatches[idx].studentName} diperbarui menjadi: ${status}`
+    );
+    return true;
+  }
+
+  public deleteDispatch(id: string): boolean {
+    const target = this.dispatches.find((d) => d.id === id);
+    if (!target) return false;
+    this.dispatches = this.dispatches.filter((d) => d.id !== id);
+    this.saveLocalData();
+    this.notify();
+    this.addLog('HAPUS_DISPOSISI', `Riwayat disposisi siswa ${target.studentName} dihapus.`);
+    return true;
+  }
+
+  public clearDispatches(): void {
+    this.dispatches = [];
+    this.saveLocalData(true);
+    this.notify();
+    this.addLog('CLEAR_DISPOSISI', 'Seluruh riwayat disposisi ke wali kelas telah dibersihkan.');
+  }
+
+  /**
+   * Cari Wali Kelas untuk kelas tertentu
+   */
+  public getHomeroomTeacherForClass(kelas: string): {
+    teacher?: Teacher;
+    name: string;
+    nip?: string;
+    phone?: string;
+    source: 'teacher_db' | 'settings_map' | 'none';
+  } {
+    if (!kelas) {
+      return { name: 'Wali Kelas', source: 'none' };
+    }
+
+    const cleanKelas = String(kelas).trim().toLowerCase();
+
+    // 1. Cek dari database guru yang memiliki field wali_kelas sesuai
+    const matchByField = this.teachers.find(
+      (t) => t.status !== 'nonaktif' && t.wali_kelas && t.wali_kelas.trim().toLowerCase() === cleanKelas
+    );
+    if (matchByField) {
+      return {
+        teacher: matchByField,
+        name: matchByField.nama,
+        nip: matchByField.nip,
+        phone: matchByField.no_hp || '',
+        source: 'teacher_db',
+      };
+    }
+
+    // 2. Cek dari database guru yang jabatan-nya mengandung "Wali Kelas [kelas]"
+    const matchByJabatan = this.teachers.find(
+      (t) =>
+        t.status !== 'nonaktif' &&
+        t.jabatan &&
+        t.jabatan.toLowerCase().includes('wali kelas') &&
+        t.jabatan.toLowerCase().includes(cleanKelas)
+    );
+    if (matchByJabatan) {
+      return {
+        teacher: matchByJabatan,
+        name: matchByJabatan.nama,
+        nip: matchByJabatan.nip,
+        phone: matchByJabatan.no_hp || '',
+        source: 'teacher_db',
+      };
+    }
+
+    // 3. Cek dari settings homeroomAssignments
+    const assignments = this.settings.homeroomAssignments || {};
+    const directKey = Object.keys(assignments).find((k) => k.toLowerCase() === cleanKelas);
+    if (directKey && assignments[directKey]) {
+      const assigned = assignments[directKey];
+      const matchTeacher = assigned.teacherNip ? this.getTeacherByNip(assigned.teacherNip) : undefined;
+      return {
+        teacher: matchTeacher,
+        name: assigned.teacherName || 'Wali Kelas ' + kelas,
+        nip: assigned.teacherNip,
+        phone: assigned.phone || matchTeacher?.no_hp || '',
+        source: 'settings_map',
+      };
+    }
+
+    return {
+      name: `Wali Kelas ${kelas}`,
+      source: 'none',
+    };
+  }
+
+  /**
+   * Set pemetaan Wali Kelas untuk kelas tertentu di Settings
+   */
+  public setHomeroomAssignment(
+    kelas: string,
+    data: { teacherName: string; teacherNip?: string; phone?: string }
+  ): void {
+    const currentAssignments = { ...(this.settings.homeroomAssignments || {}) };
+    currentAssignments[kelas] = data;
+    this.updateSettings({ homeroomAssignments: currentAssignments });
+
+    // Jika guru ada di database, update juga field wali_kelas di guru tersebut
+    if (data.teacherNip) {
+      const teacher = this.getTeacherByNip(data.teacherNip);
+      if (teacher) {
+        this.updateTeacher(teacher.id, { wali_kelas: kelas });
+      }
+    }
+  }
+
+  /**
+   * Analisis & Identifikasi Seluruh Siswa Bermasalah / Berisiko
+   */
+  public getProblematicStudentsAnalysis(options?: {
+    kelas?: string;
+    minAlpa?: number;
+    minTerlambat?: number;
+    maxAttendanceRate?: number;
+    riskLevel?: string;
+    searchQuery?: string;
+  }): Array<{
+    student: Student;
+    waliKelas: { name: string; nip?: string; phone?: string; source: string };
+    totalDays: number;
+    hadirCount: number;
+    terlambatCount: number;
+    sakitCount: number;
+    izinCount: number;
+    alpaCount: number;
+    attendanceRate: number;
+    riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian';
+    reasons: string[];
+    datesWithIssues: Array<{ tanggal: string; status: AttendanceStatus; catatan?: string; terlambatMenit?: number }>;
+    aiRecommendation: string;
+    latestDispatch?: ProblematicStudentDispatch;
+  }> {
+    const activeStudents = this.students.filter((s) => s.status === 'aktif');
+    const allUniqueDates = Array.from(new Set(this.attendance.map((a) => a.tanggal)));
+    const totalRecordedDays = Math.max(allUniqueDates.length, 1);
+
+    const minAlpa = options?.minAlpa ?? this.settings.problemThresholdAlpa ?? 2;
+    const minTerlambat = options?.minTerlambat ?? this.settings.problemThresholdTerlambat ?? 3;
+    const maxAttendanceRate = options?.maxAttendanceRate ?? this.settings.problemThresholdMinRate ?? 75;
+
+    const list: Array<any> = [];
+
+    activeStudents.forEach((student) => {
+      if (options?.kelas && options.kelas !== 'Semua Kelas' && options.kelas !== 'Semua' && student.kelas !== options.kelas) {
+        return;
+      }
+
+      const studentRecords = this.attendance.filter((a) => a.nisn === student.nisn && a.jenis === 'Masuk');
+      const studentUniqueDates = new Set(studentRecords.map((r) => r.tanggal));
+      const studentTotalDays = Math.max(studentUniqueDates.size, totalRecordedDays);
+
+      let hadirCount = 0;
+      let terlambatCount = 0;
+      let sakitCount = 0;
+      let izinCount = 0;
+      let alpaCount = 0;
+      const datesWithIssues: Array<{ tanggal: string; status: AttendanceStatus; catatan?: string; terlambatMenit?: number }> = [];
+
+      studentRecords.forEach((r) => {
+        if (r.status === 'Hadir') {
+          hadirCount++;
+        } else if (r.status === 'Terlambat') {
+          terlambatCount++;
+          datesWithIssues.push({ tanggal: r.tanggal, status: r.status, catatan: r.catatan, terlambatMenit: r.terlambatMenit });
+        } else if (r.status === 'Sakit') {
+          sakitCount++;
+          datesWithIssues.push({ tanggal: r.tanggal, status: r.status, catatan: r.catatan });
+        } else if (r.status === 'Izin') {
+          izinCount++;
+          datesWithIssues.push({ tanggal: r.tanggal, status: r.status, catatan: r.catatan });
+        } else if (r.status === 'Alpa') {
+          alpaCount++;
+          datesWithIssues.push({ tanggal: r.tanggal, status: r.status, catatan: r.catatan });
+        }
+      });
+
+      const totalPresent = hadirCount + terlambatCount;
+      const attendanceRate = Math.round((totalPresent / studentTotalDays) * 100);
+
+      const reasons: string[] = [];
+
+      if (alpaCount >= minAlpa) {
+        reasons.push(`Memiliki ${alpaCount} kali Alpa (tanpa keterangan sah).`);
+      } else if (alpaCount === 1) {
+        reasons.push(`Tercatat 1 kali Alpa.`);
+      }
+
+      if (terlambatCount >= minTerlambat + 2) {
+        reasons.push(`Sangat sering terlambat (${terlambatCount} kali).`);
+      } else if (terlambatCount >= minTerlambat) {
+        reasons.push(`Sering terlambat masuk sekolah (${terlambatCount} kali).`);
+      }
+
+      if (attendanceRate < maxAttendanceRate - 10) {
+        reasons.push(`Persentase kehadiran sangat kritis (${attendanceRate}%).`);
+      } else if (attendanceRate < maxAttendanceRate) {
+        reasons.push(`Persentase kehadiran di bawah standar minimal (${attendanceRate}% < ${maxAttendanceRate}%).`);
+      }
+
+      if (sakitCount + izinCount >= 5) {
+        reasons.push(`Akumulasi izin/sakit sangat tinggi (${sakitCount} Sakit, ${izinCount} Izin).`);
+      }
+
+      const isProblematic =
+        reasons.length > 0 ||
+        alpaCount >= minAlpa ||
+        terlambatCount >= minTerlambat ||
+        attendanceRate < maxAttendanceRate;
+
+      if (isProblematic) {
+        let riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian' = 'Sedang';
+
+        if (attendanceRate < 65 || alpaCount >= 3 || terlambatCount >= 6) {
+          riskLevel = 'Tinggi';
+        } else if (attendanceRate < 75 || alpaCount >= 2 || terlambatCount >= 3) {
+          riskLevel = 'Sedang';
+        } else {
+          riskLevel = 'Perhatian';
+        }
+
+        if (options?.riskLevel && options.riskLevel !== 'semua' && options.riskLevel !== 'Semua' && riskLevel !== options.riskLevel) {
+          return;
+        }
+
+        if (options?.searchQuery) {
+          const q = options.searchQuery.toLowerCase().trim();
+          const match =
+            student.nama.toLowerCase().includes(q) ||
+            student.nisn.includes(q) ||
+            student.kelas.toLowerCase().includes(q);
+          if (!match) return;
+        }
+
+        let aiRec = '';
+        if (riskLevel === 'Tinggi') {
+          aiRec = 'Sangat Mendesak: Terbitkan Surat Panggilan Orang Tua ke Sekolah, Koordinasi Penanganan Khusus Guru BK & Sidang Disiplin Wali Kelas.';
+        } else if (riskLevel === 'Sedang') {
+          aiRec = 'Penting: Hubungi Orang Tua / Wali murid via WhatsApp dan jadwalkan sesi konseling pembinaan bersama Wali Kelas.';
+        } else {
+          aiRec = 'Perhatian: Pantau ketat presensi siswa minggu ini dan ingatkan siswa terkait batas toleransi kedisiplinan sekolah.';
+        }
+
+        const waliKelas = this.getHomeroomTeacherForClass(student.kelas);
+        const latestDispatch = this.dispatches.find((d) => d.nisn === student.nisn);
+
+        list.push({
+          student,
+          waliKelas,
+          totalDays: studentTotalDays,
+          hadirCount,
+          terlambatCount,
+          sakitCount,
+          izinCount,
+          alpaCount,
+          attendanceRate,
+          riskLevel,
+          reasons,
+          datesWithIssues,
+          aiRecommendation: aiRec,
+          latestDispatch,
+        });
+      }
+    });
+
+    // Urutkan prioritas: Risiko Tinggi > Sedang > Perhatian, lalu persentase kehadiran terendah
+    const priority = { Tinggi: 1, Sedang: 2, Perhatian: 3 };
+    list.sort((a, b) => {
+      if (priority[a.riskLevel] !== priority[b.riskLevel]) {
+        return priority[a.riskLevel] - priority[b.riskLevel];
+      }
+      return a.attendanceRate - b.attendanceRate;
+    });
+
+    return list;
+  }
+
+  /**
+   * Membuat draf pesan WhatsApp resmi untuk Wali Kelas per individu siswa
+   */
+  public generateWaliKelasWhatsAppMessage(
+    student: Student,
+    stats: {
+      alpaCount: number;
+      terlambatCount: number;
+      sakitCount: number;
+      izinCount: number;
+      attendanceRate: number;
+      reasons: string[];
+      notes?: string;
+      aiRecommendation?: string;
+      datesWithIssues?: Array<{ tanggal: string; status: AttendanceStatus; catatan?: string; terlambatMenit?: number }>;
+    },
+    waliKelasName?: string
+  ): string {
+    const sName = this.settings.schoolName || 'SMA NEGERI 15 AMBON';
+    const now = new Date();
+    const dateFormatted = `${now.getDate()} ${['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][now.getMonth()]} ${now.getFullYear()}`;
+    const timeFormatted = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIT`;
+
+    let template = this.settings.waTemplateWaliKelas || DEFAULT_SETTINGS.waTemplateWaliKelas || '';
+
+    const reasonsFormatted = stats.reasons && stats.reasons.length > 0
+      ? stats.reasons.map((r, i) => `${i + 1}. ${r}`).join('\n')
+      : '• Perlu pemantauan presensi dan pembinaan kedisiplinan.';
+
+    const recFormatted = stats.aiRecommendation || 'Mohon koordinasi tindak lanjut pembinaan siswa bersama Guru BK dan pemanggilan Orang Tua / Wali.';
+    const notesFormatted = stats.notes?.trim() || 'Laporan otomatis dari Tim Presensi & Kedisiplinan Sekolah.';
+
+    let message = template
+      .replace(/{sekolah}/g, sName)
+      .replace(/{kelas}/g, student.kelas)
+      .replace(/{wali_kelas}/g, waliKelasName || 'Bapak/Ibu Guru')
+      .replace(/{nama}/g, student.nama)
+      .replace(/{nisn}/g, student.nisn)
+      .replace(/{no_hp_ortu}/g, student.no_hp_ortu ? student.no_hp_ortu : '(Belum tercatat di database)')
+      .replace(/{persentase_kehadiran}/g, `${stats.attendanceRate}%`)
+      .replace(/{alpa}/g, String(stats.alpaCount))
+      .replace(/{terlambat}/g, String(stats.terlambatCount))
+      .replace(/{sakit_izin}/g, String(stats.sakitCount + stats.izinCount))
+      .replace(/{alasan_masalah}/g, reasonsFormatted)
+      .replace(/{rekomendasi}/g, recFormatted)
+      .replace(/{catatan_petugas}/g, notesFormatted)
+      .replace(/{tanggal}/g, dateFormatted)
+      .replace(/{waktu}/g, timeFormatted);
+
+    // Tambahkan rincian tanggal ketidakhadiran jika ada
+    if (stats.datesWithIssues && stats.datesWithIssues.length > 0) {
+      const datesDetail = stats.datesWithIssues
+        .slice(0, 5)
+        .map((d) => `  - ${d.tanggal}: *${d.status}* ${d.terlambatMenit ? `(${d.terlambatMenit} mnt)` : ''} ${d.catatan ? `(${d.catatan})` : ''}`)
+        .join('\n');
+      message += `\n\n📅 *Rincian Tanggal Ketidakhadiran/Keterlambatan:*\n${datesDetail}`;
+      if (stats.datesWithIssues.length > 5) {
+        message += `\n  - ...dan ${stats.datesWithIssues.length - 5} rekaman lainnya di sistem.`;
+      }
+    }
+
+    return message;
+  }
+
+  /**
+   * Membuat draf pesan WhatsApp rekap batch seluruh siswa bermasalah di 1 kelas ke Wali Kelasnya
+   */
+  public generateClassBatchWaliKelasWhatsAppMessage(
+    kelas: string,
+    list: Array<{
+      student: Student;
+      alpaCount: number;
+      terlambatCount: number;
+      sakitCount: number;
+      izinCount: number;
+      attendanceRate: number;
+      riskLevel: string;
+      reasons: string[];
+    }>,
+    waliKelasName?: string
+  ): string {
+    const sName = this.settings.schoolName || 'SMA NEGERI 15 AMBON';
+    const now = new Date();
+    const dateFormatted = `${now.getDate()} ${['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][now.getMonth()]} ${now.getFullYear()}`;
+
+    let msg = `Yth. Bapak/Ibu Wali Kelas *${kelas}* (${waliKelasName || 'Bapak/Ibu Guru'}),\n\n`;
+    msg += `Salam hormat dari Tim Presensi & Kedisiplinan *${sName}*.\n\n`;
+    msg += `Berikut kami sampaikan *Rekapitulasi Siswa yang Membutuhkan Perhatian / Pembinaan Khusus* di kelas *${kelas}* (Total: ${list.length} Siswa):\n\n`;
+
+    list.forEach((item, idx) => {
+      const riskBadge = item.riskLevel === 'Tinggi' ? '🔴 RISIKO TINGGI' : item.riskLevel === 'Sedang' ? '🟠 PERLU PERHATIAN' : '🟡 MONITORING';
+      msg += `*${idx + 1}. ${item.student.nama}* (NISN: ${item.student.nisn})\n`;
+      msg += `   Status: *${riskBadge}*\n`;
+      msg += `   Kehadiran: *${item.attendanceRate}%* | Alpa: *${item.alpaCount}x* | Terlambat: *${item.terlambatCount}x* | Izin/Sakit: *${item.sakitCount + item.izinCount}x*\n`;
+      if (item.student.no_hp_ortu) {
+        msg += `   Kontak Ortu: ${item.student.no_hp_ortu}\n`;
+      }
+      if (item.reasons && item.reasons.length > 0) {
+        msg += `   Catatan: ${item.reasons.join(', ')}\n`;
+      }
+      msg += `\n`;
+    });
+
+    msg += `📌 *Rekomendasi Tindak Lanjut:*\n`;
+    msg += `1. Pembinaan personal oleh Wali Kelas pada jam bimbingan kelas.\n`;
+    msg += `2. Koordinasi dengan Guru BK untuk penjadwalan konseling.\n`;
+    msg += `3. Pengiriman pemberitahuan resmi / pemanggilan Orang Tua siswa bagi siswa berisiko tinggi.\n\n`;
+    msg += `Terima kasih atas kerja sama dan dedikasi Bapak/Ibu demi kemajuan kedisiplinan belajar siswa di ${sName}.\n\n`;
+    msg += `_Tim Presensi Digital & Kesiswaan ${sName}_\n📅 ${dateFormatted}`;
+
+    return msg;
   }
 }
 
