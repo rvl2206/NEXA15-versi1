@@ -90,17 +90,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   };
 
   const handleRestoreFromBackup = () => {
-    if (confirm('Apakah Anda yakin ingin memulihkan data siswa dan absensi dari cadangan lokal browser?')) {
-      store.restoreFromBrowserBackup();
-      setHealth(store.runDataHealthCheck());
-    }
+    store.restoreFromBrowserBackup();
+    setHealth(store.runDataHealthCheck());
+    toast.success('Restorasi Selesai', 'Data siswa dan absensi berhasil dipulihkan dari cadangan browser.');
   };
 
   const handleAutoRepair = () => {
-    if (confirm('Apakah Anda yakin ingin merekonstruksi dan merestorasi profil siswa yang hilang berdasarkan log absensi & backup?')) {
-      store.autoRepairFromAttendance();
-      setHealth(store.runDataHealthCheck());
-    }
+    store.autoRepairFromAttendance();
+    setHealth(store.runDataHealthCheck());
+    toast.success('Perbaikan Selesai', 'Profil siswa yang hilang berhasil direkonstruksi dari log absensi & backup.');
   };
 
   const handleCreateManualBackup = () => {
@@ -137,11 +135,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   };
 
   const handleDeleteHoliday = (id: string, ket: string) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus hari libur "${ket}"?`)) {
-      store.deleteHoliday(id);
-      setSettings(store.getSettings());
-      toast.success('Hari Libur Dihapus', `Berhasil menghapus hari libur "${ket}".`);
-    }
+    store.deleteHoliday(id);
+    setSettings(store.getSettings());
+    toast.success('Hari Libur Dihapus', `Berhasil menghapus hari libur "${ket}".`);
   };
 
   const handleRunAutoAlpaManual = () => {
@@ -274,11 +270,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   };
 
   const handleRemoveLogo = () => {
-    if (confirm('Apakah Anda yakin ingin menghapus logo kustom? Sistem akan kembali menggunakan lambang sekolah standar.')) {
-      setSettings((prev) => ({ ...prev, schoolLogo: '' }));
-      store.updateSettings({ schoolLogo: '' });
-      toast.info('Logo Kustom Dihapus', 'Sistem kembali menggunakan lambang sekolah default.');
-    }
+    setSettings((prev) => ({ ...prev, schoolLogo: '' }));
+    store.updateSettings({ schoolLogo: '' });
+    toast.info('Logo Kustom Dihapus', 'Sistem kembali menggunakan lambang sekolah default.');
   };
 
   // Supabase Integration States
@@ -330,11 +324,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   };
 
   const handleClearQueueOnly = () => {
-    if (confirm('Apakah Anda yakin ingin mengosongkan antrian pengiriman lokal? Seluruh data yang ada di memori saat ini tetap aman.')) {
-      store.clearSyncQueue();
-      setSyncQueueInfo(store.getSyncQueueDetails());
-      toast.success('Antrian Dikosongkan', 'Antrian pengiriman lokal berhasil dikosongkan.');
-    }
+    store.clearSyncQueue();
+    setSyncQueueInfo(store.getSyncQueueDetails());
+    toast.success('Antrian Dikosongkan', 'Antrian pengiriman lokal berhasil dikosongkan.');
   };
 
   const [activeDbTab, setActiveDbTab] = useState<'supabase' | 'cloudsql' | 'docker' | 'native' | 'migration'>('supabase');
@@ -470,38 +462,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   };
 
   const handleResetData = () => {
-    if (confirm('Apakah Anda yakin ingin mereset database ke data awal contoh sekolah?')) {
-      store.resetToSeedData();
-      setSettings(store.getSettings());
-      alert('Database berhasil direset ke data awal!');
-    }
+    store.resetToSeedData();
+    setSettings(store.getSettings());
+    toast.success('Database Direset', 'Database berhasil direset ke data awal contoh sekolah!');
   };
 
   const handleClearStudents = () => {
     const studentCount = store.getStudents().length;
     if (studentCount === 0) {
-      alert('Database siswa sudah kosong.');
+      toast.info('Database Kosong', 'Database siswa sudah kosong.');
       return;
     }
-    if (confirm(`Apakah Anda yakin ingin menghapus SELURUH ${studentCount} data siswa dari database? Ini memungkinkan Anda untuk meng-import ulang file Excel tanpa duplikasi.`)) {
-      store.deleteAllStudents();
-      alert(`Berhasil menghapus seluruh ${studentCount} data siswa dari database!`);
-    }
+    store.deleteAllStudents();
+    toast.success('Siswa Dihapus', `Berhasil menghapus seluruh ${studentCount} data siswa dari database!`);
   };
 
   const handleClearAllDatabase = async () => {
-    if (
-      confirm(
-        'PERINGATAN UTAMA & KRITIS:\n\nApakah Anda yakin ingin MENGOSONGKAN SELURUH DATABASE (Siswa, Absensi, & Log Aktivitas) di Server dan Penyimpanan Lokal?\n\nTindakan ini akan menghapus seluruh data secara bersih dan permanen!'
-      )
-    ) {
-      setIsClearingCache(true);
-      await store.clearAllDatabase();
-      setSettings(store.getSettings());
-      setHealth(store.runDataHealthCheck());
-      setIsClearingCache(false);
-      alert('Seluruh Database (Server & Lokal) berhasil dikosongkan!');
-    }
+    setIsClearingCache(true);
+    await store.clearAllDatabase();
+    setSettings(store.getSettings());
+    setHealth(store.runDataHealthCheck());
+    setIsClearingCache(false);
+    toast.success('Database Bersih', 'Seluruh Database (Server & Lokal) berhasil dikosongkan!');
   };
 
   return (

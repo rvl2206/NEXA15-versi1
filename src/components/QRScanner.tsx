@@ -127,19 +127,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     });
 
     if (unreturnedStudents.length === 0) {
-      alert('Semua siswa yang aktif sudah memiliki rekaman scan Pulang hari ini.');
+      toast.info('Semua Lengkap', 'Semua siswa yang aktif sudah memiliki rekaman scan Pulang hari ini.');
       return;
     }
 
-    if (
-      window.confirm(
-        `Apakah Anda ingin menyetel scan Pulang batas akhir (14:30 WIT) untuk ${unreturnedStudents.length} siswa yang belum/lupa scan pulang hari ini?`
-      )
-    ) {
-      const res = store.recordBulkStudentsPulang1430(todayTarget, 'Semua', currentOfficer);
-      if (res.success) {
-        alert(`Berhasil! ${res.count} siswa tercatat pulang pada batas akhir pukul 14:30 WIT.`);
-      }
+    const res = store.recordBulkStudentsPulang1430(todayTarget, 'Semua', currentOfficer);
+    if (res.success) {
+      toast.success('Batas Akhir Pulang Dicatat', `${res.count} siswa tercatat pulang pada batas akhir pukul 14:30 WIT.`);
     }
   };
 

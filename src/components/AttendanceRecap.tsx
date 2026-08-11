@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { store } from '../lib/store';
+import { toast } from '../lib/toast';
 import { AttendanceRecord, Student, AttendanceStatus, AttendanceType } from '../types';
 import { AttendanceRecoveryModal } from './AttendanceRecoveryModal';
 import { AttendanceCorrectionModal } from './AttendanceCorrectionModal';
@@ -299,21 +300,18 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
   const handleDeleteSelectedAttendance = () => {
     if (selectedAttendanceIds.length === 0) return;
-    if (
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus ${selectedAttendanceIds.length} rekaman absensi terpilih? Action ini tidak dapat dibatalkan.`
-      )
-    ) {
-      store.deleteMultipleAttendance(selectedAttendanceIds);
-      setSelectedAttendanceIds([]);
-      handleManualRefresh();
-    }
+    const count = selectedAttendanceIds.length;
+    store.deleteMultipleAttendance(selectedAttendanceIds);
+    setSelectedAttendanceIds([]);
+    handleManualRefresh();
+    toast.success('Rekaman Dihapus', `Berhasil menghapus ${count} rekaman absensi terpilih.`);
   };
 
   const handleSingleSetPulang1430 = (student: Student) => {
     if (!student) return;
     const res = store.recordStudentPulang1430(student, filterTanggal, currentOfficer);
     if (res.success) {
+      toast.success('Presensi Pulang Dicatat', `Siswa ${student.nama} berhasil dicatat pulang (14:30 WIT).`);
       handleManualRefresh();
     }
   };
@@ -321,20 +319,14 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   const handleBulkSetPulang1430 = () => {
     const countToUpdate = pairedSummaryCounts.belumPulang;
     if (countToUpdate === 0) {
-      alert('Semua siswa yang masuk sudah memiliki rekaman scan Pulang.');
+      toast.info('Semua Siswa Lengkap', 'Semua siswa yang masuk sudah memiliki rekaman scan Pulang.');
       return;
     }
 
-    if (
-      window.confirm(
-        `Apakah Anda ingin menyetel scan Pulang batas akhir (14:30 WIT) untuk ${countToUpdate} siswa yang belum scan pulang pada tanggal ${formatIndoDate(filterTanggal)}?`
-      )
-    ) {
-      const res = store.recordBulkStudentsPulang1430(filterTanggal, filterKelas, currentOfficer);
-      if (res.success) {
-        alert(`Berhasil! ${res.count} siswa telah dicatat presensi Pulang pada batas akhir 14:30 WIT.`);
-        handleManualRefresh();
-      }
+    const res = store.recordBulkStudentsPulang1430(filterTanggal, filterKelas, currentOfficer);
+    if (res.success) {
+      toast.success('Batas Akhir Pulang Dicatat', `${res.count} siswa telah dicatat presensi Pulang pada batas akhir 14:30 WIT.`);
+      handleManualRefresh();
     }
   };
 
@@ -956,7 +948,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     e.preventDefault();
     const student = students.find((s) => s.nisn === manualForm.studentNisn);
     if (!student) {
-      alert('Siswa tidak ditemukan.');
+      toast.error('Siswa Tidak Ditemukan', 'Silakan pilih siswa yang valid dari daftar.');
       return;
     }
 
@@ -972,6 +964,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       catatan: manualForm.catatan,
     });
 
+    toast.success('Presensi Dicatat', `Presensi ${manualForm.status} untuk ${student.nama} (${manualForm.jenis}) berhasil dicatat.`);
     setIsManualModalOpen(false);
   };
 
@@ -2358,13 +2351,13 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
-                              if (window.confirm('Apakah Anda yakin ingin menghapus rekaman absensi ini?')) {
-                                store.deleteAttendance(r.id);
-                                setSelectedAttendanceIds((prev) => prev.filter((id) => id !== r.id));
-                              }
+                              store.deleteAttendance(r.id);
+                              setSelectedAttendanceIds((prev) => prev.filter((id) => id !== r.id));
+                              toast.success('Rekaman Dihapus', `Rekaman presensi ${r.nama} (${r.jenis}) berhasil dihapus.`);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer"
                             title="Hapus Rekaman Ini"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

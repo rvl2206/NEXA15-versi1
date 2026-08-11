@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { store } from '../lib/store';
-import { Sparkles, AlertTriangle, FileText, Loader2, Copy, Check, Printer, RefreshCw, BarChart2 } from 'lucide-react';
+import { Sparkles, AlertTriangle, FileText, Loader2, Copy, Check, Printer, BarChart2, Filter, Calendar } from 'lucide-react';
+import { toast } from '../lib/toast';
 
 export const AIAnalysis: React.FC = () => {
   const [analysisType, setAnalysisType] = useState<'attendance_summary' | 'risk_detection' | 'monthly_report'>(
     'attendance_summary'
   );
-  const [selectedMonth, setSelectedMonth] = useState<string>('Bulan Ini (Juli 2026)');
+  
+  const currentMonthStr = useMemo(() => {
+    const now = new Date();
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+  }, []);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(`Bulan Ini (${currentMonthStr})`);
   const [selectedKelas, setSelectedKelas] = useState<string>('Semua Kelas');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resultText, setResultText] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  const registeredClasses = useMemo(() => {
+    const students = store.getStudents();
+    const setClasses = new Set(students.map((s) => s.kelas).filter(Boolean));
+    return ['Semua Kelas', ...Array.from(setClasses).sort()];
+  }, []);
 
   const runGeminiAnalysis = async (typeOverride?: 'attendance_summary' | 'risk_detection' | 'monthly_report') => {
     const activeType = typeOverride || analysisType;
@@ -42,9 +56,12 @@ export const AIAnalysis: React.FC = () => {
       }
 
       setResultText(data.analysis);
+      toast.success('Analisis AI Selesai', 'Laporan analisis cerdas Gemini AI berhasil dibuat.');
     } catch (err: any) {
       console.error('Gemini Analysis Error:', err);
-      setErrorMsg(err.message || 'Terjadi kesalahan saat meminta analisis AI.');
+      const msg = err.message || 'Terjadi kesalahan saat meminta analisis AI.';
+      setErrorMsg(msg);
+      toast.error('Gagal Analisis AI', msg);
     } finally {
       setIsLoading(false);
     }
@@ -54,14 +71,53 @@ export const AIAnalysis: React.FC = () => {
     if (!resultText) return;
     navigator.clipboard.writeText(resultText);
     setCopied(true);
+    toast.success('Teks Tersalin', 'Laporan analisis berhasil disalin ke clipboard.');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePrintReport = () => {
+    if (!resultText) return;
+    const printWin = window.open('', '_blank', 'width=800,height=900');
+    if (printWin) {
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Laporan Analisis Presensi AI - NEXA15</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #1e293b; line-height: 1.6; }
+              h1 { font-size: 18px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 16px; }
+              .meta { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+              .content { white-space: pre-line; font-size: 13px; }
+            </style>
+          </head>
+          <body>
+            <h1>Laporan Analisis Kehadiran Smart AI (SMA Negeri 15 Ambon)</h1>
+            <div class="meta">
+              Jenis Analisis: ${analysisType === 'attendance_summary' ? 'Ringkasan Kehadiran' : analysisType === 'risk_detection' ? 'Deteksi Siswa Berisiko' : 'Laporan Resmi Bulanan'} | 
+              Periode: ${selectedMonth} | 
+              Kelas: ${selectedKelas} | 
+              Dibuat: ${new Date().toLocaleString('id-ID')}
+            </div>
+            <div class="content">${resultText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => {
+        printWin.print();
+      }, 300);
+    } else {
+      window.print();
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 p-6 rounded-2xl text-white shadow-lg border border-blue-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs uppercase tracking-wider mb-1">
               <Sparkles className="w-4 h-4 text-amber-300" />
@@ -73,11 +129,46 @@ export const AIAnalysis: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Month & Class Selectors */}
+            <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-blue-700/60">
+              <div className="flex items-center gap-1.5 pl-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-300" />
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer pr-2"
+                >
+                  <option value={`Bulan Ini (${currentMonthStr})`} className="bg-slate-900 text-white">
+                    Bulan Ini ({currentMonthStr})
+                  </option>
+                  <option value="Semua Riwayat" className="bg-slate-900 text-white">Semua Riwayat</option>
+                  <option value="Semester Ini" className="bg-slate-900 text-white">Semester Ini</option>
+                </select>
+              </div>
+
+              <div className="h-4 w-px bg-blue-700/60"></div>
+
+              <div className="flex items-center gap-1.5 pl-1">
+                <Filter className="w-3.5 h-3.5 text-amber-300" />
+                <select
+                  value={selectedKelas}
+                  onChange={(e) => setSelectedKelas(e.target.value)}
+                  className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer pr-2"
+                >
+                  {registeredClasses.map((k) => (
+                    <option key={k} value={k} className="bg-slate-900 text-white">
+                      {k}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <button
               onClick={() => runGeminiAnalysis()}
               disabled={isLoading}
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
             >
               {isLoading ? (
                 <>
@@ -98,11 +189,12 @@ export const AIAnalysis: React.FC = () => {
       {/* AI Mode Selector Tabs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <button
+          type="button"
           onClick={() => {
             setAnalysisType('attendance_summary');
             runGeminiAnalysis('attendance_summary');
           }}
-          className={`p-4 rounded-2xl border text-left transition-all ${
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
             analysisType === 'attendance_summary'
               ? 'bg-blue-600 text-white border-blue-500 shadow-md'
               : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-300'
@@ -113,16 +205,17 @@ export const AIAnalysis: React.FC = () => {
             <span>A. Analisis Kehadiran</span>
           </div>
           <p className="text-xs opacity-90">
-            Analisis persentase tingkat kehadiran per kelas, pola keterlambatan, & saran monitoring wali kelas.
+            Analisis persentase tingkat kehadiran per kelas, pola keterlambatan, &amp; saran monitoring wali kelas.
           </p>
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setAnalysisType('risk_detection');
             runGeminiAnalysis('risk_detection');
           }}
-          className={`p-4 rounded-2xl border text-left transition-all ${
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
             analysisType === 'risk_detection'
               ? 'bg-amber-600 text-white border-amber-500 shadow-md'
               : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-amber-300'
@@ -138,11 +231,12 @@ export const AIAnalysis: React.FC = () => {
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setAnalysisType('monthly_report');
             runGeminiAnalysis('monthly_report');
           }}
-          className={`p-4 rounded-2xl border text-left transition-all ${
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
             analysisType === 'monthly_report'
               ? 'bg-purple-600 text-white border-purple-500 shadow-md'
               : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-purple-300'
@@ -153,33 +247,35 @@ export const AIAnalysis: React.FC = () => {
             <span>C. Laporan Otomatis</span>
           </div>
           <p className="text-xs opacity-90">
-            Generasi Laporan Kehadiran Bulanan Resmi SMA lengkap dengan temuan & rekomendasi kebijakan.
+            Generasi Laporan Kehadiran Bulanan Resmi SMA lengkap dengan temuan &amp; rekomendasi kebijakan.
           </p>
         </button>
       </div>
 
       {/* Output Screen */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4 transition-colors">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-500" />
             <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 uppercase tracking-wider">
-              Output Analisis Gemini AI
+              Output Analisis Gemini AI ({selectedMonth} • {selectedKelas})
             </h3>
           </div>
 
           {resultText && (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={handleCopy}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? 'Tersalin!' : 'Salin Laporan'}</span>
               </button>
               <button
-                onClick={() => window.print()}
-                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                type="button"
+                onClick={handlePrintReport}
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Cetak Laporan</span>
@@ -195,7 +291,7 @@ export const AIAnalysis: React.FC = () => {
             </div>
             <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Gemini AI Sedang Mengolah Data Kehadiran...</h4>
             <p className="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
-              Memindai ribuan data absensi siswa, menghitung persentase kedisiplinan, dan menyusun rekomendasi.
+              Memindai data absensi siswa ({selectedMonth} • {selectedKelas}), menghitung persentase kedisiplinan, dan menyusun rekomendasi.
             </p>
           </div>
         ) : errorMsg ? (
@@ -203,7 +299,7 @@ export const AIAnalysis: React.FC = () => {
             <p className="font-bold">Gagal Menghasilkan Analisis AI:</p>
             <p>{errorMsg}</p>
             <p className="text-[11px] text-red-600 dark:text-red-400 mt-1">
-              Pastikan environment variable GEMINI_API_KEY telah terpasang dengan benar di AI Studio Secrets.
+              Pastikan koneksi internet stabil dan layanan AI aktif.
             </p>
           </div>
         ) : resultText ? (

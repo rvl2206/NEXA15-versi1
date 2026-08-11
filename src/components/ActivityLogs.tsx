@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { store } from '../lib/store';
 import { ActivityLog } from '../types';
 import { AttendanceRecoveryModal } from './AttendanceRecoveryModal';
+import { toast } from '../lib/toast';
 import {
   History,
   Shield,
@@ -91,11 +92,10 @@ export const ActivityLogs: React.FC = () => {
   };
 
   const handleClearLogs = () => {
-    if (window.confirm('Apakah Anda yakin ingin membersihkan seluruh riwayat log aktivitas? Action ini tidak dapat dibatalkan.')) {
-      store.clearLogs();
-      setSelectedLogIds([]);
-      refreshData();
-    }
+    store.clearLogs();
+    setSelectedLogIds([]);
+    refreshData();
+    toast.success('Log Dibersihkan', 'Seluruh riwayat log aktivitas telah dibersihkan.');
   };
 
   const handleToggleSelectAll = () => {
@@ -116,15 +116,11 @@ export const ActivityLogs: React.FC = () => {
 
   const handleDeleteSelectedLogs = () => {
     if (selectedLogIds.length === 0) return;
-    if (
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus ${selectedLogIds.length} log aktivitas yang dipilih?`
-      )
-    ) {
-      store.deleteSelectedLogs(selectedLogIds);
-      setSelectedLogIds([]);
-      refreshData();
-    }
+    const count = selectedLogIds.length;
+    store.deleteSelectedLogs(selectedLogIds);
+    setSelectedLogIds([]);
+    refreshData();
+    toast.success('Log Dihapus', `${count} baris log aktivitas terpilih berhasil dihapus.`);
   };
 
   const totalDuplicateRecordsCount = anomalies.reduce(
@@ -585,13 +581,12 @@ export const ActivityLogs: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            if (window.confirm('Hapus log ini?')) {
-                              store.deleteSelectedLogs([log.id]);
-                              setSelectedLogIds((prev) => prev.filter((id) => id !== log.id));
-                              refreshData();
-                            }
+                            store.deleteSelectedLogs([log.id]);
+                            setSelectedLogIds((prev) => prev.filter((id) => id !== log.id));
+                            refreshData();
+                            toast.success('Log Dihapus', 'Baris riwayat aktivitas berhasil dihapus.');
                           }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors cursor-pointer"
                           title="Hapus baris log ini"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

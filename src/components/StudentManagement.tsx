@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { store, isGenericQrCode } from '../lib/store';
+import { toast } from '../lib/toast';
 import { Student, UserRole, AttendanceRecord } from '../types';
 import { exportStudentListToExcel, exportStudentListToCSV, downloadStudentImportTemplate, parseStudentImportFile, printElement, getWhatsAppLink, generateWhatsAppMessage } from '../lib/exportUtils';
 import { SchoolLogo } from './SchoolLogo';
@@ -481,20 +482,24 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nama || !formData.nisn) {
-      alert('Harap isi semua field wajib.');
+    if (!formData.nama.trim() || !formData.nisn.trim()) {
+      toast.error('Form Belum Lengkap', 'Nama Siswa dan NISN wajib diisi.');
       return;
     }
 
     const formattedData = {
       ...formData,
+      nama: formData.nama.trim(),
+      nisn: formData.nisn.trim(),
       id_qr: `69933068.${formData.nisn.trim()}.${formData.nama.trim()}`,
     };
 
     if (editingStudent) {
       store.updateStudent(editingStudent.id, formattedData);
+      toast.success('Data Diperbarui', `Data siswa ${formattedData.nama} berhasil diperbarui.`);
     } else {
       store.addStudent(formattedData);
+      toast.success('Siswa Ditambahkan', `Siswa baru ${formattedData.nama} berhasil didaftarkan.`);
     }
     setIsModalOpen(false);
   };
@@ -1605,11 +1610,11 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm(`Hapus seluruh ${students.length} data siswa di database sekarang agar dapat di-import ulang dari awal?`)) {
-                        store.deleteAllStudents();
-                      }
+                      const count = students.length;
+                      store.deleteAllStudents();
+                      toast.success('Database Dikosongkan', `Berhasil menghapus ${count} data siswa untuk persiapan import.`);
                     }}
-                    className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] rounded-lg transition-all shrink-0 shadow-sm flex items-center gap-1.5 border border-red-700"
+                    className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] rounded-lg transition-all shrink-0 shadow-sm flex items-center gap-1.5 border border-red-700 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Kosongkan DB Sekarang</span>
