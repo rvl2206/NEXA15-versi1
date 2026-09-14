@@ -1,6 +1,6 @@
 {
   "name": "Remix Remix Remix NEXA15",
-  "description": "Sistem Presensi Digital & Manajemen Kehadiran Siswa/Guru dengan QR Code, AI Analysis, dan Pengaturan Identitas & Logo Sekolah Terpusat.",
+  "description": "Sistem Presensi Digital & Manajemen Kehadiran Siswa/Guru dengan QR Code, Kartu Fisik RFID/NFC, AI Analysis, dan Pengaturan Identitas & Logo Sekolah Terpusat.",
   "requestFramePermissions": [
     "camera"
   ],

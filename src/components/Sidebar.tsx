@@ -135,6 +135,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badgeColor: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
         },
         {
+          id: 'users',
+          label: 'Manajemen Akun',
+          icon: Users,
+          roles: ['Admin'],
+        },
+        {
           id: 'logs',
           label: 'Log Aktivitas Sistem',
           icon: History,
@@ -234,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       key={item.id}
                       onClick={() => handleSelectTab(item.id)}
                       title={isCollapsed ? item.label : undefined}
-                      className={`w-full flex items-center ${
+                      className={`tour-step-${item.id} w-full flex items-center ${
                         isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
                       } rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer group ${
                         isActive

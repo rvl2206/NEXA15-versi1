@@ -272,9 +272,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             <SchoolLogo className="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-xs" />
           </div>
           <div>
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-0.5">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>{formatIndoDate(selectedDate)}</span>
+            <div className="flex flex-wrap items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-0.5">
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{formatIndoDate(selectedDate)}</span>
+              </span>
+              <span className="text-slate-300 dark:text-slate-700 font-normal">•</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 normal-case tracking-normal">
+                {(store.getSettings().schoolDays || 6) === 5 ? 'Sekolah 5 Hari (Senin–Jumat)' : 'Sekolah 6 Hari (Senin–Sabtu)'}
+              </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Dashboard Kehadiran NEXA15
@@ -364,14 +370,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               HARI LIBUR SEKOLAH ({selectedDate.split('-').reverse().join('-')})
             </span>
             <span className="text-[11px] text-purple-700 dark:text-purple-300">
-              {store.getHolidays().find(h => store.normalizeToYyyyMmDd(h.tanggal) === selectedDate)?.keterangan || 'Akhir Pekan (Hari Minggu)'} — Penalti presensi nonaktif pada hari libur.
+              {store.getHolidayDescription(selectedDate) || 'Akhir Pekan'} — Penalti presensi nonaktif pada hari libur.
             </span>
           </div>
         </div>
       )}
 
       {/* Tab Switcher Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="tour-step-dashboard-summary flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="inline-flex flex-wrap items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700">
           <button
             type="button"
@@ -569,7 +575,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
                             {r.nip}
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
-                            {tInfo?.jabatan || tInfo?.mapel || '-'}
+                            {tInfo?.jabatan || '-'}
                           </td>
                           <td className="py-2.5 px-3 text-center">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black border ${

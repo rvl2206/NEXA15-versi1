@@ -63,6 +63,9 @@ import {
   ArrowRight,
   BookOpen,
   Download,
+  CreditCard,
+  Volume2,
+  Cpu,
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -121,6 +124,68 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   const [newHolidayDesc, setNewHolidayDesc] = useState('');
   const [isProcessingAutoAlpa, setIsProcessingAutoAlpa] = useState(false);
 
+  // RFID Hardware Test State
+  const [rfidTestInput, setRfidTestInput] = useState('');
+  const [rfidTestResult, setRfidTestResult] = useState<{
+    found: boolean;
+    type?: 'siswa' | 'guru';
+    person?: any;
+    rawInput: string;
+    normalizedHex?: string;
+    normalizedDec?: string;
+  } | null>(null);
+
+  const handleTestRfidCard = (inputCode: string) => {
+    const trimmed = inputCode.trim();
+    if (!trimmed) {
+      setRfidTestResult(null);
+      return;
+    }
+
+    const rfidMatch = store.findByRfidUid(trimmed);
+
+    // Check conversions
+    const clean = trimmed.replace(/[\s:-]/g, '').toUpperCase();
+    let hexStr = '';
+    let decStr = '';
+    if (/^[0-9A-F]{8}$/i.test(clean)) {
+      hexStr = clean;
+      decStr = String(parseInt(clean, 16)).padStart(10, '0');
+    } else if (/^\d{8,10}$/.test(clean)) {
+      decStr = clean;
+      try {
+        hexStr = parseInt(clean, 10).toString(16).toUpperCase().padStart(8, '0');
+      } catch {}
+    }
+
+    if (rfidMatch) {
+      const personObj = rfidMatch.type === 'siswa' ? rfidMatch.student : rfidMatch.teacher;
+      setRfidTestResult({
+        found: true,
+        type: rfidMatch.type,
+        person: personObj,
+        rawInput: trimmed,
+        normalizedHex: hexStr || undefined,
+        normalizedDec: decStr || undefined,
+      });
+      toast.success(
+        'Kartu Terdeteksi',
+        `Kartu RFID cocok dengan ${rfidMatch.type === 'siswa' ? 'Siswa' : 'Guru'}: ${personObj?.nama}`
+      );
+    } else {
+      setRfidTestResult({
+        found: false,
+        rawInput: trimmed,
+        normalizedHex: hexStr || undefined,
+        normalizedDec: decStr || undefined,
+      });
+      toast.info(
+        'Kartu Terbaca (Belum Terdaftar)',
+        `UID Kartu [${trimmed}] berhasil dibaca reader USB, namun belum ditautkan ke profil manapun.`
+      );
+    }
+  };
+
   const handleAddHoliday = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHolidayDate || !newHolidayDesc.trim()) {
@@ -148,6 +213,38 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       toast.success('Otopresensi Alpa Berhasil', `Berhasil menandai ${result.addedCount} siswa sebagai Alpa untuk tanggal ${result.date}.`);
     } else {
       toast.info('Tidak Ada Siswa Alpa Baru', `Seluruh siswa aktif sudah memiliki presensi atau hari ini merupakan hari libur/belum melewati jam ${settings.autoAlpaCutoffTime || '14:30'}.`);
+    }
+  };
+
+  // State for Purging Saturday Alpa Records
+  const [isPurgingSatAlpa, setIsPurgingSatAlpa] = useState(false);
+
+  const handlePurgeSaturdayAlpa = async () => {
+    if (
+      !window.confirm(
+        'Revisi Presensi: Apakah Anda yakin ingin menghapus SELURUH data presensi hari Sabtu yang berstatus ALPA? Tindakan ini akan membersihkan data dari aplikasi lokal dan database cloud Firestore & Supabase.'
+      )
+    ) {
+      return;
+    }
+    setIsPurgingSatAlpa(true);
+    try {
+      const res = await store.purgeSaturdayAlpaAttendance();
+      if (res.total > 0) {
+        toast.success(
+          'Revisi Alpa Sabtu Selesai',
+          `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (Siswa: ${res.deletedStudents}, Guru: ${res.deletedTeachers}).`
+        );
+      } else {
+        toast.info(
+          'Tidak Ada Alpa Hari Sabtu',
+          'Data presensi hari Sabtu sudah bersih, tidak ditemukan data berstatus Alpa.'
+        );
+      }
+    } catch (err: any) {
+      toast.error('Gagal Menghapus', err.message || 'Terjadi kesalahan sistem.');
+    } finally {
+      setIsPurgingSatAlpa(false);
     }
   };
 
@@ -329,9 +426,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     toast.success('Antrian Dikosongkan', 'Antrian pengiriman lokal berhasil dikosongkan.');
   };
 
-  const [activeDbTab, setActiveDbTab] = useState<'supabase' | 'cloudsql' | 'docker' | 'native' | 'migration'>('supabase');
+  const [activeDbTab, setActiveDbTab] = useState<'firestore' | 'supabase' | 'cloudsql' | 'docker' | 'native' | 'migration'>('firestore');
+  const [isSyncingFirestore, setIsSyncingFirestore] = useState(false);
   const [copiedPostgresSchema, setCopiedPostgresSchema] = useState(false);
   const [copiedDockerCompose, setCopiedDockerCompose] = useState(false);
+
+  const handleSyncFirestore = async () => {
+    setIsSyncingFirestore(true);
+    try {
+      await store.syncAllWithFirestore();
+      setSettings(store.getSettings());
+      toast.success('Sinkronisasi Firestore Berhasil', 'Seluruh data (Akun Pengguna, Pengaturan & Pemetaan Wali Kelas, Disposisi Siswa Bermasalah, Data Siswa/Guru, Presensi & Log) telah tersimpan aman di Firestore.');
+    } catch (err: any) {
+      toast.error('Gagal Sinkronisasi Firestore', err?.message || 'Terjadi gangguan jaringan');
+    } finally {
+      setIsSyncingFirestore(false);
+    }
+  };
 
   const handleCopyPostgresSchema = () => {
     const sql = getPostgresSelfHostedSchemaSQL();
@@ -731,6 +842,154 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </div>
           </div>
 
+          {/* Pilihan Sistem Hari Sekolah: 5 Hari vs 6 Hari */}
+          <div className="pt-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Sistem Hari Kerja / Hari Belajar Sekolah
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Pilihan 5 Hari */}
+              <div
+                onClick={() => setSettings({ ...settings, schoolDays: 5 })}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                  (settings.schoolDays || 6) === 5
+                    ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${
+                      (settings.schoolDays || 6) === 5
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                          Sekolah 5 Hari
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                          Senin – Jumat
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        Hari aktif: <b>Senin s/d Jumat</b>.<br />
+                        Hari libur akhir pekan: <b>Sabtu & Minggu</b>.
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                    (settings.schoolDays || 6) === 5
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-300 dark:border-slate-600'
+                  }`}>
+                    {(settings.schoolDays || 6) === 5 && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400">Sabtu Libur:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">✅ Ya (Bebas Alpa)</span>
+                </div>
+              </div>
+
+              {/* Pilihan 6 Hari */}
+              <div
+                onClick={() => setSettings({ ...settings, schoolDays: 6 })}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                  (settings.schoolDays || 6) === 6
+                    ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${
+                      (settings.schoolDays || 6) === 6
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                          Sekolah 6 Hari
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          Senin – Sabtu
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        Hari aktif: <b>Senin s/d Sabtu</b>.<br />
+                        Hari libur akhir pekan: <b>Hanya Minggu</b>.
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                    (settings.schoolDays || 6) === 6
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-300 dark:border-slate-600'
+                  }`}>
+                    {(settings.schoolDays || 6) === 6 && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400">Sabtu Libur:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">❌ Tidak (Hari Sekolah)</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
+              <span className="text-blue-600 font-bold">ℹ️ Info:</span>
+              <span>
+                Pada sistem <b>Sekolah 5 Hari</b>, hari Sabtu otomatis ditetapkan sebagai hari libur akhir pekan, sehingga otopresensi Alpa jam 14:30 dan pemotongan kedisiplinan tidak akan memproses presensi siswa pada hari Sabtu.
+              </span>
+            </p>
+
+            {/* Revisi & Pembersihan Seluruh Alpa Hari Sabtu */}
+            <div className="mt-3.5 p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-600 text-white shadow-xs shrink-0 mt-0.5">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-950 dark:text-amber-200 uppercase tracking-wider flex items-center gap-2">
+                      <span>Revisi Presensi: Hapus Alpa Hari Sabtu</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 normal-case">
+                        Pembersihan Massal
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                      Hapus seluruh presensi yang tercatat sebagai <b>ALPA</b> pada hari Sabtu dari aplikasi, memori lokal, serta sinkronisasi cloud (Firestore & Supabase).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePurgeSaturdayAlpa}
+                  disabled={isPurgingSatAlpa}
+                  className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {isPurgingSatAlpa ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Sedang Membersihkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus Seluruh Alpa Hari Sabtu</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Auto-Alpa 14:30 Section */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center justify-between bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-2xl border border-rose-200 dark:border-rose-800">
@@ -914,6 +1173,250 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             )}
           </div>
 
+          {/* RFID Card Reader & Contactless NFC Integration Hub */}
+          <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
+            <div className="flex items-center justify-between bg-sky-50/80 dark:bg-sky-950/40 p-4 rounded-2xl border border-sky-200 dark:border-sky-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-sky-600 text-white rounded-xl shadow-sm">
+                  <Radio className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-sky-950 dark:text-sky-100 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Integrasi Kartu RFID & Contactless NFC</span>
+                    <span className="px-2 py-0.5 bg-sky-200 dark:bg-sky-900 text-sky-800 dark:text-sky-200 rounded-full text-[10px] font-bold">
+                      USB Reader Plug & Play
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-sky-700 dark:text-sky-300 mt-0.5">
+                    Mendukung pemindai kartu RFID/NFC fisik via USB (Keyboard Emulation / USB HID) untuk presensi super cepat siswa dan guru.
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.enableRfidReader !== false}
+                  onChange={(e) => setSettings({ ...settings, enableRfidReader: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-sky-600"></div>
+              </label>
+            </div>
+
+            {settings.enableRfidReader !== false && (
+              <div className="space-y-5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                      <Cpu className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                      <span>Mode Komunikasi Reader RFID</span>
+                    </label>
+                    <select
+                      value={settings.rfidReaderMode || 'keyboard'}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          rfidReaderMode: e.target.value as 'keyboard' | 'webhid' | 'serial',
+                        })
+                      }
+                      className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
+                    >
+                      <option value="keyboard">USB Keyboard Wedge (Rekomendasi - Standar Plug & Play)</option>
+                      <option value="webhid">WebHID Browser API (Direct USB Access)</option>
+                      <option value="serial">Web Serial / COM Port (Advanced Microcontroller)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                      Mode <strong>Keyboard Wedge</strong> kompatibel dengan 99% pembaca RFID USB murah di pasaran tanpa perlu driver tambahan.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                      <span>Tipe Frekuensi Kartu</span>
+                    </label>
+                    <select
+                      value={settings.rfidCardType || 'Dual'}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          rfidCardType: e.target.value as '13.56MHz_Mifare' | '125kHz_EM' | 'Dual',
+                        })
+                      }
+                      className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
+                    >
+                      <option value="Dual">Dual Frekuensi (13.56MHz Mifare / NFC + 125kHz EM-ID)</option>
+                      <option value="13.56MHz_Mifare">13.56 MHz HF (Mifare Classic / Ultralight / e-KTP / NFC)</option>
+                      <option value="125kHz_EM">125 kHz LF (EM4100 / TK4100 Proximity Card)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                      Sistem otomatis menormalisasi format Hexadecimal (8 digit) dan Decimal (10 digit).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={settings.rfidBeepFeedback !== false}
+                      onChange={(e) => setSettings({ ...settings, rfidBeepFeedback: e.target.checked })}
+                      className="rounded text-sky-600 focus:ring-sky-500"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <Volume2 className="w-3.5 h-3.5 text-sky-600" /> Audio Beep Respon
+                      </span>
+                      <p className="text-[10px] text-slate-500">Bunyikan nada saat kartu sukses terbaca</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={settings.rfidAutoRecord !== false}
+                      onChange={(e) => setSettings({ ...settings, rfidAutoRecord: e.target.checked })}
+                      className="rounded text-sky-600 focus:ring-sky-500"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-emerald-600" /> Auto-Presensi Instan
+                      </span>
+                      <p className="text-[10px] text-slate-500">Simpan absensi langsung saat kartu ditap</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={settings.rfidAllowUnregisteredCardPrompt !== false}
+                      onChange={(e) => setSettings({ ...settings, rfidAllowUnregisteredCardPrompt: e.target.checked })}
+                      className="rounded text-sky-600 focus:ring-sky-500"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Deteksi Kartu Baru
+                      </span>
+                      <p className="text-[10px] text-slate-500">Notifikasi jika kartu belum ditautkan</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Interactive RFID Tester Tool */}
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-sky-200 dark:border-sky-800/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                      <Radio className="w-4 h-4 text-sky-600" />
+                      <span>Uji Coba & Diagnostic Reader RFID USB</span>
+                    </div>
+                    {rfidTestResult && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRfidTestInput('');
+                          setRfidTestResult(null);
+                        }}
+                        className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline cursor-pointer"
+                      >
+                        Reset Uji Coba
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Tempelkan kartu RFID / NFC pada scanner USB Anda saat kursor berada pada kolom input berikut untuk menguji pembacaan nomor seri:
+                  </p>
+
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={rfidTestInput}
+                        onChange={(e) => {
+                          setRfidTestInput(e.target.value);
+                          handleTestRfidCard(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleTestRfidCard(rfidTestInput);
+                          }
+                        }}
+                        placeholder="Klik di sini lalu tap kartu RFID atau ketik nomor UID..."
+                        className="w-full pl-9 pr-3 py-2 text-xs border border-sky-300 dark:border-sky-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-500 font-mono"
+                      />
+                      <CreditCard className="w-4 h-4 text-sky-500 absolute left-3 top-2.5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTestRfidCard(rfidTestInput)}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
+                    >
+                      Cek Kartu
+                    </button>
+                  </div>
+
+                  {rfidTestResult && (
+                    <div
+                      className={`p-3.5 rounded-xl border text-xs ${
+                        rfidTestResult.found
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                          : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-bold flex items-center gap-1.5">
+                            {rfidTestResult.found ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Kartu Terdaftar Sebagai: {rfidTestResult.type === 'siswa' ? 'Siswa' : 'Guru'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                <span>Kartu Terbaca Tetapi Belum Terdaftar</span>
+                              </>
+                            )}
+                          </div>
+
+                          {rfidTestResult.found && rfidTestResult.person && (
+                            <div className="mt-2 space-y-1 font-sans">
+                              <p className="font-bold text-sm text-slate-900 dark:text-white">
+                                {rfidTestResult.person.nama}
+                              </p>
+                              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                                {rfidTestResult.type === 'siswa'
+                                  ? `Kelas: ${(rfidTestResult.person as any).kelas || '-'} | NISN: ${(rfidTestResult.person as any).nisn || '-'}`
+                                  : `Jabatan: ${(rfidTestResult.person as any).jabatan || '-'} | NIP: ${(rfidTestResult.person as any).nip || '-'}`}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="mt-2.5 flex flex-wrap gap-2 text-[10.5px] font-mono">
+                            <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                              Input: {rfidTestResult.rawInput}
+                            </span>
+                            {rfidTestResult.normalizedHex && (
+                              <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                                HEX: {rfidTestResult.normalizedHex}
+                              </span>
+                            )}
+                            {rfidTestResult.normalizedDec && (
+                              <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                                DEC: {rfidTestResult.normalizedDec}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Database Architecture & Storage Integration Hub */}
           <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
             <div className="bg-gradient-to-r from-emerald-950/10 via-slate-950/10 to-teal-950/10 dark:from-slate-950 dark:to-emerald-950/30 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-800/80 space-y-4">
@@ -963,6 +1466,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
               <div className="flex flex-wrap gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900/80 rounded-xl border border-slate-300 dark:border-slate-800">
                 <button
                   type="button"
+                  onClick={() => setActiveDbTab('firestore')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeDbTab === 'firestore'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>1. Firebase Firestore (Cloud Database Aktif)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActiveDbTab('supabase')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                     activeDbTab === 'supabase'
@@ -971,7 +1487,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }`}
                 >
                   <UploadCloud className="w-3.5 h-3.5" />
-                  <span>1. Supabase Cloud (BaaS)</span>
+                  <span>2. Supabase Cloud (BaaS)</span>
                 </button>
 
                 <button
@@ -984,7 +1500,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }`}
                 >
                   <Server className="w-3.5 h-3.5" />
-                  <span>2. Google Cloud SQL (GCP)</span>
+                  <span>3. Google Cloud SQL (GCP)</span>
                 </button>
 
                 <button
@@ -997,7 +1513,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }`}
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  <span>3. Self-Hosted PostgreSQL (Docker / VPS)</span>
+                  <span>4. Self-Hosted PostgreSQL (Docker / VPS)</span>
                 </button>
 
                 <button
@@ -1010,7 +1526,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }`}
                 >
                   <HardDrive className="w-3.5 h-3.5" />
-                  <span>4. Mode Mandiri (Cloud Run Native)</span>
+                  <span>5. Mode Mandiri (Cloud Run Native)</span>
                 </button>
 
                 <button
@@ -1023,9 +1539,85 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }`}
                 >
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span>5. Panduan Langkah Migrasi & Dump</span>
+                  <span>6. Panduan Langkah Migrasi & Dump</span>
                 </button>
               </div>
+
+              {/* TAB 0: FIREBASE FIRESTORE CLOUD DATABASE (PRIMARY ACTIVATED) */}
+              {activeDbTab === 'firestore' && (
+                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-sm">
+                        <Database className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>Google Cloud Firestore Database</span>
+                          <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Terkoneksi & Aman
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Penyimpanan cloud terdistribusi dengan skema terenkripsi dan keamanan Firestore Rules berlapis.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSyncFirestore}
+                      disabled={isSyncingFirestore}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingFirestore ? 'animate-spin' : ''}`} />
+                      <span>{isSyncingFirestore ? 'Menyinkronkan...' : 'Sinkronkan Firestore Sekarang'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <Users className="w-4 h-4 text-indigo-600" />
+                        <span>app_users</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Autentikasi akun pengguna & hash bcrypt (tanpa plain text).
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <Settings className="w-4 h-4 text-amber-600" />
+                        <span>school_settings</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Pengaturan sekolah & <strong>Pemetaan Wali Kelas</strong> per kelas.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <ShieldAlert className="w-4 h-4 text-rose-600" />
+                        <span>problematic_student_dispatches</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Disposisi siswa bermasalah ke Wali Kelas & BK.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>attendance_records</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Riwayat presensi siswa & guru harian secara real-time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* TAB 1: SUPABASE CLOUD (EXISTING FUNCTIONALITY) */}
               {activeDbTab === 'supabase' && (
@@ -1516,7 +2108,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
             <span>Daftar Hari Libur Terdaftar ({settings.holidays?.length || 0})</span>
             <span className="text-[11px] text-purple-600 dark:text-purple-400 font-normal">
-              * Hari Minggu otomatis dianggap Hari Libur (Senin – Sabtu aktif sekolah)
+              {(settings.schoolDays || 6) === 5
+                ? '* Hari Sabtu & Minggu otomatis dianggap Hari Libur (Senin – Jumat aktif sekolah)'
+                : '* Hari Minggu otomatis dianggap Hari Libur (Senin – Sabtu aktif sekolah)'}
             </span>
           </div>
 
@@ -1556,6 +2150,134 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* RFID & NFC Hardware Diagnostics Card */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-500/20">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Diagnostik & Uji Coba Reader RFID / NFC</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                  USB Plug & Play
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Uji langsung pembacaan kartu RFID (13.56 MHz / 125 kHz) dan verifikasi konversi otomatis format Hexadecimal (Hex) dan Decimal (Dec).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Tempelkan Kartu RFID ke Reader USB atau Ketik UID Kartu:
+          </label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={rfidTestInput}
+                onChange={(e) => {
+                  setRfidTestInput(e.target.value);
+                  handleTestRfidCard(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleTestRfidCard(rfidTestInput);
+                  }
+                }}
+                placeholder="Tempel kartu RFID pada scanner USB atau ketik UID (contoh: 21B842F9 / 0565723897)..."
+                className="w-full pl-9 pr-3.5 py-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono"
+              />
+              <Radio className="w-4 h-4 text-indigo-500 absolute left-3 top-3 animate-pulse" />
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTestRfidCard(rfidTestInput)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+            >
+              Cek Kartu
+            </button>
+            {rfidTestInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRfidTestInput('');
+                  setRfidTestResult(null);
+                }}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+
+          {rfidTestResult && (
+            <div
+              className={`p-4 rounded-xl border space-y-2.5 transition-all ${
+                rfidTestResult.found
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                  : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {rfidTestResult.found ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  )}
+                  <span className="font-extrabold text-xs uppercase tracking-wide">
+                    {rfidTestResult.found ? 'Kartu Terdaftar di Database' : 'Kartu Belum Terdaftar'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/70 dark:bg-slate-800/80 border border-current">
+                  {rfidTestResult.type === 'siswa' ? 'Profil Siswa' : rfidTestResult.type === 'guru' ? 'Profil Guru' : 'Kartu Baru'}
+                </span>
+              </div>
+
+              {rfidTestResult.person && (
+                <div className="bg-white/80 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                  <div className="font-extrabold text-slate-900 dark:text-white">
+                    {rfidTestResult.person.nama}
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                    {rfidTestResult.type === 'siswa' ? (
+                      <span>Kelas: {rfidTestResult.person.kelas} • NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
+                    ) : (
+                      <span>Jabatan: {rfidTestResult.person.jabatan} • NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">UID Input Asli:</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{rfidTestResult.rawInput}</span>
+                </div>
+                {rfidTestResult.normalizedHex && (
+                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Konversi Hex (8-Digit):</span>
+                    <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{rfidTestResult.normalizedHex}</span>
+                  </div>
+                )}
+                {rfidTestResult.normalizedDec && (
+                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Konversi Dec (10-Digit):</span>
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{rfidTestResult.normalizedDec}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1805,7 +2527,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           </div>
         )}
 
-        <form onSubmit={handleChangePassword} className="space-y-4">
+        <form onSubmit={handleChangePassword} autoComplete="off" className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Kata Sandi Admin Saat Ini
@@ -1817,6 +2539,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 placeholder="Masukkan kata sandi lama Admin..."
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                data-lpignore="true"
                 className="w-full pl-10 pr-10 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                 required
               />
@@ -1842,6 +2569,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Password baru (min. 5 karakter)..."
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  data-lpignore="true"
                   className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
@@ -1859,6 +2591,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ulangi password baru..."
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  data-lpignore="true"
                   className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
@@ -1868,54 +2605,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              * Password baru akan langsung disinkronkan ke server dan dapat digunakan untuk login berikutnya di semua perangkat.
+              * Password baru akan langsung dienkripsi (bcrypt) dan disinkronkan ke server secara aman.
             </p>
             <button
               type="submit"
-              className="w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0"
+              className="w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Simpan & Sinkronkan Kata Sandi</span>
             </button>
           </div>
         </form>
-
-        {/* Registered Accounts Info Panel */}
-        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Informasi Kata Sandi Terdaftar Saat Ini</span>
-            </h4>
-            <span className="text-[10px] text-slate-500 font-mono">Status: Aktif & Tersinkron</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="p-3 bg-white dark:bg-slate-900 border border-amber-200/80 dark:border-amber-900/50 rounded-xl">
-              <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase">1. Admin (Utama)</div>
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5 truncate">smanlibas@gmail.com</div>
-              <div className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-300 mt-1 bg-amber-50 dark:bg-amber-950/80 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 inline-block">
-                {store.getAdminPassword()}
-              </div>
-            </div>
-
-            <div className="p-3 bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl">
-              <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">2. Guru Piket</div>
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5 truncate">piket.smanlibas@gmail.com</div>
-              <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-300 mt-1 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 inline-block">
-                piket123
-              </div>
-            </div>
-
-            <div className="p-3 bg-white dark:bg-slate-900 border border-purple-200/80 dark:border-purple-900/50 rounded-xl">
-              <div className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase">3. Kepala Sekolah</div>
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5 truncate">kepsek.smanlibas@gmail.com</div>
-              <div className="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-300 mt-1 bg-purple-50 dark:bg-purple-950/80 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 inline-block">
-                KepsekNexa15!
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Reset & Maintenance Zone */}

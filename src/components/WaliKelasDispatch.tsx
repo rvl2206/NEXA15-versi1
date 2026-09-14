@@ -17,6 +17,7 @@ import {
   User,
   Users,
   FileText,
+  FileSpreadsheet,
   ChevronRight,
   RefreshCw,
   Edit3,
@@ -37,7 +38,13 @@ import {
 import { Student, Teacher, ProblematicStudentDispatch, SchoolSettings, AttendanceRecord } from '../types';
 import { store } from '../lib/store';
 import { toast } from '../lib/toast';
-import { getWhatsAppLink, formatWhatsAppNumber, exportProblematicStudentsToExcel } from '../lib/exportUtils';
+import {
+  getWhatsAppLink,
+  formatWhatsAppNumber,
+  exportProblematicStudentsToExcel,
+  exportProblematicStudentsToPDF,
+  formatIndoMonth,
+} from '../lib/exportUtils';
 
 interface WaliKelasDispatchProps {
   students: Student[];
@@ -59,6 +66,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
 
   // Filters
   const [selectedClass, setSelectedClass] = useState<string>('Semua Kelas');
+  const [selectedMonth, setSelectedMonth] = useState<string>('Semua');
   const [selectedRisk, setSelectedRisk] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedIssueType, setSelectedIssueType] = useState<'all' | 'alpa' | 'terlambat' | 'rate'>('all');
@@ -108,17 +116,31 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
     return arr.length > 0 ? arr : ['X-1', 'X-2', 'XI IPA 1', 'XI IPA 2', 'XI IPS 1', 'XI IPS 2', 'XII MIPA 1', 'XII MIPA 2'];
   }, [students, teachers]);
 
+  // Available months from attendance logs
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set<string>();
+    attendance.forEach((a) => {
+      if (a.tanggal && a.tanggal.length >= 7) {
+        monthsSet.add(a.tanggal.slice(0, 7));
+      }
+    });
+    const currentM = new Date().toISOString().slice(0, 7);
+    monthsSet.add(currentM);
+    return Array.from(monthsSet).sort().reverse();
+  }, [attendance]);
+
   // Compute problematic students analysis
   const problematicList = useMemo(() => {
     return store.getProblematicStudentsAnalysis({
-      kelas: selectedClass,
+      kelas: selectedClass === 'Semua Kelas' ? undefined : selectedClass,
+      bulan: selectedMonth === 'Semua' ? undefined : selectedMonth,
       riskLevel: selectedRisk,
       searchQuery: searchQuery,
       minAlpa: tempAlpaThreshold,
       minTerlambat: tempTerlambatThreshold,
       maxAttendanceRate: tempMinRateThreshold,
     });
-  }, [selectedClass, selectedRisk, searchQuery, tempAlpaThreshold, tempTerlambatThreshold, tempMinRateThreshold, students, attendance, teachers, settings]);
+  }, [selectedClass, selectedMonth, selectedRisk, searchQuery, tempAlpaThreshold, tempTerlambatThreshold, tempMinRateThreshold, students, attendance, teachers, settings]);
 
   // Filter by issue type
   const filteredList = useMemo(() => {
@@ -416,12 +438,38 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
 
   // Export to Excel
   const handleExportExcel = () => {
-    if (problematicList.length === 0) {
-      toast.info('Data Kosong', 'Tidak ada data siswa bermasalah untuk diekspor.');
+    if (filteredList.length === 0) {
+      toast.info('Data Kosong', 'Tidak ada data siswa bermasalah untuk diekspor pada filter yang dipilih.');
       return;
     }
-    exportProblematicStudentsToExcel(problematicList, settings.schoolName || 'SMA NEGERI 15 AMBON');
-    toast.success('File Excel Terunduh', `${problematicList.length} data siswa bermasalah berhasil diekspor.`);
+    const classLabel = selectedClass === 'Semua Kelas' ? 'Semua' : selectedClass;
+    exportProblematicStudentsToExcel(
+      filteredList,
+      settings.schoolName || 'SMA NEGERI 15 AMBON',
+      classLabel,
+      selectedMonth
+    );
+    const monthLabel = formatIndoMonth(selectedMonth);
+    const displayClass = selectedClass === 'Semua Kelas' ? 'Semua Kelas' : `Kelas ${selectedClass}`;
+    toast.success('File Excel Terunduh', `Rekap ${displayClass} (${monthLabel}) berhasil diekspor (${filteredList.length} siswa).`);
+  };
+
+  // Export to PDF
+  const handleExportPDF = () => {
+    if (filteredList.length === 0) {
+      toast.info('Data Kosong', 'Tidak ada data siswa bermasalah untuk diekspor pada filter yang dipilih.');
+      return;
+    }
+    const classLabel = selectedClass === 'Semua Kelas' ? 'Semua' : selectedClass;
+    exportProblematicStudentsToPDF(
+      filteredList,
+      settings.schoolName || 'SMA NEGERI 15 AMBON',
+      classLabel,
+      selectedMonth
+    );
+    const monthLabel = formatIndoMonth(selectedMonth);
+    const displayClass = selectedClass === 'Semua Kelas' ? 'Semua Kelas' : `Kelas ${selectedClass}`;
+    toast.success('Dokumen PDF Terunduh', `Dokumen PDF resmi ${displayClass} (${monthLabel}) berhasil dicetak (${filteredList.length} siswa).`);
   };
 
   return (
@@ -453,10 +501,20 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             <button
               onClick={handleExportExcel}
               id="btn-export-problematic-excel"
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-medium backdrop-blur-sm border border-white/15 transition-all flex items-center gap-2 shadow-sm"
+              className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-200 rounded-xl text-xs font-semibold backdrop-blur-sm border border-emerald-500/30 transition-all flex items-center gap-2 shadow-sm"
+              title="Unduh rekap siswa bermasalah format Excel (.xlsx)"
             >
-              <Download className="w-4 h-4 text-emerald-400" />
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
               Export Excel
+            </button>
+            <button
+              onClick={handleExportPDF}
+              id="btn-export-problematic-pdf"
+              className="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-200 rounded-xl text-xs font-semibold backdrop-blur-sm border border-rose-500/30 transition-all flex items-center gap-2 shadow-sm"
+              title="Unduh rekap siswa bermasalah format PDF resmi berkop surat"
+            >
+              <FileText className="w-4 h-4 text-rose-400" />
+              Export PDF (Resmi)
             </button>
             <button
               onClick={() => setActiveTab('batch')}
@@ -601,7 +659,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
         <div className="space-y-5">
           {/* Filtering Controls */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Search Bar */}
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -621,6 +679,23 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
+              </div>
+
+              {/* Month / Period Filter */}
+              <div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  id="select-filter-month"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  <option value="Semua">Semua Bulan (Akumulasi)</option>
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>
+                      {formatIndoMonth(m)}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Class Filter */}

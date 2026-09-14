@@ -18,6 +18,7 @@ import {
   CloudUpload,
   RefreshCw,
   PanelLeftOpen,
+  HelpCircle,
 } from 'lucide-react';
 import { SchoolLogo } from './SchoolLogo';
 import { store } from '../lib/store';
@@ -33,6 +34,7 @@ interface NavbarProps {
   onToggleTheme?: () => void;
   onToggleMobileSidebar?: () => void;
   isMobileSidebarOpen?: boolean;
+  onStartTour?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleTheme,
   onToggleMobileSidebar,
   isMobileSidebarOpen,
+  onStartTour,
 }) => {
   const [time, setTime] = useState<string>('');
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -93,17 +96,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const handleForceSync = async () => {
+    if (offlineQueueCount > 0) {
+      window.dispatchEvent(new CustomEvent('open-unsynced-modal'));
+    }
     setIsSyncing(true);
-    const queueRes = await store.processOfflineQueue();
-    const syncRes = await store.syncAllToSupabase();
-    await store.fetchFromServer();
-    const remaining = store.getOfflineQueueCount();
-    setOfflineQueueCount(remaining);
-    setIsSyncing(false);
-    if (syncRes.success) {
-      toast.success('Sinkronisasi Sukses', syncRes.message);
-    } else {
-      toast.info('Sinkronisasi Parsial', `${syncRes.message} (Antrian tersisa: ${remaining})`);
+    try {
+      const res = await store.syncAllPendingToDatabase(true);
+      const remaining = store.getOfflineQueueCount();
+      setOfflineQueueCount(remaining);
+      if (res.success) {
+        toast.success('Sinkronisasi Sukses', res.message);
+      } else {
+        toast.warning('Sinkronisasi Parsial', res.message);
+      }
+    } catch (err: any) {
+      toast.error('Gagal Sinkronisasi', err?.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -220,20 +229,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={handleForceSync}
                 disabled={isSyncing}
-                className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs ${
                   isSyncing
                     ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40 animate-pulse'
                     : offlineQueueCount > 0
-                    ? 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-100 border-amber-400/60 animate-bounce'
+                    ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white border-rose-400 font-black shadow-md ring-2 ring-rose-500/40 animate-pulse'
                     : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border-slate-700'
                 }`}
-                title="Klik untuk menyinkronkan data presensi & siswa ke Server & Cloud"
+                title={
+                  offlineQueueCount > 0
+                    ? `PERINGATAN: Ada ${offlineQueueCount} data belum terkirim ke database Cloud! Klik untuk mengirim sekarang.`
+                    : 'Klik untuk menyinkronkan data presensi & siswa ke Server & Cloud'
+                }
               >
                 <RefreshCw
-                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : 'text-sky-300'}`}
+                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : offlineQueueCount > 0 ? 'text-white' : 'text-sky-300'}`}
                 />
-                <span className="text-[10px] sm:text-[11px] hidden sm:inline">
-                  {isSyncing ? 'Sync...' : offlineQueueCount > 0 ? `Sync (${offlineQueueCount})` : 'Sync'}
+                <span className="text-[10px] sm:text-[11px]">
+                  {isSyncing ? 'Mengirim...' : offlineQueueCount > 0 ? `${offlineQueueCount} Tertunda` : 'Sync'}
                 </span>
               </button>
             </div>
@@ -267,18 +280,28 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Quick AI Button (Extra Large screens only) */}
             {currentUser && (
-              <button
-                onClick={() => setActiveTab('ai-analysis')}
-                className={`hidden lg:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer shrink-0 ${
-                  activeTab === 'ai-analysis'
-                    ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
-                    : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80'
-                }`}
-                title="Analisis AI Gemini"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span className="text-[11px]">Analisis AI</span>
-              </button>
+              <>
+                <button
+                  onClick={onStartTour}
+                  className="hidden md:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 hover:bg-indigo-500/30 transition-all font-semibold cursor-pointer shrink-0"
+                  title="Mulai Tur Panduan Aplikasi"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="text-[11px]">Panduan</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai-analysis')}
+                  className={`hidden lg:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer shrink-0 ${
+                    activeTab === 'ai-analysis'
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
+                      : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80'
+                  }`}
+                  title="Analisis AI Gemini"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="text-[11px]">Analisis AI</span>
+                </button>
+              </>
             )}
 
             {/* User Profile / Role & Critical Actions (Settings + Logout) */}

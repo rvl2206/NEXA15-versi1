@@ -4,6 +4,7 @@ import { toast } from '../lib/toast';
 import { AttendanceRecord, Student, AttendanceStatus, AttendanceType } from '../types';
 import { AttendanceRecoveryModal } from './AttendanceRecoveryModal';
 import { AttendanceCorrectionModal } from './AttendanceCorrectionModal';
+import { ExportProblematicModal } from './ExportProblematicModal';
 import {
   exportAttendanceToExcel,
   exportAttendanceToPDF,
@@ -19,6 +20,8 @@ import {
   generateWhatsAppLateGuidanceMessage,
   exportLateGuidanceToPDF,
   exportLateGuidanceToExcel,
+  exportProblematicStudentsToExcel,
+  exportProblematicStudentsToPDF,
   drawOfficialKopSurat,
   LateGuidanceExportItem,
 } from '../lib/exportUtils';
@@ -58,6 +61,9 @@ import {
   Award,
   Printer,
   Edit3,
+  CreditCard,
+  QrCode,
+  Cloud,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -131,6 +137,9 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printStudentSlip, setPrintStudentSlip] = useState<Student | null>(null);
   const [printWaliKelasName, setPrintWaliKelasName] = useState<string>('Drs. Wali Kelas');
+
+  // Problematic Student Export Modal State
+  const [isProblematicExportModalOpen, setIsProblematicExportModalOpen] = useState(false);
 
   // Manual Log Modal
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -211,6 +220,42 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   // Pagination State (Default 10 per page)
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [isFetchingCloud, setIsFetchingCloud] = useState(false);
+
+  const handleFetchCloud = async () => {
+    setIsFetchingCloud(true);
+    try {
+      let startDateStr = '';
+      let endDateStr = '';
+
+      if (recapMode === 'harian') {
+        startDateStr = filterTanggal;
+        endDateStr = filterTanggal;
+      } else if (recapMode === 'bulanan' || recapMode === 'analisis_terlambat') {
+        // e.g. "2026-08" -> "2026-08-01" to "2026-08-31"
+        const [year, month] = filterBulan.split('-');
+        startDateStr = `${filterBulan}-01`;
+        const lastDay = new Date(Number(year), Number(month), 0).getDate();
+        endDateStr = `${filterBulan}-${lastDay.toString().padStart(2, '0')}`;
+      } else {
+        toast.info('Pilih mode Harian atau Bulanan terlebih dahulu untuk menarik data dari Cloud.');
+        setIsFetchingCloud(false);
+        return;
+      }
+
+      const totalLoaded = await store.fetchHistoricalAttendance(startDateStr, endDateStr);
+      if (totalLoaded > 0) {
+        setAttendance(store.getAttendance());
+        toast.success('Berhasil', `Berhasil memuat ${totalLoaded} data dari Cloud untuk periode ini.`);
+      } else {
+        toast.info('Info', 'Tidak ada data presensi tambahan ditemukan di Cloud untuk periode ini.');
+      }
+    } catch (err: any) {
+      toast.error('Gagal', err?.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setIsFetchingCloud(false);
+    }
+  };
 
   // Reset page to 1 when filter, mode, or page size changes
   useEffect(() => {
@@ -328,6 +373,59 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       toast.success('Batas Akhir Pulang Dicatat', `${res.count} siswa telah dicatat presensi Pulang pada batas akhir 14:30 WIT.`);
       handleManualRefresh();
     }
+  };
+
+  const handleBulkSetAlpa = () => {
+    // Guard: Pastikan bukan hari libur atau akhir pekan sekolah
+    if (store.isHoliday(filterTanggal)) {
+      toast.warning('Hari Libur / Akhir Pekan', 'Tanggal yang dipilih merupakan hari libur atau akhir pekan sekolah. Tutup Gerbang (Alpa) tidak dapat diproses.');
+      return;
+    }
+
+    // Kita anggap "yang belum masuk" sebagai alpa. 
+    // Hitungannya: total siswa (filterKelas) - total yang sudah ada record masuk hari ini
+    const totalStudentsInClass = filterKelas === 'Semua' 
+      ? students.filter(s => s.status !== 'nonaktif').length 
+      : students.filter(s => s.status !== 'nonaktif' && s.kelas === filterKelas).length;
+    const studentsCheckedIn = pairedSummaryCounts.total; // yang punya pasangan data (Masuk)
+    const countToUpdate = totalStudentsInClass - studentsCheckedIn;
+
+    if (countToUpdate <= 0) {
+      toast.info('Semua Hadir', 'Semua siswa aktif sudah memproses presensi Masuk hari ini.');
+      return;
+    }
+
+    if (!window.confirm(`Apakah Anda yakin ingin menutup gerbang dan memproses status ALPA untuk ${countToUpdate} siswa (Kelas: ${filterKelas}) yang belum melakukan presensi Masuk hari ini?`)) {
+      return;
+    }
+
+    const res = store.recordBulkStudentsAlpa(filterTanggal, filterKelas, currentOfficer);
+    if (res.success) {
+      toast.success('Tutup Gerbang Selesai', `Telah memproses ${res.count} siswa menjadi ALPA (Tanpa Keterangan).`);
+      handleManualRefresh();
+    } else {
+      toast.error('Gagal Memproses Alpa', res.message);
+    }
+  };
+
+  const handlePurgeSaturdayAlpa = async () => {
+    if (
+      !window.confirm(
+        'Revisi Presensi: Apakah Anda yakin ingin menghapus SELURUH data presensi hari Sabtu yang berstatus ALPA? Tindakan ini akan membersihkan data dari aplikasi lokal dan database cloud.'
+      )
+    ) {
+      return;
+    }
+    const res = await store.purgeSaturdayAlpaAttendance();
+    if (res.total > 0) {
+      toast.success(
+        'Revisi Alpa Sabtu Selesai',
+        `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (Siswa: ${res.deletedStudents}, Guru: ${res.deletedTeachers}).`
+      );
+    } else {
+      toast.info('Data Sudah Bersih', 'Tidak ada data presensi hari Sabtu yang berstatus Alpa.');
+    }
+    handleManualRefresh();
   };
 
   const handleManualRefresh = async () => {
@@ -1141,6 +1239,16 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             <span>Import Data Kehadiran</span>
           </button>
 
+          <button
+            onClick={() => setIsProblematicExportModalOpen(true)}
+            id="btn-open-export-problematic-modal"
+            className="px-3.5 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-rose-600/20 transition-all flex items-center gap-1.5 active:scale-[0.98]"
+            title="Ekspor Rekap Siswa Bermasalah (Alpa, Terlambat, Kehadiran Rendah) ke Excel atau PDF Resmi Berkop Surat"
+          >
+            <ShieldAlert className="w-4 h-4 text-rose-200" />
+            <span>Rekap Siswa Bermasalah</span>
+          </button>
+
           {recapMode === 'analisis_terlambat' ? (
             <>
               <button
@@ -1348,12 +1456,23 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 <CalendarRange className="w-3.5 h-3.5" />
                 <span>Pilih Bulan Rekapan</span>
               </label>
-              <input
-                type="month"
-                value={filterBulan}
-                onChange={(e) => setFilterBulan(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs border border-blue-300 dark:border-blue-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-semibold"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="month"
+                  value={filterBulan}
+                  onChange={(e) => setFilterBulan(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs border border-blue-300 dark:border-blue-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-semibold"
+                />
+                <button
+                  type="button"
+                  onClick={handleFetchCloud}
+                  disabled={isFetchingCloud}
+                  title="Tarik Data dari Cloud Database"
+                  className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/60 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-xl transition-colors shrink-0 flex items-center justify-center disabled:opacity-50"
+                >
+                  <Cloud className={`w-4 h-4 ${isFetchingCloud ? 'animate-bounce text-blue-500' : ''}`} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1606,6 +1725,26 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBulkSetAlpa}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-sm cursor-pointer"
+                title="Tutup gerbang dan otomatis set Alpa untuk siswa yang tidak scan masuk"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>🚨 Tutup Gerbang (Auto-Alpa)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePurgeSaturdayAlpa}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800 shadow-xs cursor-pointer"
+                title="Hapus seluruh data presensi hari Sabtu yang berstatus ALPA"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-amber-600" />
+                <span>Revisi Alpa Sabtu</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleBulkSetPulang1430}
@@ -1884,7 +2023,16 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsProblematicExportModalOpen(true)}
+                  className="px-3.5 py-2 bg-slate-800/80 hover:bg-slate-800 text-white font-bold text-xs rounded-xl border border-white/20 shadow transition-all flex items-center gap-1.5"
+                  title="Buka panel ekspor lengkap rekap siswa bermasalah (Excel & PDF)"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Ekspor Rekap Siswa Bermasalah</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => exportLateGuidanceToPDF(filteredDisciplineData, formatIndoMonth(filterBulan), filterKelas)}
@@ -2315,15 +2463,23 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                           <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({r.kelas})</span>
                         </td>
                         <td className="p-3.5">
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              r.jenis === 'Masuk'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                                : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                            }`}
-                          >
-                            {r.jenis}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                r.jenis === 'Masuk'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                  : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                              }`}
+                            >
+                              {r.jenis}
+                            </span>
+                            {r.scan_method === 'RFID' ? (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.2 bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded inline-flex items-center gap-0.5" title="Discan via Kartu RFID">
+                                <CreditCard className="w-2.5 h-2.5" />
+                                <span>RFID</span>
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="p-3.5">{getStatusBadge(r.status)}</td>
                         <td className="p-3.5">
@@ -3069,6 +3225,14 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         initialDate={correctionDate}
         initialType={correctionType}
         currentOfficer={currentOfficer}
+      />
+
+      <ExportProblematicModal
+        isOpen={isProblematicExportModalOpen}
+        onClose={() => setIsProblematicExportModalOpen(false)}
+        classList={classOptions}
+        initialClass={filterKelas !== 'Semua' ? filterKelas : 'Semua'}
+        initialBulan={filterBulan}
       />
     </div>
   );

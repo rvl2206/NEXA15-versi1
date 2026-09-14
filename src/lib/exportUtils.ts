@@ -463,6 +463,7 @@ export function exportStudentListToExcel(students: Student[], filenamePrefix = '
     No: index + 1,
     NPSN: s.id_qr || '69933068',
     'Format QR Code': `69933068.${s.nisn}.${s.nama}`,
+    'UID Kartu RFID': s.rfid_uid || '',
     NISN: s.nisn,
     Nama: s.nama,
     Kelas: s.kelas,
@@ -475,6 +476,7 @@ export function exportStudentListToExcel(students: Student[], filenamePrefix = '
     { wch: 6 },
     { wch: 12 },
     { wch: 35 },
+    { wch: 18 },
     { wch: 16 },
     { wch: 30 },
     { wch: 12 },
@@ -491,6 +493,7 @@ export function exportStudentListToCSV(students: Student[], filenamePrefix = 'Da
     No: index + 1,
     NPSN: s.id_qr || '69933068',
     'Format QR Code': `69933068.${s.nisn}.${s.nama}`,
+    'UID Kartu RFID': s.rfid_uid || '',
     NISN: s.nisn,
     Nama: s.nama,
     Kelas: s.kelas,
@@ -520,6 +523,7 @@ export function downloadStudentImportTemplate() {
       'NISN': '0061234567',
       'Kelas': 'X 1',
       'No HP Ortu': '081234567890',
+      'UID Kartu RFID': 'E28068A1',
       'Status': 'aktif',
     },
     {
@@ -527,6 +531,7 @@ export function downloadStudentImportTemplate() {
       'NISN': '0061234568',
       'Kelas': 'XI 2',
       'No HP Ortu': '081298765432',
+      'UID Kartu RFID': 'B492C1D0',
       'Status': 'aktif',
     },
     {
@@ -534,6 +539,7 @@ export function downloadStudentImportTemplate() {
       'NISN': '0061234569',
       'Kelas': 'XII 1',
       'No HP Ortu': '085211223344',
+      'UID Kartu RFID': '',
       'Status': 'aktif',
     },
   ];
@@ -546,6 +552,7 @@ export function downloadStudentImportTemplate() {
     { wch: 16 }, // NISN
     { wch: 14 }, // Kelas
     { wch: 18 }, // No HP Ortu
+    { wch: 18 }, // UID Kartu RFID
     { wch: 12 }, // Status
   ];
 
@@ -642,6 +649,18 @@ export function parseStudentImportFile(file: File): Promise<{
             normalizedRow['telepon'] ||
             '';
 
+          const rfid_uid =
+            normalizedRow['uidkarturfid'] ||
+            normalizedRow['karturfid'] ||
+            normalizedRow['rfiduid'] ||
+            normalizedRow['rfid'] ||
+            normalizedRow['uidrfid'] ||
+            normalizedRow['nfc'] ||
+            normalizedRow['nfcuid'] ||
+            normalizedRow['kartupintar'] ||
+            normalizedRow['uid'] ||
+            '';
+
           const statusRaw = (
             normalizedRow['status'] || 'aktif'
           ).toLowerCase();
@@ -667,6 +686,7 @@ export function parseStudentImportFile(file: File): Promise<{
             nama: finalNama,
             kelas: kelas || 'X 1',
             no_hp_ortu: no_hp_ortu,
+            rfid_uid: rfid_uid ? rfid_uid.trim().toUpperCase() : undefined,
             foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
             status: status,
           });
@@ -1897,6 +1917,23 @@ export function exportTeacherAttendanceToPDF(
 }
 
 /**
+ * Format YYYY-MM to Indonesian Month Year (e.g. '2026-09' -> 'September 2026')
+ */
+export function formatIndoMonth(isoMonth: string): string {
+  if (!isoMonth || isoMonth === 'Semua') return 'Semua Periode';
+  const parts = isoMonth.split('-');
+  if (parts.length < 2) return isoMonth;
+  const y = parts[0];
+  const m = parts[1];
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  const idx = parseInt(m, 10) - 1;
+  return idx >= 0 && idx < 12 ? `${months[idx]} ${y}` : isoMonth;
+}
+
+/**
  * Ekspor Data Siswa Bermasalah ke File Excel untuk Arsip Wali Kelas & BK
  */
 export function exportProblematicStudentsToExcel(
@@ -1914,13 +1951,18 @@ export function exportProblematicStudentsToExcel(
     reasons: string[];
     aiRecommendation?: string;
   }>,
-  schoolName = 'SMA NEGERI 15 AMBON'
+  schoolName = 'SMA NEGERI 15 AMBON',
+  filterKelas = 'Semua',
+  filterBulan = 'Semua'
 ) {
+  const periodStr = filterBulan && filterBulan !== 'Semua' ? formatIndoMonth(filterBulan) : 'Semua Periode (Akumulasi)';
+
   const data = items.map((item, index) => ({
     No: index + 1,
     'Nama Siswa': item.student.nama,
     NISN: item.student.nisn,
     Kelas: item.student.kelas,
+    'Periode / Bulan': periodStr,
     'Wali Kelas': item.waliKelas.name,
     'No HP Wali Kelas': item.waliKelas.phone || '-',
     'No HP Orang Tua': item.student.no_hp_ortu || '-',
@@ -1941,6 +1983,7 @@ export function exportProblematicStudentsToExcel(
     { wch: 30 },
     { wch: 15 },
     { wch: 12 },
+    { wch: 22 },
     { wch: 28 },
     { wch: 18 },
     { wch: 18 },
@@ -1958,7 +2001,165 @@ export function exportProblematicStudentsToExcel(
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Siswa Bermasalah');
   const dateStr = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(workbook, `Data_Siswa_Bermasalah_${schoolName.replace(/\s+/g, '_')}_${dateStr}.xlsx`);
+  const cleanSchool = schoolName.replace(/\s+/g, '_');
+  const cleanClass = (filterKelas || 'Semua').replace(/\s+/g, '_');
+  const cleanBulan = (filterBulan || 'Semua').replace(/\s+/g, '_');
+  XLSX.writeFile(workbook, `Rekap_Siswa_Bermasalah_${cleanSchool}_${cleanClass}_${cleanBulan}_${dateStr}.xlsx`);
+}
+
+/**
+ * Ekspor Data Siswa Bermasalah ke Dokumen Resmi PDF Berkop Surat (BK & Wali Kelas)
+ */
+export function exportProblematicStudentsToPDF(
+  items: Array<{
+    student: Student;
+    waliKelas: { name: string; nip?: string; phone?: string };
+    totalDays: number;
+    hadirCount: number;
+    terlambatCount: number;
+    sakitCount: number;
+    izinCount: number;
+    alpaCount: number;
+    attendanceRate: number;
+    riskLevel: string;
+    reasons: string[];
+    aiRecommendation?: string;
+  }>,
+  schoolName = 'SMA NEGERI 15 AMBON',
+  filterKelas = 'Semua',
+  filterBulan = 'Semua'
+) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  // Header Kop Surat Resmi
+  const startY = drawOfficialKopSurat(doc, 'landscape');
+
+  doc.setTextColor(185, 28, 28);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('LAPORAN REKAPITULASI SISWA BERMASALAH & PERLU PEMBINAAN', 148.5, startY + 4, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  const classLabel = filterKelas !== 'Semua' && filterKelas !== 'Semua Kelas' ? `KELAS: ${filterKelas}` : 'SEMUA KELAS';
+  const monthLabel = filterBulan && filterBulan !== 'Semua' ? `PERIODE: ${formatIndoMonth(filterBulan).toUpperCase()}` : 'SEMUA PERIODE (AKUMULASI)';
+  const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  doc.text(
+    `Indikasi: Sering Alpa / Terlambat / Kehadiran Rendah | ${classLabel} | ${monthLabel}`,
+    148.5,
+    startY + 8.5,
+    { align: 'center' }
+  );
+  doc.text(
+    `Total: ${items.length} Siswa Terjaring Pembinaan | Dokumen Pertanggungjawaban Resmi BK, Wali Kelas & Kesiswaan - Tanggal Cetak: ${todayStr}`,
+    148.5,
+    startY + 12.5,
+    { align: 'center' }
+  );
+
+  const tableHead = [
+    [
+      'No',
+      'NISN',
+      'Nama Siswa',
+      'Kelas',
+      'Wali Kelas',
+      'Alpa',
+      'Terlambat',
+      'Hadir %',
+      'Risiko',
+      'Indikasi Masalah / Pelanggaran',
+      'Rekomendasi Tindak Lanjut Pembinaan BK',
+    ],
+  ];
+
+  const tableBody = items.map((item, i) => {
+    return [
+      i + 1,
+      item.student.nisn,
+      item.student.nama,
+      item.student.kelas,
+      item.waliKelas.name || '-',
+      item.alpaCount > 0 ? `${item.alpaCount}x Alpa` : '0',
+      item.terlambatCount > 0 ? `${item.terlambatCount}x Telat` : '0',
+      `${item.attendanceRate}%`,
+      item.riskLevel.toUpperCase(),
+      item.reasons.join('; '),
+      item.aiRecommendation || 'Konseling individual dengan Guru BK dan koordinasi Wali Kelas.',
+    ];
+  });
+
+  autoTable(doc, {
+    startY: startY + 15,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [254, 242, 242] },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 36 },
+      3: { cellWidth: 14 },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 14 },
+      6: { cellWidth: 16 },
+      7: { cellWidth: 16 },
+      8: { cellWidth: 18 },
+      9: { cellWidth: 49 },
+      10: { cellWidth: 48 },
+    },
+  });
+
+  // Calculate signature position
+  let sigY = (doc as any).lastAutoTable?.finalY || 160;
+  if (sigY + 45 > 200) {
+    doc.addPage();
+    sigY = 20;
+  } else {
+    sigY += 8;
+  }
+
+  // Signature Block
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(30, 41, 59);
+
+  doc.text(`Ambon, ${todayStr}`, 220, sigY);
+  sigY += 5;
+
+  const colWidth = 65;
+  const col1 = 14;
+  const col2 = col1 + colWidth;
+  const col3 = col2 + colWidth;
+  const col4 = col3 + colWidth;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Koordinator Guru BK', col1, sigY);
+  doc.text('Wali Kelas Yang Bersangkutan', col2, sigY);
+  doc.text('Wakasek Bidang Kesiswaan', col3, sigY);
+  doc.text('Mengetahui: Kepala Sekolah', col4, sigY);
+
+  const finalSigY = sigY + 22;
+  doc.setFont('helvetica', 'normal');
+  doc.text('(................................................)', col1, finalSigY);
+  doc.text('(................................................)', col2, finalSigY);
+  doc.text('(................................................)', col3, finalSigY);
+  doc.text('(................................................)', col4, finalSigY);
+
+  doc.setFontSize(7);
+  doc.text('NIP. ........................................', col1, finalSigY + 4);
+  doc.text('NIP. ........................................', col2, finalSigY + 4);
+  doc.text('NIP. ........................................', col3, finalSigY + 4);
+  doc.text('NIP. ........................................', col4, finalSigY + 4);
+
+  const cleanSchool = schoolName.replace(/\s+/g, '_');
+  const cleanClass = (filterKelas || 'Semua').replace(/\s+/g, '_');
+  const cleanBulan = (filterBulan || 'Semua').replace(/\s+/g, '_');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  doc.save(`Rekap_Siswa_Bermasalah_${cleanSchool}_${cleanClass}_${cleanBulan}_${dateStr}.pdf`);
 }
 
 

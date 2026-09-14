@@ -47,6 +47,8 @@ import {
   ChevronDown,
   Cloud,
   Eye,
+  Radio,
+  Archive,
 } from 'lucide-react';
 
 interface TeacherManagementProps {
@@ -89,6 +91,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     jabatan: '',
     wali_kelas: '',
     no_hp: '',
+    rfid_uid: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
   });
   const [formError, setFormError] = useState('');
@@ -179,6 +182,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       jabatan: '',
       wali_kelas: '',
       no_hp: '',
+      rfid_uid: '',
       status: 'aktif',
     });
     setFormError('');
@@ -193,6 +197,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       jabatan: teacher.jabatan,
       wali_kelas: teacher.wali_kelas || '',
       no_hp: teacher.no_hp || '',
+      rfid_uid: teacher.rfid_uid || '',
       status: teacher.status || 'aktif',
     });
     setFormError('');
@@ -207,11 +212,23 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     }
 
     const cleanNip = formData.nip.trim();
+    const cleanRfid = formData.rfid_uid.trim().toUpperCase();
+
     // Check if NIP already exists
     const duplicate = teachers.find((t) => t.nip === cleanNip);
     if (duplicate) {
       setFormError(`NIP ${cleanNip} sudah digunakan oleh ${duplicate.nama}.`);
       return;
+    }
+
+    if (cleanRfid) {
+      const duplicateRfid = teachers.find(
+        (t) => t.rfid_uid && t.rfid_uid.trim().toUpperCase() === cleanRfid
+      );
+      if (duplicateRfid) {
+        setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh guru ${duplicateRfid.nama}.`);
+        return;
+      }
     }
 
     const added = await store.addTeacher({
@@ -220,6 +237,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       jabatan: formData.jabatan.trim() || 'Guru Mata Pelajaran',
       wali_kelas: formData.wali_kelas.trim() || undefined,
       no_hp: formData.no_hp.trim() || undefined,
+      rfid_uid: cleanRfid || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -240,10 +258,22 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     }
 
     const cleanNip = formData.nip.trim();
+    const cleanRfid = formData.rfid_uid.trim().toUpperCase();
+
     const duplicate = teachers.find((t) => t.id !== currentTeacher.id && t.nip === cleanNip);
     if (duplicate) {
       setFormError(`NIP ${cleanNip} sudah digunakan oleh ${duplicate.nama}.`);
       return;
+    }
+
+    if (cleanRfid) {
+      const duplicateRfid = teachers.find(
+        (t) => t.id !== currentTeacher.id && t.rfid_uid && t.rfid_uid.trim().toUpperCase() === cleanRfid
+      );
+      if (duplicateRfid) {
+        setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh guru ${duplicateRfid.nama}.`);
+        return;
+      }
     }
 
     await store.updateTeacher(currentTeacher.id, {
@@ -252,6 +282,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       jabatan: formData.jabatan.trim() || 'Guru Mata Pelajaran',
       wali_kelas: formData.wali_kelas.trim() || undefined,
       no_hp: formData.no_hp.trim() || undefined,
+      rfid_uid: cleanRfid || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -701,6 +732,13 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                         <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                           {teacher.nip}
                         </span>
+                        {teacher.rfid_uid && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800">
+                              <Radio className="w-2.5 h-2.5 text-sky-500" /> {teacher.rfid_uid}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="p-3.5">
                         <div className="font-semibold text-slate-900 dark:text-slate-100">
@@ -935,6 +973,38 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 </div>
               </div>
 
+              {/* RFID UID Input for Teacher */}
+              <div className="p-3 bg-sky-50/50 dark:bg-sky-950/30 rounded-xl border border-sky-100 dark:border-sky-900/50">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-sky-900 dark:text-sky-300">
+                    <Radio className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 animate-pulse" />
+                    UID Kartu RFID / Contactless NFC Guru (Opsional)
+                  </label>
+                  {formData.rfid_uid && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rfid_uid: '' })}
+                      className="text-[10px] text-red-500 hover:underline cursor-pointer"
+                    >
+                      Hapus Kartu
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.rfid_uid}
+                    onChange={(e) => setFormData({ ...formData, rfid_uid: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                    placeholder="Contoh: E28068A1 atau tap kartu ke USB reader..."
+                    className="w-full pl-8 pr-3 py-2 text-xs border border-sky-200 dark:border-sky-800 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 font-mono uppercase tracking-wider"
+                  />
+                  <CreditCard className="w-4 h-4 text-sky-400 absolute left-2.5 top-2.5" />
+                </div>
+                <p className="text-[10px] text-sky-700/80 dark:text-sky-400/80 mt-1">
+                  💡 <strong>Tip:</strong> Tap kartu RFID guru pada reader USB untuk mengisi nomor seri kartu secara instan.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Status Guru
@@ -1038,6 +1108,65 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Wali Kelas (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: X-1 / XI IPA 1"
+                    value={formData.wali_kelas}
+                    onChange={(e) => setFormData({ ...formData, wali_kelas: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    No. HP / WA (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    value={formData.no_hp}
+                    onChange={(e) => setFormData({ ...formData, no_hp: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              {/* RFID UID Input for Teacher in Edit Modal */}
+              <div className="p-3 bg-sky-50/50 dark:bg-sky-950/30 rounded-xl border border-sky-100 dark:border-sky-900/50">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-sky-900 dark:text-sky-300">
+                    <Radio className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 animate-pulse" />
+                    UID Kartu RFID / Contactless NFC Guru (Opsional)
+                  </label>
+                  {formData.rfid_uid && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rfid_uid: '' })}
+                      className="text-[10px] text-red-500 hover:underline cursor-pointer"
+                    >
+                      Hapus Kartu
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.rfid_uid}
+                    onChange={(e) => setFormData({ ...formData, rfid_uid: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                    placeholder="Contoh: E28068A1 atau tap kartu ke USB reader..."
+                    className="w-full pl-8 pr-3 py-2 text-xs border border-sky-200 dark:border-sky-800 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 font-mono uppercase tracking-wider"
+                  />
+                  <CreditCard className="w-4 h-4 text-sky-400 absolute left-2.5 top-2.5" />
+                </div>
+                <p className="text-[10px] text-sky-700/80 dark:text-sky-400/80 mt-1">
+                  💡 <strong>Tip:</strong> Tap kartu RFID guru pada reader USB untuk memperbarui nomor kartu.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Status Guru
@@ -1077,33 +1206,30 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: DELETE SINGLE TEACHER CONFIRMATION */}
       {deletingTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 dark:border-rose-900 animate-in fade-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-              <span className="p-2.5 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-xl">
-                <AlertTriangle className="w-5 h-5" />
+              <span className="p-2.5 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-xl">
+                <Archive className="w-5 h-5" />
               </span>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Hapus Data Guru?
+                  Nonaktifkan Data Guru?
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Tindakan ini tidak dapat dibatalkan
+                  Penghapusan Halus (Soft Delete)
                 </p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Apakah Anda yakin ingin menghapus data guru berikut dari database aplikasi dan cloud Supabase?
+                Apakah Anda yakin ingin <strong>menonaktifkan</strong> data guru berikut? Statusnya akan berubah menjadi Nonaktif dan presensi lamanya tetap aman.
               </p>
-              <div className="bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-900/60 text-xs">
+              <div className="bg-amber-50 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs">
                 <p className="font-bold text-slate-900 dark:text-slate-100">{deletingTeacher.nama}</p>
                 <p className="font-mono text-slate-600 dark:text-slate-400 mt-0.5">NIP: {deletingTeacher.nip}</p>
                 <p className="text-slate-500 dark:text-slate-400 mt-0.5">{deletingTeacher.jabatan}</p>
               </div>
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                Catatan: Riwayat presensi guru terkait juga akan dibersihkan agar data tetap sinkron.
-              </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1117,9 +1243,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               <button
                 type="button"
                 onClick={handleConfirmDeleteSingle}
-                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700 rounded-xl transition shadow-sm cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
               >
-                Ya, Hapus Data Guru
+                <Archive className="w-3.5 h-3.5" />
+                <span>Ya, Nonaktifkan</span>
               </button>
             </div>
           </div>
@@ -1129,26 +1256,26 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: BATCH DELETE CONFIRMATION */}
       {isBatchDeleteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 dark:border-rose-900 animate-in fade-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-              <span className="p-2.5 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 rounded-xl">
-                <Trash2 className="w-5 h-5" />
+              <span className="p-2.5 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-xl">
+                <Archive className="w-5 h-5" />
               </span>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Hapus {selectedIds.length} Guru Terpilih?
+                  Nonaktifkan {selectedIds.length} Guru Terpilih?
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Tindakan penghapusan massal tidak dapat dibatalkan
+                  Penghapusan Halus (Soft Delete Massal)
                 </p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Anda akan menghapus <strong>{selectedIds.length}</strong> data guru yang dipilih secara permanen dari sistem.
+                Anda akan mengubah status <strong>{selectedIds.length}</strong> data guru menjadi Nonaktif. Mereka tidak akan muncul di daftar presensi harian, namun riwayat presensinya tetap tersimpan.
               </p>
-              <div className="max-h-32 overflow-y-auto bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <div className="max-h-32 overflow-y-auto bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs space-y-1">
                 {teachers
                   .filter((t) => selectedIds.includes(t.id))
                   .slice(0, 5)
@@ -1177,9 +1304,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               <button
                 type="button"
                 onClick={handleConfirmBatchDelete}
-                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-sm cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
               >
-                Ya, Hapus {selectedIds.length} Guru
+                <Archive className="w-3.5 h-3.5" />
+                <span>Nonaktifkan {selectedIds.length} Guru</span>
               </button>
             </div>
           </div>

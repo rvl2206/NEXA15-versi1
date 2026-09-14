@@ -4,6 +4,7 @@ import { store } from './lib/store';
 import { toast } from './lib/toast';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { BottomNav } from './components/BottomNav';
 import { LoginModal } from './components/LoginModal';
 import { Dashboard } from './components/Dashboard';
 import { QRScanner } from './components/QRScanner';
@@ -16,21 +17,66 @@ import { WaliKelasDispatch } from './components/WaliKelasDispatch';
 import { AIAnalysis } from './components/AIAnalysis';
 import { ActivityLogs } from './components/ActivityLogs';
 import { SettingsPage } from './components/SettingsPage';
+import { UserManagement } from './components/UserManagement';
 import { ToastContainer } from './components/ToastContainer';
+import { UnsyncedDataWarning } from './components/UnsyncedDataWarning';
+import { GuidedTour } from './components/GuidedTour';
 
 export function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => store.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      return store.getCurrentUser();
+    } catch (e) {
+      console.warn('Error reading current user:', e);
+      return null;
+    }
+  });
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [settings, setSettings] = useState<SchoolSettings>(store.getSettings());
+  const [settings, setSettings] = useState<SchoolSettings>(() => {
+    try {
+      return store.getSettings();
+    } catch (e) {
+      console.warn('Error reading settings:', e);
+      return {
+        schoolName: 'SMA Negeri 15 Ambon',
+        schoolNPSN: '69933068',
+      } as any;
+    }
+  });
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('nexa15_theme') || localStorage.getItem('sapasiswa_theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      const saved = localStorage.getItem('nexa15_theme') || localStorage.getItem('sapasiswa_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+      return 'dark';
+    }
   });
+  
+  const [runTour, setRunTour] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentUser && !localStorage.getItem('nexa15_tour_completed')) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        setRunTour(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser]);
+
+  const handleTourFinish = () => {
+    setRunTour(false);
+    localStorage.setItem('nexa15_tour_completed', 'true');
+  };
+
+  const startTourManually = () => {
+    setRunTour(true);
+  };
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -58,7 +104,7 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return;
     const rolePermissions: Record<UserRole, string[]> = {
-      Admin: ['dashboard', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
+      Admin: ['dashboard', 'users', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
       Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template'],
       'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'ai-analysis', 'logs', 'settings'],
     };
@@ -107,7 +153,27 @@ export function App() {
     };
   }, [currentUser]);
 
+  // Antisipasi data tidak terekam: Peringatkan pengguna jika menutup browser saat ada data belum terkirim
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (store.getOfflineQueueCount() > 0) {
+        e.preventDefault();
+        e.returnValue = 'Peringatan: Terdapat data presensi/sistem yang belum terkirim ke database Cloud. Yakin ingin menutup halaman?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   const handleLogout = () => {
+    const unsyncedCount = store.getOfflineQueueCount();
+    if (unsyncedCount > 0) {
+      const confirmLogout = window.confirm(
+        `PERINGATAN SINKRONISASI:\n\nMasih ada ${unsyncedCount} data presensi/perubahan yang BELUM TERKIRIM ke database Cloud!\n\nJika Anda keluar sekarang dan memori browser dibersihkan, data berisiko tidak terekam di server.\n\nApakah Anda tetap ingin keluar?`
+      );
+      if (!confirmLogout) return;
+    }
     store.setCurrentUser(null);
     setCurrentUser(null);
   };
@@ -136,6 +202,8 @@ export function App() {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard onNavigateTab={setActiveTab} />;
+      case 'users':
+        return <UserManagement />;
       case 'scan':
         return <QRScanner currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'students':
@@ -171,6 +239,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
+      <GuidedTour run={runTour} onFinish={handleTourFinish} activeTab={activeTab} />
       <ToastContainer />
       {/* Top Navbar */}
       <Navbar
@@ -183,6 +252,7 @@ export function App() {
         onToggleTheme={toggleTheme}
         isMobileSidebarOpen={isMobileSidebarOpen}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+        onStartTour={startTourManually}
       />
 
       {/* Main Body */}
@@ -201,10 +271,20 @@ export function App() {
           onToggleTheme={toggleTheme}
         />
 
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 md:pb-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
+          <UnsyncedDataWarning onNavigateToSettings={() => setActiveTab('settings')} />
           {renderActiveTabContent()}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userRole={currentUser?.role}
+        onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+        offlineQueueCount={store.getOfflineQueueCount()}
+      />
     </div>
   );
 }

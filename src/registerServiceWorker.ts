@@ -1,32 +1,25 @@
-import { store } from './lib/store';
-
+/**
+ * Service Worker Unregister & Cache Cleanup Helper
+ * Ensures the applet always runs fresh code without stale cache trapping
+ */
 export function registerServiceWorker() {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return;
+  if (typeof window === 'undefined') return;
+
+  // Unregister existing Service Workers
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister().catch(() => {});
+      }
+    }).catch(() => {});
   }
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('NEXA15 ServiceWorker registered with scope:', registration.scope);
-
-        // Register background sync if supported
-        if ('sync' in registration) {
-          window.addEventListener('online', () => {
-            (registration as any).sync?.register('nexa15-sync-attendance').catch(() => {});
-          });
-        }
-      })
-      .catch((error) => {
-        console.warn('NEXA15 ServiceWorker registration failed:', error);
-      });
-
-    // Listen to messages from Service Worker
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data && event.data.type === 'TRIGGER_OFFLINE_SYNC') {
-        store.processOfflineQueue();
+  // Clear CacheStorage to purge any stale cached index.html or scripts
+  if ('caches' in window) {
+    caches.keys().then((cacheNames) => {
+      for (const name of cacheNames) {
+        caches.delete(name).catch(() => {});
       }
-    });
-  });
+    }).catch(() => {});
+  }
 }

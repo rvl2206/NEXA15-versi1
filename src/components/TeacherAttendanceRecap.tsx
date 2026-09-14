@@ -28,6 +28,8 @@ import {
   Briefcase,
   UserCheck,
   Building,
+  CreditCard,
+  Cloud,
 } from 'lucide-react';
 
 interface TeacherAttendanceRecapProps {
@@ -79,6 +81,40 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+  const [isFetchingCloud, setIsFetchingCloud] = useState(false);
+
+  const handleFetchCloud = async () => {
+    setIsFetchingCloud(true);
+    try {
+      let startDateStr = '';
+      let endDateStr = '';
+
+      if (filterDate) {
+        startDateStr = filterDate;
+        endDateStr = filterDate;
+      } else if (filterMonth) {
+        const [year, month] = filterMonth.split('-');
+        startDateStr = `${filterMonth}-01`;
+        const lastDay = new Date(Number(year), Number(month), 0).getDate();
+        endDateStr = `${filterMonth}-${lastDay.toString().padStart(2, '0')}`;
+      } else {
+        toast.info('Pilih Tanggal atau Bulan terlebih dahulu untuk menarik data cloud.');
+        setIsFetchingCloud(false);
+        return;
+      }
+
+      const totalLoaded = await store.fetchHistoricalAttendance(startDateStr, endDateStr);
+      if (totalLoaded > 0) {
+        toast.success('Berhasil', `Berhasil memuat ${totalLoaded} data (Siswa & Guru) dari Cloud.`);
+      } else {
+        toast.info('Info', 'Tidak ada data presensi tambahan dari Cloud untuk periode ini.');
+      }
+    } catch (err: any) {
+      toast.error('Gagal', err?.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setIsFetchingCloud(false);
+    }
+  };
 
   useEffect(() => {
     setAttendance(store.getTeacherAttendance());
@@ -424,7 +460,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
           </div>
 
           {/* Date Picker */}
-          <div>
+          <div className="flex gap-2">
             <input
               type="date"
               value={filterDate}
@@ -435,6 +471,15 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               }}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
+            <button
+              type="button"
+              onClick={handleFetchCloud}
+              disabled={isFetchingCloud}
+              title="Tarik Data dari Cloud Database"
+              className="px-3 py-2 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-xl transition-colors shrink-0 flex items-center justify-center disabled:opacity-50"
+            >
+              <Cloud className={`w-4 h-4 ${isFetchingCloud ? 'animate-bounce text-sky-500' : ''}`} />
+            </button>
           </div>
 
           {/* Status Filter */}
@@ -660,15 +705,26 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         </span>
                       </td>
                       <td className="p-3.5 text-center">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            record.jenis === 'Pulang'
-                              ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                              : 'bg-sky-100 text-sky-800 border border-sky-200'
-                          }`}
-                        >
-                          {record.jenis}
-                        </span>
+                        <div className="inline-flex items-center justify-center gap-1 flex-wrap">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              record.jenis === 'Pulang'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : 'bg-sky-100 text-sky-800 border border-sky-200'
+                            }`}
+                          >
+                            {record.jenis}
+                          </span>
+                          {record.scan_method === 'RFID' && (
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.2 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[9px] font-extrabold"
+                              title="Discan menggunakan Kartu RFID"
+                            >
+                              <CreditCard className="w-2.5 h-2.5" />
+                              <span>RFID</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3.5 text-center">
                         <span

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { store, isGenericQrCode } from '../lib/store';
 import { toast } from '../lib/toast';
-import { Student, UserRole, AttendanceRecord } from '../types';
+import { Student, UserRole, AttendanceRecord, Teacher } from '../types';
 import { exportStudentListToExcel, exportStudentListToCSV, downloadStudentImportTemplate, parseStudentImportFile, printElement, getWhatsAppLink, generateWhatsAppMessage } from '../lib/exportUtils';
 import { SchoolLogo } from './SchoolLogo';
 import {
@@ -37,6 +37,11 @@ import {
   ChevronRight,
   CreditCard,
   MessageCircle,
+  Radio,
+  Smartphone,
+  CheckCircle2,
+  Archive,
+  RefreshCw,
 } from 'lucide-react';
 
 export type CardSizeOption = 'CR80' | 'B2' | 'B1';
@@ -123,9 +128,22 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
   const [qrModalStudent, setQrModalStudent] = useState<Student | null>(null);
 
+  // RFID Card Binding State
+  const [rfidBindStudent, setRfidBindStudent] = useState<Student | null>(null);
+  const [rfidInputVal, setRfidInputVal] = useState('');
+  const [rfidConflict, setRfidConflict] = useState<{
+    type: 'siswa' | 'guru';
+    student?: Student;
+    teacher?: Teacher;
+  } | null>(null);
+  const [isNfcActive, setIsNfcActive] = useState(false);
+  const rfidInputRef = useRef<HTMLInputElement>(null);
+
   // Selection & Batch Delete State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isBatchMoveModalOpen, setIsBatchMoveModalOpen] = useState(false);
+  const [batchTargetClass, setBatchTargetClass] = useState('');
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
   // Import Excel Modal State
@@ -186,9 +204,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     nama: '',
     kelas: 'X 1',
     no_hp_ortu: '',
+    rfid_uid: '',
     foto: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     setStudents(store.getStudents());
@@ -201,9 +224,55 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     return () => unsubscribe();
   }, []);
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => {
+    if (rfidBindStudent) {
+      setRfidInputVal(rfidBindStudent.rfid_uid || '');
+      setRfidConflict(null);
+      setIsNfcActive(false);
+      const timer = setTimeout(() => {
+        rfidInputRef.current?.focus();
+        rfidInputRef.current?.select();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [rfidBindStudent]);
+
+  const { hexFormatted, decFormatted } = useMemo(() => {
+    const clean = rfidInputVal.trim().toUpperCase().replace(/[\s:-]/g, '');
+    if (!clean) return { hexFormatted: '', decFormatted: '' };
+
+    let hex = '';
+    let dec = '';
+
+    // Check if input is hex
+    if (/^[0-9A-F]+$/.test(clean)) {
+      if (clean.length <= 8) {
+        try {
+          const decNum = parseInt(clean, 16);
+          if (!isNaN(decNum)) {
+            dec = String(decNum).padStart(10, '0');
+            hex = clean.padStart(8, '0');
+          }
+        } catch {}
+      } else {
+        hex = clean;
+      }
+    }
+
+    // Check if input is decimal
+    if (/^\d+$/.test(clean)) {
+      try {
+        const decVal = parseInt(clean, 10);
+        if (!isNaN(decVal)) {
+          const hexStr = decVal.toString(16).toUpperCase();
+          if (!hex) hex = hexStr.padStart(8, '0');
+          if (!dec) dec = clean.padStart(10, '0');
+        }
+      } catch {}
+    }
+
+    return { hexFormatted: hex, decFormatted: dec };
+  }, [rfidInputVal]);
 
   const handleTingkatChange = (tingkat: string) => {
     setSelectedTingkat(tingkat);
@@ -302,6 +371,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
         s.id.toLowerCase().includes(term) ||
         s.nisn.toLowerCase().includes(term) ||
         s.id_qr.toLowerCase().includes(term) ||
+        (s.rfid_uid && s.rfid_uid.toLowerCase().includes(term)) ||
         s.kelas.toLowerCase().includes(term);
 
       if (!matchSearch) return false;
@@ -413,6 +483,15 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     }
   };
 
+  const handleConfirmBatchMove = async () => {
+    if (selectedIds.length > 0 && batchTargetClass) {
+      await store.updateMultipleStudents(selectedIds, { kelas: batchTargetClass });
+      setSelectedIds([]);
+      setBatchTargetClass('');
+      setIsBatchMoveModalOpen(false);
+    }
+  };
+
   const handleConfirmClearAll = () => {
     store.deleteAllStudents();
     setSelectedIds([]);
@@ -460,6 +539,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       nama: '',
       kelas: 'X 1',
       no_hp_ortu: '',
+      rfid_uid: '',
       foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
       status: 'aktif',
     });
@@ -474,6 +554,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       nama: s.nama,
       kelas: s.kelas,
       no_hp_ortu: s.no_hp_ortu || '',
+      rfid_uid: s.rfid_uid || '',
       foto: s.foto || '',
       status: s.status,
     });
@@ -487,11 +568,25 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       return;
     }
 
+    const cleanRfid = formData.rfid_uid.trim().toUpperCase();
+
+    // Check if another student already uses this RFID UID
+    if (cleanRfid) {
+      const existingWithRfid = students.find(
+        (s) => s.rfid_uid && s.rfid_uid.trim().toUpperCase() === cleanRfid && s.id !== editingStudent?.id
+      );
+      if (existingWithRfid) {
+        toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh ${existingWithRfid.nama} (${existingWithRfid.kelas}).`);
+        return;
+      }
+    }
+
     const formattedData = {
       ...formData,
       nama: formData.nama.trim(),
       nisn: formData.nisn.trim(),
       id_qr: `69933068.${formData.nisn.trim()}.${formData.nama.trim()}`,
+      rfid_uid: cleanRfid || undefined,
     };
 
     if (editingStudent) {
@@ -512,6 +607,83 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     if (deletingStudent) {
       store.deleteStudent(deletingStudent.id);
       setDeletingStudent(null);
+    }
+  };
+
+  // RFID Binding Handlers & Helpers
+  const handleOpenBindRfid = (s: Student) => {
+    setRfidBindStudent(s);
+    setRfidInputVal(s.rfid_uid || '');
+    setRfidConflict(null);
+    setIsNfcActive(false);
+  };
+
+  const handleRfidInputChange = (val: string) => {
+    setRfidInputVal(val);
+    const clean = val.trim().toUpperCase().replace(/[\s:-]/g, '');
+    if (!clean) {
+      setRfidConflict(null);
+      return;
+    }
+    const match = store.findByRfidUid(clean);
+    if (match) {
+      if (match.type === 'siswa' && match.student?.id === rfidBindStudent?.id) {
+        setRfidConflict(null);
+      } else {
+        setRfidConflict(match);
+      }
+    } else {
+      setRfidConflict(null);
+    }
+  };
+
+  const handleSaveRfidBind = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!rfidBindStudent) return;
+    const clean = rfidInputVal.trim().toUpperCase().replace(/[\s:-]/g, '');
+    if (!clean) {
+      toast.error('UID Kosong', 'Silakan ketik atau tempelkan kartu RFID fisik ke reader.');
+      return;
+    }
+
+    store.assignRfidToStudent(rfidBindStudent.id, clean);
+    toast.success(
+      'Kartu RFID Ditautkan',
+      `Kartu [${clean}] berhasil dipetakan ke profil siswa ${rfidBindStudent.nama} (${rfidBindStudent.kelas}).`
+    );
+    setRfidBindStudent(null);
+  };
+
+  const handleUnbindRfid = () => {
+    if (!rfidBindStudent) return;
+    store.updateStudent(rfidBindStudent.id, { rfid_uid: undefined });
+    toast.info(
+      'Tautan Kartu Dihapus',
+      `Kartu RFID untuk siswa ${rfidBindStudent.nama} berhasil dilepas.`
+    );
+    setRfidBindStudent(null);
+  };
+
+  const handleStartNfcScan = async () => {
+    if (typeof window === 'undefined' || !('NDEFReader' in window)) {
+      toast.error('NFC Tidak Didukung', 'Browser atau perangkat tidak mendukung Web NFC API.');
+      return;
+    }
+    try {
+      const ndef = new (window as any).NDEFReader();
+      await ndef.scan();
+      setIsNfcActive(true);
+      toast.info('NFC Smartphone Aktif', 'Tempelkan kartu RFID/NFC ke bagian belakang smartphone Anda.');
+      ndef.addEventListener('reading', (event: any) => {
+        const serial = (event.serialNumber || '').replace(/[:\s-]/g, '').toUpperCase();
+        if (serial) {
+          handleRfidInputChange(serial);
+          toast.success('Kartu Terdeteksi', `UID [${serial}] berhasil dipindai via NFC!`);
+        }
+      });
+    } catch (err: any) {
+      setIsNfcActive(false);
+      toast.error('Gagal Mengaktifkan NFC', err?.message || 'Izin NFC ditolak atau tidak tersedia.');
     }
   };
 
@@ -681,6 +853,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 rounded-lg transition-colors"
             >
               Batal Pilih
+            </button>
+            <button
+              onClick={() => setIsBatchMoveModalOpen(true)}
+              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Mutasi Kelas ({selectedIds.length})</span>
             </button>
             <button
               onClick={() => setIsBatchDeleteModalOpen(true)}
@@ -935,7 +1114,28 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                           </div>
                         </div>
                       </td>
-                      <td className="p-3.5 font-mono font-semibold text-slate-800 dark:text-slate-200">{s.nisn}</td>
+                      <td className="p-3.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        <div>{s.nisn}</div>
+                        {s.rfid_uid ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBindRfid(s)}
+                            className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 mt-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
+                            title={`UID Kartu: ${s.rfid_uid} (Klik untuk ubah / kelola tautan kartu RFID)`}
+                          >
+                            <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" /> {s.rfid_uid}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBindRfid(s)}
+                            className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 mt-1 hover:underline cursor-pointer"
+                            title={`Tautkan Kartu RFID Fisik untuk ${s.nama}`}
+                          >
+                            <CreditCard className="w-2.5 h-2.5" /> +Taut RFID
+                          </button>
+                        )}
+                      </td>
                       <td className="p-3.5 font-mono text-blue-700 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-950/40 px-2 py-1 rounded w-max">
                         {s.id_qr}
                       </td>
@@ -1006,6 +1206,22 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                       </td>
                       <td className="p-3.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          {/* Bind RFID Card Button */}
+                          <button
+                            onClick={() => handleOpenBindRfid(s)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              s.rfid_uid
+                                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800'
+                                : 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50'
+                            }`}
+                            title={
+                              s.rfid_uid
+                                ? `Kartu RFID Tertaut: ${s.rfid_uid} (Klik untuk kelola/ganti kartu)`
+                                : `Tautkan Kartu Fisik RFID untuk ${s.nama}`
+                            }
+                          >
+                            <Radio className={`w-4 h-4 ${s.rfid_uid ? 'animate-pulse' : ''}`} />
+                          </button>
                           <button
                             onClick={() => setQrModalStudent(s)}
                             className="p-1.5 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 rounded-lg transition-colors"
@@ -1222,6 +1438,38 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                 />
               </div>
 
+              {/* RFID / NFC Card UID */}
+              <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-indigo-900 dark:text-indigo-300">
+                    <Radio className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                    UID Kartu RFID / Contactless NFC (Opsional)
+                  </label>
+                  {formData.rfid_uid && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rfid_uid: '' })}
+                      className="text-[10px] text-red-500 hover:underline cursor-pointer"
+                    >
+                      Hapus Kartu
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.rfid_uid}
+                    onChange={(e) => setFormData({ ...formData, rfid_uid: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                    placeholder="Contoh: E28068A1 atau tempelkan kartu ke reader..."
+                    className="w-full pl-8 pr-3 py-2 text-xs border border-indigo-200 dark:border-indigo-800 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono uppercase tracking-wider"
+                  />
+                  <CreditCard className="w-4 h-4 text-indigo-400 absolute left-2.5 top-2.5" />
+                </div>
+                <p className="text-[10px] text-indigo-700/80 dark:text-indigo-400/80 mt-1">
+                  💡 <strong>Tip Cepat:</strong> Klik kolom ini lalu tempelkan kartu RFID siswa pada alat USB RFID Reader untuk mengisi otomatis.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">No. WhatsApp / HP Orang Tua</label>
                 <input
@@ -1286,21 +1534,21 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       {deletingStudent && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden transition-colors">
-            <div className="bg-red-600 p-4 text-white flex items-center justify-between">
+            <div className="bg-amber-600 p-4 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
-                <Trash2 className="w-4 h-4" />
-                Konfirmasi Hapus Data Siswa
+                <Archive className="w-4 h-4" />
+                Konfirmasi Nonaktifkan Data Siswa
               </h3>
-              <button onClick={() => setDeletingStudent(null)} className="text-red-200 hover:text-white">
+              <button onClick={() => setDeletingStudent(null)} className="text-amber-200 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-5 space-y-4 text-slate-800 dark:text-slate-100">
-              <div className="p-3 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/60 text-xs text-red-700 dark:text-red-300">
-                <p className="font-bold">⚠️ Perhatian Admin:</p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs text-amber-800 dark:text-amber-300">
+                <p className="font-bold">⚠️ Perhatian Admin (Soft Delete):</p>
                 <p className="mt-1">
-                  Data siswa ini akan dihapus permanen dari database utama. Siswa yang terhapus tidak akan dikenali lagi oleh scanner absensi.
+                  Data siswa ini akan diubah statusnya menjadi <strong>Nonaktif</strong>. Rekaman presensi historis <strong>tidak akan dihapus</strong>, namun siswa ini tidak akan bisa melakukan scan presensi baru sebelum diaktifkan kembali.
                 </p>
               </div>
 
@@ -1334,13 +1582,217 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={confirmDeleteStudent}
-                  className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-md transition-all flex items-center gap-1.5"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus Permanen</span>
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>Nonaktifkan Siswa</span>
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tautkan Kartu RFID / Bind RFID Card */}
+      {rfidBindStudent && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden transition-colors animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-400/30 text-indigo-300">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm flex items-center gap-2">
+                    <span>Tautkan Kartu RFID / NFC Fisik</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                      Siswa
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-indigo-200/80 mt-0.5">
+                    Petakan UID kartu fisik (13.56 MHz / 125 kHz) ke profil siswa untuk absensi instan.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRfidBindStudent(null)}
+                className="text-indigo-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRfidBind} className="p-5 space-y-4 text-slate-800 dark:text-slate-100">
+              {/* Student Profile Card */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3.5">
+                <img
+                  src={rfidBindStudent.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'}
+                  alt={rfidBindStudent.nama}
+                  className="w-12 h-12 rounded-xl object-cover border-2 border-indigo-500/30 shadow-sm shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-black text-xs text-slate-900 dark:text-white uppercase truncate">
+                      {rfidBindStudent.nama}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 shrink-0">
+                      Kelas {rfidBindStudent.kelas}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono">
+                    <span>NISN: <strong className="text-slate-800 dark:text-slate-200">{rfidBindStudent.nisn}</strong></span>
+                    <span>ID QR: <strong className="text-cyan-700 dark:text-cyan-300 text-[10px]">{rfidBindStudent.id_qr}</strong></span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Status Kartu Saat Ini:</span>
+                    {rfidBindStudent.rfid_uid ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                        <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" />
+                        Tertaut: {rfidBindStudent.rfid_uid}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400 italic">
+                        Belum memiliki kartu RFID tertaut
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* RFID Input Area */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    UID Kartu RFID / NFC Fisik:
+                  </label>
+                  {typeof window !== 'undefined' && 'NDEFReader' in window && (
+                    <button
+                      type="button"
+                      onClick={handleStartNfcScan}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 border transition cursor-pointer ${
+                        isNfcActive
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                      }`}
+                    >
+                      <Smartphone className="w-3 h-3" />
+                      <span>{isNfcActive ? 'NFC HP Aktif...' : 'Scan via NFC HP'}</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    ref={rfidInputRef}
+                    type="text"
+                    value={rfidInputVal}
+                    onChange={(e) => handleRfidInputChange(e.target.value)}
+                    placeholder="Tempelkan kartu RFID pada reader USB atau ketik UID..."
+                    className="w-full pl-9 pr-20 py-2.5 text-xs border border-indigo-300 dark:border-indigo-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono uppercase tracking-wider font-bold shadow-inner"
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  <Radio className="w-4 h-4 text-indigo-500 absolute left-3 top-3 animate-pulse" />
+                  {rfidInputVal && (
+                    <button
+                      type="button"
+                      onClick={() => handleRfidInputChange('')}
+                      className="absolute right-2.5 top-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
+                    >
+                      Bersihkan
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <span>💡</span>
+                  <span>
+                    <strong>USB Reader:</strong> Klik kolom di atas lalu tempelkan kartu RFID ke alat USB Reader untuk membaca nomor UID otomatis.
+                  </span>
+                </p>
+              </div>
+
+              {/* Format Conversions Preview (Hex & Dec) */}
+              {(hexFormatted || decFormatted) && (
+                <div className="bg-indigo-50/60 dark:bg-indigo-950/40 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/60 space-y-1.5 text-xs">
+                  <div className="text-[10px] font-extrabold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Konversi Format Kartu Otomatis</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                      <span className="text-[10px] text-slate-400 block">Hexadecimal (Hex):</span>
+                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                        {hexFormatted || '-'}
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                      <span className="text-[10px] text-slate-400 block">Decimal (Dec):</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {decFormatted || '-'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Sistem otomatis mengenali kartu ini baik saat dipindai reader USB bertipe Hex maupun Dec.
+                  </p>
+                </div>
+              )}
+
+              {/* Conflict / Occupancy Warning */}
+              {rfidConflict && (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 rounded-xl space-y-1.5 text-xs text-amber-950 dark:text-amber-200 animate-in fade-in">
+                  <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Perhatian: Kartu Sedang Dipakai!</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Kartu UID <strong>[{rfidInputVal}]</strong> saat ini sedang ditautkan ke{' '}
+                    <strong>
+                      {rfidConflict.type === 'siswa' ? rfidConflict.student?.nama : rfidConflict.teacher?.nama}
+                    </strong>{' '}
+                    ({rfidConflict.type === 'siswa' ? `Siswa Kelas ${rfidConflict.student?.kelas}` : `Guru - ${rfidConflict.teacher?.jabatan}`}).
+                  </p>
+                  <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-900/50 p-2 rounded-lg">
+                    ⚡ Jika Anda melanjutkan penyimpanan, kepemilikan kartu RFID ini akan otomatis dialihkan secara eksklusif ke <strong>{rfidBindStudent.nama}</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+                {rfidBindStudent.rfid_uid ? (
+                  <button
+                    type="button"
+                    onClick={handleUnbindRfid}
+                    className="px-3.5 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 rounded-xl transition-all cursor-pointer"
+                  >
+                    Lepas Tautan Kartu
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRfidBindStudent(null)}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!rfidInputVal.trim()}
+                    className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Tautkan Kartu RFID</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1481,6 +1933,66 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
           <p className="text-[11px] text-slate-400 mt-2 font-medium select-none">
             Klik kartu atau tombol "Cetak Kartu Sekarang" di atas • Klik di luar kartu untuk menutup
           </p>
+        </div>
+      )}
+
+      {/* Modal Batch Move (Mutasi Kelas Massal) */}
+      {isBatchMoveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden transition-colors">
+            <div className="bg-amber-600 p-4 text-white flex items-center justify-between">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Mutasi Kelas {selectedIds.length} Siswa
+              </h3>
+              <button onClick={() => setIsBatchMoveModalOpen(false)} className="text-amber-200 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-slate-800 dark:text-slate-100">
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs text-amber-700 dark:text-amber-300">
+                <p className="font-bold">Info Pembaruan Massal:</p>
+                <p className="mt-1">
+                  Anda akan mengubah data kelas untuk <strong>{selectedIds.length} siswa</strong> yang Anda centang secara bersamaan. Sangat berguna untuk kenaikan kelas atau pemindahan kelas paralel.
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                  Pilih Kelas Tujuan
+                </label>
+                <select
+                  value={batchTargetClass}
+                  onChange={(e) => setBatchTargetClass(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500/30"
+                >
+                  <option value="">-- Pilih Kelas Tujuan --</option>
+                  {classOptions.map((cls) => (
+                    <option key={cls.name} value={cls.name}>
+                      {cls.name} ({cls.count} siswa)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
+              <button
+                onClick={() => setIsBatchMoveModalOpen(false)}
+                className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl transition-colors text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmBatchMove}
+                disabled={!batchTargetClass}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold rounded-xl shadow transition-colors flex items-center gap-2 text-sm"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

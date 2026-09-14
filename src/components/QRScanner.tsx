@@ -49,6 +49,7 @@ import {
   Radio,
   Wifi,
   WifiOff,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from '../lib/toast';
 
@@ -56,13 +57,14 @@ interface QRScannerProps {
   currentOfficer: string;
 }
 
-export type ScanTargetMode = 'siswa' | 'guru';
+export type ScanTargetMode = 'siswa' | 'guru' | 'auto';
 
 interface ScanOutcome {
   success: boolean;
   isDuplicate?: boolean;
   isOffline?: boolean;
   targetMode?: ScanTargetMode;
+  scanMethod?: 'QR' | 'RFID';
   student?: Student;
   teacher?: Teacher;
   record?: AttendanceRecord;
@@ -80,6 +82,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<ScanOutcome | null>(null);
+
+  // Web NFC Support (for Android Chrome / NFC Devices)
+  const [hasNfcSupport, setHasNfcSupport] = useState<boolean>(false);
+  const [isNfcActive, setIsNfcActive] = useState<boolean>(false);
+  const nfcAbortControllerRef = useRef<AbortController | null>(null);
 
   // Network Status State
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -167,8 +174,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     const handleOnline = () => {
       setIsOnline(true);
-      toast.success('Koneksi Internet Pulih', 'Perangkat kembali online. Sinkronisasi dengan Supabase Cloud aktif.', 4000);
-      store.fetchFromServer();
+      toast.success('Koneksi Internet Pulih', 'Perangkat kembali online. Menyinkronkan data tertunda ke Database Cloud...', 4000);
+      store.syncAllPendingToDatabase(true).then((res) => {
+        if (res.processedCount > 0) {
+          toast.success('Sinkronisasi Otomatis Sukses', `${res.processedCount} data scan berhasil terekam ke database Cloud.`);
+        }
+      }).catch(() => {});
     };
 
     const handleOffline = () => {
@@ -187,13 +198,71 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     fetchAvailableCameras();
 
+    if (typeof window !== 'undefined' && 'NDEFReader' in window) {
+      setHasNfcSupport(true);
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (nfcAbortControllerRef.current) {
+        nfcAbortControllerRef.current.abort();
+        nfcAbortControllerRef.current = null;
+      }
       unsubscribe();
       stopCamera();
     };
   }, []);
+
+  const toggleWebNfc = async () => {
+    if (!hasNfcSupport) {
+      toast.info(
+        'NFC Tidak Didukung',
+        'Browser atau perangkat ini tidak mendukung Web NFC API. Anda tetap dapat menggunakan USB RFID Reader (Plug & Play) atau Kamera.'
+      );
+      return;
+    }
+
+    if (isNfcActive) {
+      if (nfcAbortControllerRef.current) {
+        nfcAbortControllerRef.current.abort();
+        nfcAbortControllerRef.current = null;
+      }
+      setIsNfcActive(false);
+      toast.info('NFC Dinonaktifkan', 'Sensor NFC perangkat dimatikan.');
+      return;
+    }
+
+    try {
+      const NDEFReaderClass = (window as any).NDEFReader;
+      const ndef = new NDEFReaderClass();
+      const ctrl = new AbortController();
+      nfcAbortControllerRef.current = ctrl;
+
+      await ndef.scan({ signal: ctrl.signal });
+      setIsNfcActive(true);
+      toast.success(
+        'Sensor NFC Aktif!',
+        'Tempelkan kartu RFID/NFC (Mifare/e-KTP/Tag) ke bagian belakang perangkat.'
+      );
+
+      ndef.addEventListener('reading', (event: any) => {
+        const serialNumber = event.serialNumber;
+        if (serialNumber) {
+          const cleanSerial = serialNumber.replace(/[\s:-]+/g, '').toUpperCase();
+          processScannedCode(cleanSerial);
+        }
+      });
+
+      ndef.addEventListener('readingerror', () => {
+        toast.error('Gagal Baca NFC', 'Kartu NFC tidak terbaca dengan jelas. Silakan tap ulang.');
+      });
+    } catch (err: any) {
+      console.error('NFC error:', err);
+      setIsNfcActive(false);
+      toast.error('Izin NFC Ditolak / Tidak Aktif', err.message || 'Pastikan NFC diaktifkan di setelan HP.');
+    }
+  };
 
   const handleManualCheckConnection = async () => {
     setIsCheckingConnection(true);
@@ -345,6 +414,34 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }
   };
 
+  const playVoiceFeedback = (name: string, status: string, isSuccess: boolean) => {
+    if (!soundEnabled) return;
+    try {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        
+        let text = '';
+        if (isSuccess) {
+           const firstName = name.split(' ')[0];
+           if (status === 'Terlambat') {
+             text = `Hadir terlambat, ${firstName}`;
+           } else {
+             text = `Terima kasih, ${firstName}`;
+           }
+        } else {
+           text = `Maaf, presensi gagal`;
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'id-ID';
+        utterance.rate = 1.1; 
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (e) {
+      console.log('TTS Error', e);
+    }
+  };
+
   const processScannedCode = (decodedText: string) => {
     if (!decodedText || !decodedText.trim()) return;
 
@@ -354,6 +451,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     // 1. Same-QR debounce check
     const lastTime = recentScanTimesRef.current.get(raw);
     if (lastTime && now - lastTime < debounceSeconds * 1000) {
+      toast.warning('Terlalu Cepat!', 'Data ini baru saja dipindai beberapa detik yang lalu. Mohon tunggu sesaat.');
       return;
     }
 
@@ -393,21 +491,53 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         timeZone: 'Asia/Jayapura',
       }) + ' WIT';
 
-    if (scanTargetMode === 'guru') {
+    // Smart target resolution: check if target explicitly matches student or teacher
+    let effectiveTarget: ScanTargetMode = scanTargetMode;
+    if (scanTargetMode === 'auto') {
+      const match = store.findPersonByRfidOrCode(raw);
+      if (match) {
+        effectiveTarget = match.type === 'guru' ? 'guru' : 'siswa';
+      } else {
+        effectiveTarget = 'siswa';
+      }
+    } else if (scanTargetMode === 'siswa') {
+      const studentMatch = store.findStudentByScannedCode(raw);
+      if (!studentMatch) {
+        const teacherMatch = store.findTeacherByScannedCode(raw);
+        if (teacherMatch) {
+          effectiveTarget = 'guru';
+        }
+      }
+    } else if (scanTargetMode === 'guru') {
+      const teacherMatch = store.findTeacherByScannedCode(raw);
+      if (!teacherMatch) {
+        const studentMatch = store.findStudentByScannedCode(raw);
+        if (studentMatch) {
+          effectiveTarget = 'siswa';
+        }
+      }
+    }
+
+    if (effectiveTarget === 'guru') {
       // Record scan in teacher attendance store with scan type mode
       const result = store.recordTeacherScan(raw, raw, raw, currentOfficer, scanTypeMode);
 
       if (result.success) {
         playSuccessSound();
+        if (result.teacher?.nama) playVoiceFeedback(result.teacher.nama, result.status || '', true);
       } else {
         playErrorSound();
+        playVoiceFeedback('', '', false);
       }
+
+      const isRfid = result.record?.scan_method === 'RFID' || (result.teacher?.rfid_uid && raw.toUpperCase().includes(result.teacher.rfid_uid.toUpperCase()));
 
       const outcome: ScanOutcome = {
         success: result.success,
         isDuplicate: result.isDuplicate,
         isOffline: currentlyOffline,
         targetMode: 'guru',
+        scanMethod: isRfid ? 'RFID' : 'QR',
         teacher: result.teacher,
         teacherRecord: result.record,
         type: result.type,
@@ -429,15 +559,20 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
       if (result.success) {
         playSuccessSound();
+        if (result.student?.nama) playVoiceFeedback(result.student.nama, result.status || '', true);
       } else {
         playErrorSound();
+        playVoiceFeedback('', '', false);
       }
+
+      const isRfid = result.record?.scan_method === 'RFID' || (result.student?.rfid_uid && raw.toUpperCase().includes(result.student.rfid_uid.toUpperCase()));
 
       const outcome: ScanOutcome = {
         success: result.success,
         isDuplicate: result.isDuplicate,
         isOffline: currentlyOffline,
         targetMode: 'siswa',
+        scanMethod: isRfid ? 'RFID' : 'QR',
         student: result.student,
         record: result.record,
         type: result.type,
@@ -461,6 +596,24 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }, 250);
   };
 
+  const handleAssignRfidToStudent = (rfidUid: string, studentId: string) => {
+    if (!rfidUid || !studentId) return;
+    const success = store.assignRfidToStudent(studentId, rfidUid);
+    if (success) {
+      toast.success('Kartu RFID Ditaungkan', 'Kartu RFID berhasil ditautkan ke siswa. Memproses absensi...');
+      processScannedCode(rfidUid);
+    }
+  };
+
+  const handleAssignRfidToTeacher = (rfidUid: string, teacherId: string) => {
+    if (!rfidUid || !teacherId) return;
+    const success = store.assignRfidToTeacher(teacherId, rfidUid);
+    if (success) {
+      toast.success('Kartu RFID Ditautkan', 'Kartu RFID berhasil ditautkan ke guru. Memproses absensi...');
+      processScannedCode(rfidUid);
+    }
+  };
+
   const handleConnectQRToStudent = (codeToConnect: string, studentId: string) => {
     if (!codeToConnect || !studentId) return;
 
@@ -478,8 +631,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     if (result.success) {
       playSuccessSound();
+      if (result.student?.nama) playVoiceFeedback(result.student.nama, result.status || '', true);
     } else {
       playErrorSound();
+      playVoiceFeedback('', '', false);
     }
 
     const timeStr =
@@ -494,6 +649,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       success: result.success,
       isOffline: currentlyOffline,
       targetMode: 'siswa',
+      scanMethod: 'QR',
       student: result.student,
       record: result.record,
       type: result.type,
@@ -530,8 +686,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     if (result.success) {
       playSuccessSound();
+      if (result.teacher?.nama) playVoiceFeedback(result.teacher.nama, result.status || '', true);
     } else {
       playErrorSound();
+      playVoiceFeedback('', '', false);
     }
 
     const timeStr =
@@ -546,6 +704,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       success: result.success,
       isOffline: currentlyOffline,
       targetMode: 'guru',
+      scanMethod: 'QR',
       teacher: result.teacher,
       teacherRecord: result.record,
       type: result.type,
@@ -707,6 +866,57 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </button>
           </div>
         </div>
+
+        {/* Prominent Unsynced Scan Data Warning */}
+        {offlineQueueCount > 0 && (
+          <div className="bg-gradient-to-r from-amber-500/20 via-rose-500/15 to-amber-500/20 border-2 border-amber-500/80 dark:border-amber-500 rounded-2xl p-4 shadow-md animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-amber-500 to-rose-600 text-white rounded-xl shadow-sm flex-shrink-0 animate-pulse">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-black text-xs sm:text-sm text-rose-700 dark:text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>PERINGATAN: {offlineQueueCount} DATA SCAN BELUM TERKIRIM KE DATABASE</span>
+                    </h3>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700">
+                      Antisipasi Data Hilang
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-800 dark:text-slate-200 mt-1 leading-relaxed">
+                    Data scan presensi ini tersimpan di memori lokal dan <b>belum terekam ke Database Cloud</b>. Segera klik tombol <b>Kirim ke Database</b> agar rekapitulasi presensi tidak hilang saat berpindah perangkat atau browser ditutup.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 self-end sm:self-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-unsynced-modal'))}
+                  className="px-3.5 py-2 text-xs font-black bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-slate-700 active:scale-95 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Buka Popup Petugas</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await store.syncAllPendingToDatabase(true);
+                    if (res.success) {
+                      toast.success('Pengiriman Berhasil', res.message);
+                    } else {
+                      toast.warning('Pengiriman Tertunda', res.message);
+                    }
+                  }}
+                  className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-600 via-rose-600 to-rose-700 hover:from-amber-700 hover:to-rose-800 active:scale-95 text-white rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Kirim ke Server ({offlineQueueCount})</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Prominent Network Offline Warning Banner */}
         {!isOnline && (
@@ -1040,16 +1250,34 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </div>
           </div>
 
-          {/* Hardware Scanner & Manual Test Box */}
-          <div className="w-full mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+          {/* Hardware Scanner, USB RFID Reader & Web NFC Card */}
+          <div className="w-full mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex-wrap gap-2">
               <span className="flex items-center gap-1.5">
-                <Barcode className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Input Manual / Scanner Gun USB</span>
+                <Radio className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                <span>Reader RFID USB, Web NFC & Barcode Scanner</span>
               </span>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold lowercase">
-                *scanner gun siap
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                  <CreditCard className="w-3 h-3" />
+                  <span>USB RFID Plug & Play Aktif</span>
+                </span>
+                {hasNfcSupport && (
+                  <button
+                    type="button"
+                    onClick={toggleWebNfc}
+                    className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border transition-all cursor-pointer ${
+                      isNfcActive
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm animate-pulse'
+                        : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 hover:bg-indigo-100'
+                    }`}
+                    title="Aktifkan sensor Web NFC perangkat (misal: HP Android)"
+                  >
+                    <Radio className="w-3 h-3" />
+                    <span>{isNfcActive ? 'NFC Sensor Aktif' : 'NFC HP Siaga'}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <form
@@ -1062,22 +1290,25 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               }}
               className="flex gap-2"
             >
-              <input
-                type="text"
-                value={manualInput}
-                onChange={(e) => setManualInput(e.target.value)}
-                placeholder={
-                  scanTargetMode === 'guru'
-                    ? 'Ketik NIP, Kode QR, atau Nama Guru lalu tekan Enter...'
-                    : 'Ketik NISN, Kode QR, atau Nama Siswa lalu tekan Enter...'
-                }
-                className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  placeholder={
+                    scanTargetMode === 'guru'
+                      ? 'Tempelkan Kartu RFID / Ketik NIP / Nama Guru lalu Enter...'
+                      : 'Tempelkan Kartu RFID / Ketik NISN / Nama Siswa lalu Enter...'
+                  }
+                  className="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                />
+                <CreditCard className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              </div>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow transition-all whitespace-nowrap cursor-pointer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
               >
-                Proses
+                <span>Proses Scan</span>
               </button>
             </form>
           </div>
@@ -1166,7 +1397,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                           <span className="text-slate-500 dark:text-slate-400">
                             Status & Jenis:
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span
                               className={`font-black text-[10px] px-2 py-0.5 rounded-full ${
                                 scanResult.type === 'Masuk'
@@ -1187,6 +1418,25 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                                 {scanResult.status.toUpperCase()}
                               </span>
                             )}
+                            <span
+                              className={`font-extrabold text-[9px] px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 border ${
+                                scanResult.scanMethod === 'RFID'
+                                  ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {scanResult.scanMethod === 'RFID' ? (
+                                <>
+                                  <CreditCard className="w-2.5 h-2.5" />
+                                  <span>RFID Card</span>
+                                </>
+                              ) : (
+                                <>
+                                  <QrCode className="w-2.5 h-2.5" />
+                                  <span>QR Code</span>
+                                </>
+                              )}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -1228,7 +1478,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                           <span className="text-slate-500 dark:text-slate-400">
                             Status & Jenis:
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span
                               className={`font-black text-[10px] px-2 py-0.5 rounded-full ${
                                 scanResult.type === 'Masuk'
@@ -1249,6 +1499,25 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                                 {scanResult.status.toUpperCase()}
                               </span>
                             )}
+                            <span
+                              className={`font-extrabold text-[9px] px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 border ${
+                                scanResult.scanMethod === 'RFID'
+                                  ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {scanResult.scanMethod === 'RFID' ? (
+                                <>
+                                  <CreditCard className="w-2.5 h-2.5" />
+                                  <span>RFID Card</span>
+                                </>
+                              ) : (
+                                <>
+                                  <QrCode className="w-2.5 h-2.5" />
+                                  <span>QR Code</span>
+                                </>
+                              )}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -1569,68 +1838,98 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   </div>
                 </>
               ) : (
-                <div className="space-y-3 text-center">
-                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-left space-y-2">
-                    {scanTargetMode === 'guru' ? (
-                      <>
-                        <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                          Hubungkan Kode QR ke Guru
+                <div className="space-y-3 text-left">
+                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                        {scanResult.scanMethod === 'RFID' ? (
+                          <>
+                            <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            <span>Daftarkan Kartu RFID</span>
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span>Hubungkan Kode QR</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
+                        {scanResult.scannedCode || lastScannedQR}
+                      </span>
+                    </div>
+
+                    {/* Choose Target Type if in Auto or specific mode */}
+                    {(scanTargetMode === 'auto' || scanTargetMode === 'siswa') && (
+                      <div className="space-y-1.5 pt-1">
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          1. Hubungkan ke Siswa
                         </label>
-                        <select
-                          value={selectedTeacherForQR}
-                          onChange={(e) => setSelectedTeacherForQR(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
-                        >
-                          <option value="">-- Pilih Nama Guru / NIP --</option>
-                          {teachersList.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.nama} (NIP: {t.nip}) - {t.jabatan}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          disabled={!selectedTeacherForQR}
-                          onClick={() =>
-                            handleConnectQRToTeacher(
-                              scanResult.scannedCode || lastScannedQR,
-                              selectedTeacherForQR
-                            )
-                          }
-                          className="w-full py-2 bg-sky-700 hover:bg-sky-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow cursor-pointer"
-                        >
-                          Hubungkan & Simpan Absensi Guru
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                          Hubungkan Kode QR ke Siswa
+                        <div className="flex gap-2">
+                          <select
+                            value={selectedStudentForQR}
+                            onChange={(e) => setSelectedStudentForQR(e.target.value)}
+                            className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
+                          >
+                            <option value="">-- Pilih Nama Siswa --</option>
+                            {studentsList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.nama} ({s.kelas} - NISN: {s.nisn})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            disabled={!selectedStudentForQR}
+                            onClick={() => {
+                              const code = scanResult.scannedCode || lastScannedQR;
+                              if (scanResult.scanMethod === 'RFID') {
+                                handleAssignRfidToStudent(code, selectedStudentForQR);
+                              } else {
+                                handleConnectQRToStudent(code, selectedStudentForQR);
+                              }
+                            }}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
+                          >
+                            Hubungkan Siswa
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(scanTargetMode === 'auto' || scanTargetMode === 'guru') && (
+                      <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          2. Hubungkan ke Guru / Tenaga Pendidik
                         </label>
-                        <select
-                          value={selectedStudentForQR}
-                          onChange={(e) => setSelectedStudentForQR(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
-                        >
-                          <option value="">-- Pilih Nama Siswa --</option>
-                          {studentsList.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.nama} ({s.kelas} - NISN: {s.nisn})
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          disabled={!selectedStudentForQR}
-                          onClick={() =>
-                            handleConnectQRToStudent(
-                              scanResult.scannedCode || lastScannedQR,
-                              selectedStudentForQR
-                            )
-                          }
-                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow cursor-pointer"
-                        >
-                          Hubungkan & Simpan Absensi
-                        </button>
-                      </>
+                        <div className="flex gap-2">
+                          <select
+                            value={selectedTeacherForQR}
+                            onChange={(e) => setSelectedTeacherForQR(e.target.value)}
+                            className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
+                          >
+                            <option value="">-- Pilih Nama Guru / NIP --</option>
+                            {teachersList.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.nama} (NIP: {t.nip}) - {t.jabatan}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            disabled={!selectedTeacherForQR}
+                            onClick={() => {
+                              const code = scanResult.scannedCode || lastScannedQR;
+                              if (scanResult.scanMethod === 'RFID') {
+                                handleAssignRfidToTeacher(code, selectedTeacherForQR);
+                              } else {
+                                handleConnectQRToTeacher(code, selectedTeacherForQR);
+                              }
+                            }}
+                            className="px-3.5 py-2 bg-sky-700 hover:bg-sky-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
+                          >
+                            Hubungkan Guru
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

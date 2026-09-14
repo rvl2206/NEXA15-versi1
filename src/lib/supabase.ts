@@ -1200,4 +1200,90 @@ ON CONFLICT (id) DO NOTHING;\n`;
   return sql;
 }
 
+/**
+ * Revisi & Hapus Seluruh Presensi Hari Sabtu yang Berstatus ALPA dari Supabase
+ */
+export async function purgeSaturdayAlpaFromSupabase(customConfig?: SupabaseConfig): Promise<{
+  deletedStudents: number;
+  deletedTeachers: number;
+}> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return { deletedStudents: 0, deletedTeachers: 0 };
+
+  let deletedStudents = 0;
+  let deletedTeachers = 0;
+
+  const isSat = (dateStr?: string, timestamp?: string): boolean => {
+    if (dateStr) {
+      const s = String(dateStr).trim();
+      if (s.includes('T')) {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return d.getDay() === 6;
+      }
+      const parts = s.split(/[-/]/);
+      if (parts.length === 3) {
+        let d: Date | null = null;
+        if (parts[0].length === 4) {
+          d = new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}T00:00:00`);
+        } else if (parts[2].length === 4) {
+          d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
+        }
+        if (d && !isNaN(d.getTime())) return d.getDay() === 6;
+      }
+    }
+    if (timestamp) {
+      const d = new Date(timestamp);
+      if (!isNaN(d.getTime())) return d.getDay() === 6;
+    }
+    return false;
+  };
+
+  try {
+    // 1. Student Attendance
+    const { data: studentRecords } = await client
+      .from('attendance')
+      .select('id, tanggal, timestamp, status')
+      .eq('status', 'Alpa');
+
+    if (studentRecords && studentRecords.length > 0) {
+      const idsToDelete = studentRecords
+        .filter((r: any) => isSat(r.tanggal, r.timestamp))
+        .map((r: any) => r.id);
+
+      if (idsToDelete.length > 0) {
+        for (let i = 0; i < idsToDelete.length; i += 200) {
+          const chunk = idsToDelete.slice(i, i + 200);
+          await client.from('attendance').delete().in('id', chunk);
+        }
+        deletedStudents = idsToDelete.length;
+      }
+    }
+
+    // 2. Teacher Attendance
+    const { data: teacherRecords } = await client
+      .from('teacher_attendance')
+      .select('id, tanggal, timestamp, status')
+      .eq('status', 'Alpa');
+
+    if (teacherRecords && teacherRecords.length > 0) {
+      const idsToDelete = teacherRecords
+        .filter((r: any) => isSat(r.tanggal, r.timestamp))
+        .map((r: any) => r.id);
+
+      if (idsToDelete.length > 0) {
+        for (let i = 0; i < idsToDelete.length; i += 200) {
+          const chunk = idsToDelete.slice(i, i + 200);
+          await client.from('teacher_attendance').delete().in('id', chunk);
+        }
+        deletedTeachers = idsToDelete.length;
+      }
+    }
+  } catch (error) {
+    console.warn('purgeSaturdayAlpaFromSupabase warning:', error);
+  }
+
+  return { deletedStudents, deletedTeachers };
+}
+
+
 

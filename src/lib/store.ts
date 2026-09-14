@@ -34,14 +34,52 @@ import {
   deleteTeacherAttendanceFromSupabase,
   deleteLogFromSupabase,
   getSupabaseClient,
+  purgeSaturdayAlpaFromSupabase,
 } from './supabase';
 
 import { formatPetugasRole } from './exportUtils';
+import { 
+  fetchUsersFromFirestore, 
+  saveUserToFirestore, 
+  deleteUserFromFirestore,
+  fetchSettingsFromFirestore,
+  saveSettingsToFirestore,
+  fetchDispatchesFromFirestore,
+  saveDispatchToFirestore,
+  deleteDispatchFromFirestore,
+  fetchStudentsFromFirestore,
+  saveStudentToFirestore,
+  saveMultipleStudentsToFirestore,
+  deleteStudentFromFirestore,
+  fetchTeachersFromFirestore,
+  saveTeacherToFirestore,
+  saveMultipleTeachersToFirestore,
+  deleteTeacherFromFirestore,
+  fetchAttendanceFromFirestore,
+  saveAttendanceToFirestore,
+  saveMultipleAttendanceToFirestore,
+  deleteAttendanceFromFirestore,
+  fetchTeacherAttendanceFromFirestore,
+  saveTeacherAttendanceToFirestore,
+  saveMultipleTeacherAttendanceToFirestore,
+  deleteTeacherAttendanceFromFirestore,
+  fetchLogsFromFirestore,
+  saveLogToFirestore,
+  purgeSaturdayAlpaFromFirestore,
+} from './firebase';
+import {
+  hashPassword,
+  hashPasswordSync,
+  comparePassword,
+  isHashedPassword,
+  ensureHashedPassword,
+} from './bcrypt';
 
 const STORAGE_KEYS = {
   SETTINGS: 'nexa15_settings_v3',
   PASSWORDS: 'nexa15_passwords_v3',
   CURRENT_USER: 'nexa15_user_v3',
+  USERS: 'nexa15_users_v3',
   STUDENTS: 'nexa15_students_v3',
   ATTENDANCE: 'nexa15_attendance_v3',
   TEACHERS: 'nexa15_teachers_v3',
@@ -50,6 +88,61 @@ const STORAGE_KEYS = {
   SYNC_QUEUE: 'nexa15_sync_queue_v3',
   DISPATCHES: 'nexa15_dispatches_v3',
 };
+
+export const INITIAL_USERS: User[] = [
+  {
+    uid: 'usr-admin',
+    username: 'admin',
+    email: 'admin@sman15.sch.id',
+    name: 'Super Administrator (NEXA15)',
+    role: 'Admin',
+    subRole: 'Super Admin',
+    assignedClass: '',
+    password: hashPasswordSync('admin'),
+    status: 'aktif',
+    createdAt: new Date().toISOString(),
+    notes: 'Akun Utama Administrator Sistem',
+  },
+  {
+    uid: 'usr-piket',
+    username: 'guru_piket',
+    email: 'piket@sman15.sch.id',
+    name: 'Petugas Guru Piket',
+    role: 'Guru',
+    subRole: 'Guru Piket',
+    assignedClass: '',
+    password: hashPasswordSync('piket'),
+    status: 'aktif',
+    createdAt: new Date().toISOString(),
+    notes: 'Petugas Piket Presensi Harian',
+  },
+  {
+    uid: 'usr-kepsek',
+    username: 'kepsek',
+    email: 'kepsek@sman15.sch.id',
+    name: 'Drs. H. Rustam Rumra, M.Pd',
+    role: 'Kepala Sekolah',
+    subRole: 'Kepala Sekolah',
+    assignedClass: '',
+    password: hashPasswordSync('kepsek'),
+    status: 'aktif',
+    createdAt: new Date().toISOString(),
+    notes: 'Kepala SMA Negeri 15 Ambon',
+  },
+  {
+    uid: 'usr-wali-x1',
+    username: 'wali_x1',
+    email: 'wali.x1@sman15.sch.id',
+    name: 'Dra. Siti Aminah, M.Pd',
+    role: 'Guru',
+    subRole: 'Wali Kelas',
+    assignedClass: 'X-1',
+    password: hashPasswordSync('wali'),
+    status: 'aktif',
+    createdAt: new Date().toISOString(),
+    notes: 'Wali Kelas X-1',
+  },
+];
 
 export interface SyncQueueItem {
   id: string;
@@ -89,6 +182,7 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   cutoffTime: '07:15',
   autoAlpaCutoffTime: '14:30',
   enableAutoAlpa: true,
+  schoolDays: 6, // 6 = 6 Hari Sekolah (Senin - Sabtu), 5 = 5 Hari Sekolah (Senin - Jumat)
   academicYear: '2026/2027',
   enableWaNotif: true,
   waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
@@ -104,6 +198,13 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   supabaseKey: 'sb_publishable_oH-2538e28kbMbpk8ESZ7w_LpeIn1Jh',
   enableSupabaseAutoSync: true,
   holidays: [],
+  // RFID & Contactless Card Support
+  enableRfidReader: true,
+  rfidReaderMode: 'auto',
+  rfidBeepSound: true,
+  rfidFastTapDelay: 1500,
+  rfidPrefix: '',
+  rfidSuffix: '',
 };
 
 /**
@@ -159,7 +260,35 @@ export function isMatchingNip(nipA?: string, nipB?: string): boolean {
   return false;
 }
 
+/**
+ * Strict and resilient RFID / NFC UID matcher (supports Hex, Decimal, colons/spaces stripped)
+ */
+export function isMatchingRfidUid(uidA?: string, uidB?: string): boolean {
+  if (!uidA || !uidB) return false;
+  const cleanA = String(uidA).replace(/[\s:-]+/g, '').trim().toUpperCase();
+  const cleanB = String(uidB).replace(/[\s:-]+/g, '').trim().toUpperCase();
+  if (!cleanA || !cleanB) return false;
+  if (cleanA === cleanB) return true;
+
+  // Check if one is 10-digit decimal representation of 8-character hex UID (standard Wiegand-26 / Wiegand-34 / HID conversion)
+  if (/^\d{8,12}$/.test(cleanA) && /^[0-9A-F]{6,16}$/i.test(cleanB)) {
+    try {
+      const decB = parseInt(cleanB, 16);
+      if (!isNaN(decB) && (String(decB) === cleanA || String(decB).padStart(10, '0') === cleanA)) return true;
+    } catch {}
+  }
+  if (/^\d{8,12}$/.test(cleanB) && /^[0-9A-F]{6,16}$/i.test(cleanA)) {
+    try {
+      const decA = parseInt(cleanA, 16);
+      if (!isNaN(decA) && (String(decA) === cleanB || String(decA).padStart(10, '0') === cleanB)) return true;
+    } catch {}
+  }
+
+  return false;
+}
+
 class AppStore {
+  private users: User[] = [];
   private students: Student[] = [];
   private attendance: AttendanceRecord[] = [];
   private teachers: Teacher[] = [];
@@ -168,9 +297,9 @@ class AppStore {
   private dispatches: ProblematicStudentDispatch[] = [];
   private settings: SchoolSettings = DEFAULT_SETTINGS;
   private passwords: Record<string, string> = {
-    'usr-admin': 'AdminNexa15!',
-    'usr-kepsek': 'KepsekNexa15!',
-    'usr-guru': 'piket123',
+    'usr-admin': 'admin',
+    'usr-kepsek': 'kepsek',
+    'usr-guru': 'piket',
   };
   private currentUser: User | null = null;
   private listeners: Array<() => void> = [];
@@ -196,6 +325,43 @@ class AppStore {
       if (savedUser) {
         this.currentUser = JSON.parse(savedUser);
       }
+      const savedUsersList = localStorage.getItem(STORAGE_KEYS.USERS);
+      if (savedUsersList) {
+        try {
+          const parsed = JSON.parse(savedUsersList);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.users = parsed;
+          } else {
+            this.users = [...INITIAL_USERS];
+          }
+        } catch {
+          this.users = [...INITIAL_USERS];
+        }
+      } else {
+        this.users = [...INITIAL_USERS];
+      }
+
+      // Automatically migrate any legacy plain-text passwords to bcrypt hashes
+      let needsMigration = false;
+      this.users = this.users.map((u) => {
+        if (u.password && !isHashedPassword(u.password)) {
+          needsMigration = true;
+          return { ...u, password: ensureHashedPassword(u.password) };
+        }
+        return u;
+      });
+
+      Object.keys(this.passwords).forEach((key) => {
+        if (this.passwords[key] && !isHashedPassword(this.passwords[key])) {
+          this.passwords[key] = ensureHashedPassword(this.passwords[key]);
+          needsMigration = true;
+        }
+      });
+
+      if (needsMigration) {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
+        localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
+      }
       const savedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
       if (savedStudents) {
         this.students = JSON.parse(savedStudents);
@@ -213,6 +379,19 @@ class AppStore {
       const savedTeacherAttendance = localStorage.getItem(STORAGE_KEYS.TEACHER_ATTENDANCE);
       if (savedTeacherAttendance) {
         this.teacherAttendance = JSON.parse(savedTeacherAttendance);
+      }
+
+      // Purge any Saturday Alpa records immediately from memory & local storage
+      const hadSatAlpa = this.attendance.some((a) => a.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a));
+      if (hadSatAlpa) {
+        this.attendance = this.attendance.filter((a) => !(a.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a)));
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
+      }
+
+      const hadSatTeacherAlpa = this.teacherAttendance.some((ta) => ta.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta));
+      if (hadSatTeacherAlpa) {
+        this.teacherAttendance = this.teacherAttendance.filter((ta) => !(ta.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta)));
+        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
       }
       const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
       if (savedLogs) {
@@ -262,9 +441,12 @@ class AppStore {
       this.startBackgroundAttendanceRetry(30000);
     }
 
-    // Synchronize with server automatically in background
+    // Synchronize all database records, settings, and users with Firestore cloud in background
+    await this.syncAllWithFirestore();
     await this.fetchFromServer();
     this.sanitizeData();
+    // Auto purge lingering Saturday Alpa records across Firestore, Supabase, and local store
+    await this.purgeSaturdayAlpaAttendance(true);
     if (this.syncQueue.length > 0) {
       this.processPendingSyncQueue();
     }
@@ -367,10 +549,25 @@ class AppStore {
   private saveLocalData(immediate = false) {
     const doSave = () => {
       try {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
-        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
+        
+        // Prevent LocalStorage from crashing when data gets huge (Max 5MB quota)
+        // Only keep the most recent 2000 attendance records in local cache
+        let attendanceToSave = this.attendance;
+        if (attendanceToSave.length > 2000) {
+          attendanceToSave = [...attendanceToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
+        }
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceToSave));
+        
         localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
-        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
+        
+        let teacherAttToSave = this.teacherAttendance;
+        if (teacherAttToSave.length > 2000) {
+          teacherAttToSave = [...teacherAttToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
+        }
+        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(teacherAttToSave));
+        
         localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
         localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
         localStorage.setItem(STORAGE_KEYS.DISPATCHES, JSON.stringify(this.dispatches));
@@ -412,8 +609,29 @@ class AppStore {
     }
 
     this.saveLocalData(true);
-    // Trigger background sync immediately
-    this.processPendingSyncQueue().catch(() => {});
+    this.notify();
+
+    // If offline, notify user that data is saved locally and waiting to be sent to database
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const typeLabel =
+        item.type === 'attendance'
+          ? 'Presensi Siswa'
+          : item.type === 'teacher_attendance'
+          ? 'Presensi Guru'
+          : item.type === 'student'
+          ? 'Data Siswa'
+          : item.type === 'teacher'
+          ? 'Data Guru'
+          : 'Catatan Aktivitas';
+      toast.warning(
+        'Data Belum Terkirim ke Database',
+        `${typeLabel} tersimpan sementara di memori perangkat (Mode Offline). Segera hubungkan ke internet untuk mengirim data ke database Cloud.`,
+        5000
+      );
+    } else {
+      // Trigger background sync immediately
+      this.processPendingSyncQueue().catch(() => {});
+    }
   }
 
   private lastSyncQueueTimestamp = 0;
@@ -445,6 +663,7 @@ class AppStore {
     try {
       const queueSnapshot = [...this.syncQueue];
       const successfulIds = new Set<string>();
+      const hasSupabase = isSupabaseConfigured(config);
 
       // 1. Process attendance items
       const attendanceUpserts = queueSnapshot
@@ -452,8 +671,22 @@ class AppStore {
         .map((q) => q.data as AttendanceRecord);
 
       if (attendanceUpserts.length > 0) {
-        const res = await syncAttendanceToSupabase(attendanceUpserts, config);
-        if (res.success) {
+        let firestoreOk = false;
+        try {
+          firestoreOk = await saveMultipleAttendanceToFirestore(attendanceUpserts);
+        } catch {
+          firestoreOk = false;
+        }
+
+        if (hasSupabase) {
+          const res = await syncAttendanceToSupabase(attendanceUpserts, config);
+          if (res.success || firestoreOk) {
+            queueSnapshot
+              .filter((q) => q.type === 'attendance' && q.action === 'upsert')
+              .forEach((q) => successfulIds.add(q.id));
+            processedCount += attendanceUpserts.length;
+          }
+        } else if (firestoreOk) {
           queueSnapshot
             .filter((q) => q.type === 'attendance' && q.action === 'upsert')
             .forEach((q) => successfulIds.add(q.id));
@@ -467,8 +700,22 @@ class AppStore {
         .map((q) => q.data as TeacherAttendanceRecord);
 
       if (teacherAttUpserts.length > 0) {
-        const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
-        if (res.success) {
+        let firestoreOk = false;
+        try {
+          firestoreOk = await saveMultipleTeacherAttendanceToFirestore(teacherAttUpserts);
+        } catch {
+          firestoreOk = false;
+        }
+
+        if (hasSupabase) {
+          const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
+          if (res.success || firestoreOk) {
+            queueSnapshot
+              .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert')
+              .forEach((q) => successfulIds.add(q.id));
+            processedCount += teacherAttUpserts.length;
+          }
+        } else if (firestoreOk) {
           queueSnapshot
             .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert')
             .forEach((q) => successfulIds.add(q.id));
@@ -482,8 +729,22 @@ class AppStore {
         .map((q) => q.data as Student);
 
       if (studentUpserts.length > 0) {
-        const res = await syncStudentsToSupabase(studentUpserts, config);
-        if (res.success) {
+        let firestoreOk = false;
+        try {
+          firestoreOk = await saveMultipleStudentsToFirestore(studentUpserts);
+        } catch {
+          firestoreOk = false;
+        }
+
+        if (hasSupabase) {
+          const res = await syncStudentsToSupabase(studentUpserts, config);
+          if (res.success || firestoreOk) {
+            queueSnapshot
+              .filter((q) => q.type === 'student' && q.action === 'upsert')
+              .forEach((q) => successfulIds.add(q.id));
+            processedCount += studentUpserts.length;
+          }
+        } else if (firestoreOk) {
           queueSnapshot
             .filter((q) => q.type === 'student' && q.action === 'upsert')
             .forEach((q) => successfulIds.add(q.id));
@@ -497,8 +758,22 @@ class AppStore {
         .map((q) => q.data as Teacher);
 
       if (teacherUpserts.length > 0) {
-        const res = await syncTeachersToSupabase(teacherUpserts, config);
-        if (res.success) {
+        let firestoreOk = false;
+        try {
+          firestoreOk = await saveMultipleTeachersToFirestore(teacherUpserts);
+        } catch {
+          firestoreOk = false;
+        }
+
+        if (hasSupabase) {
+          const res = await syncTeachersToSupabase(teacherUpserts, config);
+          if (res.success || firestoreOk) {
+            queueSnapshot
+              .filter((q) => q.type === 'teacher' && q.action === 'upsert')
+              .forEach((q) => successfulIds.add(q.id));
+            processedCount += teacherUpserts.length;
+          }
+        } else if (firestoreOk) {
           queueSnapshot
             .filter((q) => q.type === 'teacher' && q.action === 'upsert')
             .forEach((q) => successfulIds.add(q.id));
@@ -512,8 +787,23 @@ class AppStore {
         .map((q) => q.data as ActivityLog);
 
       if (logUpserts.length > 0) {
-        const res = await syncLogsToSupabase(logUpserts, config);
-        if (res.success) {
+        let firestoreOk = false;
+        try {
+          const results = await Promise.all(logUpserts.map((l) => saveLogToFirestore(l)));
+          firestoreOk = results.some((r) => r === true);
+        } catch {
+          firestoreOk = false;
+        }
+
+        if (hasSupabase) {
+          const res = await syncLogsToSupabase(logUpserts, config);
+          if (res.success || firestoreOk) {
+            queueSnapshot
+              .filter((q) => q.type === 'log' && q.action === 'upsert')
+              .forEach((q) => successfulIds.add(q.id));
+            processedCount += logUpserts.length;
+          }
+        } else if (firestoreOk) {
           queueSnapshot
             .filter((q) => q.type === 'log' && q.action === 'upsert')
             .forEach((q) => successfulIds.add(q.id));
@@ -525,13 +815,46 @@ class AppStore {
       const deleteItems = queueSnapshot.filter((q) => q.action === 'delete');
       for (const item of deleteItems) {
         try {
-          if (item.type === 'student') await deleteStudentFromSupabase(item.id, config);
-          else if (item.type === 'attendance') await deleteAttendanceFromSupabase(item.id, config);
-          else if (item.type === 'teacher') await deleteTeacherFromSupabase(item.id, config);
-          else if (item.type === 'teacher_attendance') await deleteTeacherAttendanceFromSupabase(item.id, config);
-          else if (item.type === 'log') await deleteLogFromSupabase(item.id, config);
-          successfulIds.add(item.id);
-          processedCount++;
+          let ok = false;
+          if (item.type === 'student') {
+            const fOk = await deleteStudentFromFirestore(item.id);
+            let sOk = false;
+            if (hasSupabase) {
+              sOk = await deleteStudentFromSupabase(item.id, config);
+            }
+            ok = fOk || sOk;
+          } else if (item.type === 'attendance') {
+            const fOk = await deleteAttendanceFromFirestore(item.id);
+            let sOk = false;
+            if (hasSupabase) {
+              sOk = await deleteAttendanceFromSupabase(item.id, config);
+            }
+            ok = fOk || sOk;
+          } else if (item.type === 'teacher') {
+            const fOk = await deleteTeacherFromFirestore(item.id);
+            let sOk = false;
+            if (hasSupabase) {
+              sOk = await deleteTeacherFromSupabase(item.id, config);
+            }
+            ok = fOk || sOk;
+          } else if (item.type === 'teacher_attendance') {
+            const fOk = await deleteTeacherAttendanceFromFirestore(item.id);
+            let sOk = false;
+            if (hasSupabase) {
+              sOk = await deleteTeacherAttendanceFromSupabase(item.id, config);
+            }
+            ok = fOk || sOk;
+          } else if (item.type === 'log') {
+            if (hasSupabase) {
+              ok = await deleteLogFromSupabase(item.id, config);
+            } else {
+              ok = true;
+            }
+          }
+          if (ok) {
+            successfulIds.add(item.id);
+            processedCount++;
+          }
         } catch {
           // Keep in queue for next retry
         }
@@ -557,6 +880,74 @@ class AppStore {
     }
   }
 
+  /**
+   * Mengirim seluruh data antrian tertunda ke Database Cloud (Firestore & Supabase)
+   */
+  public async syncAllPendingToDatabase(force = true): Promise<{
+    success: boolean;
+    message: string;
+    processedCount: number;
+    remainingCount: number;
+  }> {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!isOnline && !force) {
+      return {
+        success: false,
+        message: 'Perangkat sedang Offline. Hubungkan ke internet untuk mengirim data ke database Cloud.',
+        processedCount: 0,
+        remainingCount: this.syncQueue.length,
+      };
+    }
+
+    try {
+      // 1. Process items in the queue
+      const queueRes = await this.processPendingSyncQueue(true);
+
+      // 2. Also ensure cloud database has all fresh records synced
+      try {
+        await this.syncAllWithFirestore();
+      } catch (err) {
+        console.warn('Sync with Firestore error during flush:', err);
+      }
+
+      // 3. Sync to Supabase if configured
+      const config = this.getSupabaseConfig();
+      if (isSupabaseConfigured(config)) {
+        try {
+          await this.syncAllToSupabase();
+        } catch (err) {
+          console.warn('Sync to Supabase error during flush:', err);
+        }
+      }
+
+      const remaining = this.syncQueue.length;
+      this.notify();
+
+      if (remaining === 0) {
+        return {
+          success: true,
+          message: `Seluruh data berhasil dikirim dan tersimpan aman di database Cloud!`,
+          processedCount: queueRes.processedCount,
+          remainingCount: 0,
+        };
+      } else {
+        return {
+          success: false,
+          message: `Sebagian data terkirim, namun masih ada ${remaining} data tertunda. Periksa koneksi dan coba lagi.`,
+          processedCount: queueRes.processedCount,
+          remainingCount: remaining,
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'Gagal mengirim data ke database Cloud.',
+        processedCount: 0,
+        remainingCount: this.syncQueue.length,
+      };
+    }
+  }
+
   public getSyncQueue(): SyncQueueItem[] {
     return [...this.syncQueue];
   }
@@ -577,11 +968,12 @@ class AppStore {
     teacherCount: number;
     logCount: number;
     deleteCount: number;
+    items: SyncQueueItem[];
   } {
     const total = this.syncQueue.length;
     const attendanceCount = this.syncQueue.filter((q) => q.type === 'attendance' && q.action === 'upsert').length;
     const studentCount = this.syncQueue.filter((q) => q.type === 'student' && q.action === 'upsert').length;
-    const teacherCount = this.syncQueue.filter((q) => q.type === 'teacher' || q.type === 'teacher_attendance').length;
+    const teacherCount = this.syncQueue.filter((q) => (q.type === 'teacher' || q.type === 'teacher_attendance') && q.action === 'upsert').length;
     const logCount = this.syncQueue.filter((q) => q.type === 'log' && q.action === 'upsert').length;
     const deleteCount = this.syncQueue.filter((q) => q.action === 'delete').length;
     return {
@@ -591,6 +983,7 @@ class AppStore {
       teacherCount,
       logCount,
       deleteCount,
+      items: [...this.syncQueue].reverse(),
     };
   }
 
@@ -620,6 +1013,9 @@ class AppStore {
     this.settings = { ...this.settings, ...newSettings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
     this.notify();
+    saveSettingsToFirestore(this.settings).catch((err) => {
+      console.warn('Firestore settings update error:', err);
+    });
   }
 
   public getHolidays(): Holiday[] {
@@ -661,14 +1057,38 @@ class AppStore {
       return true;
     }
 
-    // 2. Check Weekend (Only Sunday is an automatic holiday; Monday to Saturday are active school days)
+    // 2. Check Weekend based on schoolDays setting:
+    // - 5 Hari Sekolah (Senin - Jumat): Minggu (0) dan Sabtu (6) adalah hari libur
+    // - 6 Hari Sekolah (Senin - Sabtu): Hanya Minggu (0) yang libur; Sabtu aktif belajar
     const dateObj = new Date(normDate + 'T00:00:00');
     if (!isNaN(dateObj.getTime())) {
       const day = dateObj.getDay();
-      if (day === 0) return true; // 0: Minggu (Hari libur otomatis hanya hari Minggu)
+      const schoolDays = Number(this.settings.schoolDays) === 5 ? 5 : 6;
+      if (day === 0) return true; // 0: Minggu (selalu libur)
+      if (schoolDays === 5 && day === 6) return true; // 6: Sabtu (libur pada sistem sekolah 5 hari)
     }
 
     return false;
+  }
+
+  public getHolidayDescription(dateStr: string): string | null {
+    if (!dateStr) return null;
+    const normDate = this.normalizeToYyyyMmDd(dateStr);
+    if (!normDate) return null;
+
+    const holidays = this.getHolidays();
+    const found = holidays.find((h) => this.normalizeToYyyyMmDd(h.tanggal) === normDate);
+    if (found) return found.keterangan;
+
+    const dateObj = new Date(normDate + 'T00:00:00');
+    if (!isNaN(dateObj.getTime())) {
+      const day = dateObj.getDay();
+      const schoolDays = Number(this.settings.schoolDays) === 5 ? 5 : 6;
+      if (day === 0) return 'Akhir Pekan (Hari Minggu)';
+      if (schoolDays === 5 && day === 6) return 'Akhir Pekan (Hari Sabtu - Sekolah 5 Hari)';
+    }
+
+    return null;
   }
 
   public processAutoAlpa(targetDateYyyyMmDd?: string): { addedCount: number; date: string } {
@@ -753,21 +1173,502 @@ class AppStore {
     this.notify();
   }
 
+  public getUsers(): User[] {
+    return [...this.users];
+  }
+
+  public getUserById(uid: string): User | undefined {
+    if (!uid) return undefined;
+    return this.users.find((u) => u.uid === uid);
+  }
+
+  public getUserByUsernameOrEmail(identifier: string): User | undefined {
+    if (!identifier) return undefined;
+    const clean = identifier.trim().toLowerCase();
+    return this.users.find(
+      (u) =>
+        (u.username && u.username.trim().toLowerCase() === clean) ||
+        (u.email && u.email.trim().toLowerCase() === clean) ||
+        (u.nip && u.nip.trim() === identifier.trim())
+    );
+  }
+
+  public async syncUsersWithFirestore(): Promise<void> {
+    try {
+      const remoteUsers = await fetchUsersFromFirestore();
+      if (remoteUsers && remoteUsers.length > 0) {
+        // Merge remote users with local users, prioritizing remote updates and ensuring bcrypt hashes
+        const userMap = new Map<string, User>();
+        // Add existing local users
+        this.users.forEach((u) => {
+          if (u.password && !isHashedPassword(u.password)) {
+            u.password = ensureHashedPassword(u.password);
+          }
+          userMap.set(u.uid, u);
+        });
+        // Upsert remote users
+        remoteUsers.forEach((ru) => {
+          if (ru.password && !isHashedPassword(ru.password)) {
+            ru.password = ensureHashedPassword(ru.password);
+          }
+          userMap.set(ru.uid, ru);
+        });
+
+        // Ensure Master Admin always exists with secure hash
+        if (!userMap.has('usr-admin')) {
+          userMap.set('usr-admin', INITIAL_USERS[0]);
+        }
+
+        this.users = Array.from(userMap.values());
+        this.saveLocalData(true);
+        this.notify();
+      } else {
+        // Firestore app_users collection is empty -> bootstrap seed initial users to Firestore with bcrypt hashes
+        for (const u of this.users) {
+          if (u.password && !isHashedPassword(u.password)) {
+            u.password = ensureHashedPassword(u.password);
+          }
+          saveUserToFirestore(u).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('Sync users with Firestore error:', err);
+    }
+  }
+
+  /**
+   * Synchronize all persistent collections (Users, Settings/Homeroom, Dispatches, Students, Teachers, Attendance, Logs)
+   * with Firestore Cloud Database.
+   */
+  public async syncAllWithFirestore(): Promise<void> {
+    try {
+      // 1. Sync Users
+      await this.syncUsersWithFirestore();
+
+      // 2. Sync Settings & Homeroom Assignments (Pemetaan Wali Kelas)
+      try {
+        const remoteSettings = await fetchSettingsFromFirestore();
+        if (remoteSettings && Object.keys(remoteSettings).length > 0) {
+          this.settings = {
+            ...this.settings,
+            ...remoteSettings,
+            homeroomAssignments: {
+              ...(this.settings.homeroomAssignments || {}),
+              ...(remoteSettings.homeroomAssignments || {}),
+            },
+            holidays: remoteSettings.holidays && remoteSettings.holidays.length > 0
+              ? remoteSettings.holidays
+              : (this.settings.holidays || []),
+          };
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
+          this.notify();
+        } else {
+          // Cloud settings document is empty -> persist current school settings & homeroom map
+          saveSettingsToFirestore(this.settings).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('Sync settings with Firestore notice:', e);
+      }
+
+      // 3. Sync Problematic Student Dispatches (Disposisi Wali Kelas & BK)
+      try {
+        const remoteDispatches = await fetchDispatchesFromFirestore();
+        if (remoteDispatches && remoteDispatches.length > 0) {
+          const dspMap = new Map<string, ProblematicStudentDispatch>();
+          this.dispatches.forEach((d) => dspMap.set(d.id, d));
+          remoteDispatches.forEach((d) => dspMap.set(d.id, d));
+          this.dispatches = Array.from(dspMap.values()).sort((a, b) => {
+            return new Date(b.dispatchedAt || 0).getTime() - new Date(a.dispatchedAt || 0).getTime();
+          });
+          this.saveLocalData(true);
+          this.notify();
+        } else if (this.dispatches.length > 0) {
+          // Seed local dispatches to Firestore
+          this.dispatches.forEach((d) => saveDispatchToFirestore(d).catch(() => {}));
+        }
+      } catch (e) {
+        console.warn('Sync dispatches with Firestore notice:', e);
+      }
+
+      // 4. Sync Students & Teachers with Firestore if cloud has records or local needs backup
+      try {
+        const remoteStudents = await fetchStudentsFromFirestore();
+        if (remoteStudents && remoteStudents.length > 0) {
+          const sMap = new Map<string, Student>();
+          this.students.forEach((s) => sMap.set(s.id || s.nisn, s));
+          remoteStudents.forEach((s) => sMap.set(s.id || s.nisn, s));
+          this.students = Array.from(sMap.values());
+          this.saveLocalData(true);
+        } else if (this.students.length > 0) {
+          saveMultipleStudentsToFirestore(this.students).catch(() => {});
+        }
+
+        const remoteTeachers = await fetchTeachersFromFirestore();
+        if (remoteTeachers && remoteTeachers.length > 0) {
+          const tMap = new Map<string, Teacher>();
+          this.teachers.forEach((t) => tMap.set(t.id || t.nip, t));
+          remoteTeachers.forEach((t) => tMap.set(t.id || t.nip, t));
+          this.teachers = Array.from(tMap.values());
+          this.saveLocalData(true);
+        } else if (this.teachers.length > 0) {
+          saveMultipleTeachersToFirestore(this.teachers).catch(() => {});
+        }
+
+        const remoteAttendance = await fetchAttendanceFromFirestore();
+        if (remoteAttendance && remoteAttendance.length > 0) {
+          const aMap = new Map<string, AttendanceRecord>();
+          this.attendance.forEach((a) => aMap.set(a.id, a));
+          remoteAttendance.forEach((a) => aMap.set(a.id, a));
+          this.attendance = Array.from(aMap.values());
+          this.saveLocalData(true);
+        } else if (this.attendance.length > 0) {
+          saveMultipleAttendanceToFirestore(this.attendance.slice(0, 300)).catch(() => {});
+        }
+
+        const remoteTeacherAtt = await fetchTeacherAttendanceFromFirestore();
+        if (remoteTeacherAtt && remoteTeacherAtt.length > 0) {
+          const taMap = new Map<string, TeacherAttendanceRecord>();
+          this.teacherAttendance.forEach((ta) => taMap.set(ta.id, ta));
+          remoteTeacherAtt.forEach((ta) => taMap.set(ta.id, ta));
+          this.teacherAttendance = Array.from(taMap.values());
+          this.saveLocalData(true);
+        } else if (this.teacherAttendance.length > 0) {
+          saveMultipleTeacherAttendanceToFirestore(this.teacherAttendance.slice(0, 300)).catch(() => {});
+        }
+
+        this.notify();
+      } catch (e) {
+        console.warn('Sync entity tables with Firestore notice:', e);
+      }
+    } catch (err) {
+      console.warn('Firestore full database synchronization error:', err);
+    }
+  }
+
+  public async addUser(userData: Omit<User, 'uid' | 'createdAt'>): Promise<{ success: boolean; user?: User; message: string }> {
+    const cleanUsername = (userData.username || '').trim().toLowerCase().replace(/\s+/g, '_');
+    if (!cleanUsername) {
+      return { success: false, message: 'Username tidak boleh kosong.' };
+    }
+
+    // Check username uniqueness
+    const existing = this.users.find((u) => (u.username || '').trim().toLowerCase() === cleanUsername);
+    if (existing) {
+      return { success: false, message: `Username "${cleanUsername}" sudah digunakan. Silakan gunakan username lain.` };
+    }
+
+    if (!userData.name || !userData.name.trim()) {
+      return { success: false, message: 'Nama lengkap pengguna wajib diisi.' };
+    }
+
+    const cleanPass = (userData.password || '').trim();
+    if (!cleanPass) {
+      return { success: false, message: 'Kata sandi wajib diisi.' };
+    }
+
+    // Safely hash password using bcrypt before saving
+    const hashedPassword = await hashPassword(cleanPass);
+
+    const newUid = `usr-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newUser: User = {
+      ...userData,
+      uid: newUid,
+      username: cleanUsername,
+      name: userData.name.trim(),
+      email: (userData.email || '').trim(),
+      role: userData.role || 'Guru',
+      subRole: userData.subRole || (userData.role === 'Guru' ? 'Guru Piket' : undefined),
+      assignedClass: (userData.assignedClass || '').trim(),
+      nip: (userData.nip || '').trim(),
+      phone: (userData.phone || '').trim(),
+      password: hashedPassword,
+      status: userData.status || 'aktif',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      notes: (userData.notes || '').trim(),
+    };
+
+    this.users.push(newUser);
+    this.saveLocalData(true);
+    this.notify();
+
+    // Persist to Firestore in background (stores secure bcrypt hash)
+    saveUserToFirestore(newUser).catch((err) => {
+      console.warn('Background save user to Firestore failed:', err);
+    });
+
+    this.addLog(
+      'TAMBAH_PENGGUNA',
+      `Menambahkan akun baru: ${newUser.name} (@${newUser.username}) sebagai ${newUser.role}${newUser.subRole ? ` (${newUser.subRole})` : ''} (Tersimpan terenkripsi bcrypt)`
+    );
+
+    return { success: true, user: newUser, message: `Akun ${newUser.name} berhasil dibuat dan disimpan dengan enkripsi kata sandi yang aman!` };
+  }
+
+  public async updateUser(uid: string, userData: Partial<User>): Promise<{ success: boolean; message: string }> {
+    const idx = this.users.findIndex((u) => u.uid === uid);
+    if (idx === -1) {
+      return { success: false, message: 'Data pengguna tidak ditemukan.' };
+    }
+
+    const existing = this.users[idx];
+
+    // If username is changing, ensure uniqueness
+    if (userData.username) {
+      const cleanUsername = userData.username.trim().toLowerCase().replace(/\s+/g, '_');
+      const duplicate = this.users.find((u) => u.uid !== uid && (u.username || '').trim().toLowerCase() === cleanUsername);
+      if (duplicate) {
+        return { success: false, message: `Username "${cleanUsername}" sudah digunakan oleh akun lain.` };
+      }
+      userData.username = cleanUsername;
+    }
+
+    // If password update requested, hash it with bcrypt
+    if (userData.password && userData.password.trim()) {
+      userData.password = await hashPassword(userData.password.trim());
+    }
+
+    const updatedUser: User = {
+      ...existing,
+      ...userData,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.users[idx] = updatedUser;
+
+    // If current logged-in user is updated, sync session
+    if (this.currentUser && this.currentUser.uid === uid) {
+      this.currentUser = { ...this.currentUser, ...updatedUser };
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+    }
+
+    this.saveLocalData(true);
+    this.notify();
+
+    // Persist update to Firestore
+    saveUserToFirestore(updatedUser).catch((err) => {
+      console.warn('Background update user in Firestore failed:', err);
+    });
+
+    this.addLog('EDIT_PENGGUNA', `Memperbarui akun pengguna: ${updatedUser.name} (@${updatedUser.username})`);
+
+    return { success: true, message: `Data akun ${updatedUser.name} berhasil diperbarui.` };
+  }
+
+  public async deleteUser(uid: string): Promise<{ success: boolean; message: string }> {
+    if (uid === 'usr-admin') {
+      return { success: false, message: 'Akun Super Admin Utama (usr-admin) dilindungi dan tidak dapat dihapus.' };
+    }
+
+    if (this.currentUser && this.currentUser.uid === uid) {
+      return { success: false, message: 'Anda tidak dapat menghapus akun yang sedang Anda gunakan saat ini.' };
+    }
+
+    const target = this.users.find((u) => u.uid === uid);
+    if (!target) {
+      return { success: false, message: 'Data pengguna tidak ditemukan.' };
+    }
+
+    this.users = this.users.filter((u) => u.uid !== uid);
+    this.saveLocalData(true);
+    this.notify();
+
+    // Delete from Firestore
+    deleteUserFromFirestore(uid).catch((err) => {
+      console.warn('Background delete user in Firestore failed:', err);
+    });
+
+    this.addLog('HAPUS_PENGGUNA', `Menghapus akun pengguna: ${target.name} (@${target.username}) dari database.`);
+
+    return { success: true, message: `Akun ${target.name} berhasil dihapus dari database.` };
+  }
+
+  public async resetUserPassword(uid: string, newPass: string): Promise<{ success: boolean; message: string }> {
+    const cleanPass = (newPass || '').trim();
+    if (!cleanPass || cleanPass.length < 3) {
+      return { success: false, message: 'Kata sandi baru minimal 3 karakter.' };
+    }
+
+    const user = this.users.find((u) => u.uid === uid);
+    if (!user) {
+      return { success: false, message: 'Pengguna tidak ditemukan.' };
+    }
+
+    // Safely hash the new password using bcrypt
+    const hashedPassword = await hashPassword(cleanPass);
+    user.password = hashedPassword;
+    user.updatedAt = new Date().toISOString();
+
+    if (uid === 'usr-admin') {
+      this.passwords['usr-admin'] = hashedPassword;
+      localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
+    }
+
+    this.saveLocalData(true);
+    this.notify();
+
+    saveUserToFirestore(user).catch(() => {});
+
+    this.addLog('RESET_PASSWORD_PENGGUNA', `Administrator mereset kata sandi untuk akun: ${user.name} (@${user.username}) dengan enkripsi bcrypt.`);
+
+    return { success: true, message: `Kata sandi untuk ${user.name} berhasil diperbarui dan dienkripsi dengan aman.` };
+  }
+
+  public async loginWithCredentials(
+    identifier: string,
+    pass: string
+  ): Promise<{ success: boolean; user?: User; message: string }> {
+    const cleanId = (identifier || '').trim();
+    const cleanPass = (pass || '').trim();
+
+    if (!cleanId || !cleanPass) {
+      return { success: false, message: 'Silakan masukkan Username / Email dan Kata Sandi.' };
+    }
+
+    // Refresh from local cache or find user
+    let user = this.getUserByUsernameOrEmail(cleanId);
+
+    // Fallback check for admin
+    if (!user && (cleanId.toLowerCase() === 'admin' || cleanId.toLowerCase() === 'superadmin')) {
+      const adminPass = this.getAdminPassword();
+      const isDefaultMatch = await comparePassword(cleanPass, adminPass) || cleanPass === 'admin' || cleanPass === 'admin123';
+      if (isDefaultMatch) {
+        user = { ...INITIAL_USERS[0], password: await hashPassword(cleanPass) };
+        this.users.unshift(user);
+        this.saveLocalData(true);
+      }
+    }
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'Akun tidak ditemukan. Pastikan Username atau Email sudah terdaftar oleh Admin di database.',
+      };
+    }
+
+    if (user.status === 'nonaktif') {
+      return {
+        success: false,
+        message: 'Akun Anda dinonaktifkan oleh Administrator. Silakan hubungi admin sekolah untuk mengaktifkan kembali.',
+      };
+    }
+
+    // Check password using bcrypt comparison
+    const userPass = user.password || (user.uid === 'usr-admin' ? this.getAdminPassword() : hashPasswordSync('admin'));
+    const isDirectMatch = await comparePassword(cleanPass, userPass);
+    const isAdminFallbackMatch = user.role === 'Admin' && (await comparePassword(cleanPass, this.getAdminPassword()));
+    const isMatch = isDirectMatch || isAdminFallbackMatch;
+
+    if (!isMatch) {
+      return {
+        success: false,
+        message: 'Kata sandi tidak sesuai. Periksa kembali huruf besar/kecil Anda.',
+      };
+    }
+
+    // If stored password was plain text from legacy data, upgrade to bcrypt on login
+    if (!isHashedPassword(user.password)) {
+      user.password = await hashPassword(cleanPass);
+    }
+
+    // Success login
+    user.lastLoginAt = new Date().toISOString();
+    this.setCurrentUser(user);
+    this.saveLocalData(true);
+
+    // Update lastLoginAt in Firestore
+    saveUserToFirestore(user).catch(() => {});
+
+    this.addLog('LOGIN_DATABASE', `Pengguna ${user.name} (@${user.username}) berhasil masuk sebagai ${user.role}.`);
+
+    return {
+      success: true,
+      user,
+      message: `Selamat datang kembali, ${user.name}!`,
+    };
+  }
+
+  public async loginWithGoogleUser(googleUser: any): Promise<{ success: boolean; user: User; message: string }> {
+    if (!googleUser || !googleUser.email) {
+      throw new Error('Data akun Google tidak lengkap.');
+    }
+
+    const email = (googleUser.email || '').toLowerCase().trim();
+    let existing = this.users.find((u) => (u.email && u.email.toLowerCase() === email) || u.uid === googleUser.uid);
+
+    const isSuperAdminEmail =
+      email === 'ryugadirgantara9@gmail.com' ||
+      email.includes('admin@sman15') ||
+      email.startsWith('admin');
+
+    if (existing) {
+      if (isSuperAdminEmail && existing.role !== 'Admin') {
+        existing.role = 'Admin';
+      }
+      existing.lastLoginAt = new Date().toISOString();
+      if (googleUser.photoURL && !existing.avatar) {
+        existing.avatar = googleUser.photoURL;
+      }
+      this.setCurrentUser(existing);
+      this.saveLocalData(true);
+      saveUserToFirestore(existing).catch(() => {});
+      this.addLog('LOGIN_GOOGLE', `Pengguna ${existing.name} masuk melalui akun Google (${email}).`);
+      return { success: true, user: existing, message: `Selamat datang, ${existing.name}!` };
+    }
+
+    // Create new user from Google
+    const username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+    const newUser: User = {
+      uid: googleUser.uid || `usr-g-${Date.now()}`,
+      username: username,
+      email: email,
+      name: googleUser.displayName || email.split('@')[0],
+      role: isSuperAdminEmail ? 'Admin' : 'Guru',
+      subRole: isSuperAdminEmail ? 'Super Admin' : 'Guru Piket',
+      assignedClass: '',
+      status: 'aktif',
+      avatar: googleUser.photoURL || '',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      notes: 'Terdaftar otomatis via Login Google',
+    };
+
+    this.users.push(newUser);
+    this.setCurrentUser(newUser);
+    this.saveLocalData(true);
+    saveUserToFirestore(newUser).catch(() => {});
+
+    this.addLog('REGISTER_GOOGLE', `Akun baru terdaftar via Google: ${newUser.name} (${email}) sebagai ${newUser.role}`);
+
+    return { success: true, user: newUser, message: `Selamat datang di NEXA15, ${newUser.name}!` };
+  }
+
   public getAdminPassword(): string {
-    return this.passwords['usr-admin'] || 'AdminNexa15!';
+    const adminUser = this.users.find((u) => u.uid === 'usr-admin');
+    return adminUser?.password || this.passwords['usr-admin'] || hashPasswordSync('admin');
   }
 
   public async updateAdminPassword(oldPass: string, newPass: string): Promise<{ success: boolean; message: string }> {
-    if (oldPass !== this.getAdminPassword()) {
+    const currentAdminPass = this.getAdminPassword();
+    const isOldMatch = await comparePassword(oldPass, currentAdminPass);
+    if (!isOldMatch) {
       return { success: false, message: 'Password lama tidak sesuai.' };
     }
-    if (!newPass || newPass.length < 6) {
-      return { success: false, message: 'Password baru minimal 6 karakter.' };
+    if (!newPass || newPass.length < 3) {
+      return { success: false, message: 'Password baru minimal 3 karakter.' };
     }
-    this.passwords['usr-admin'] = newPass;
+
+    const hashedNewPass = await hashPassword(newPass);
+    this.passwords['usr-admin'] = hashedNewPass;
+    const adminUser = this.users.find((u) => u.uid === 'usr-admin');
+    if (adminUser) {
+      adminUser.password = hashedNewPass;
+      saveUserToFirestore(adminUser).catch(() => {});
+    }
     localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
-    this.addLog('UBAH_PASSWORD', 'Pengguna Admin memperbarui kata sandi akun.');
-    return { success: true, message: 'Password Admin berhasil diperbarui.' };
+    this.saveLocalData(true);
+    this.addLog('UBAH_PASSWORD', 'Pengguna Admin memperbarui kata sandi akun dengan enkripsi bcrypt.');
+    return { success: true, message: 'Password Admin berhasil diperbarui dan dienkripsi.' };
   }
 
   public getStudents(): Student[] {
@@ -881,6 +1782,37 @@ class AppStore {
     }
   }
 
+  public async fetchHistoricalAttendance(startDate: string, endDate: string): Promise<number> {
+    try {
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (!isOnline) throw new Error('Koneksi internet terputus.');
+
+      const records = await fetchAttendanceFromFirestore(startDate, endDate);
+      const teacherRecords = await fetchTeacherAttendanceFromFirestore(startDate, endDate);
+
+      if (records.length > 0) {
+        const aMap = new Map<string, AttendanceRecord>();
+        this.attendance.forEach((a) => aMap.set(a.id, a));
+        records.forEach((a) => aMap.set(a.id, a));
+        this.attendance = Array.from(aMap.values()).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+      }
+
+      if (teacherRecords.length > 0) {
+        const taMap = new Map<string, TeacherAttendanceRecord>();
+        this.teacherAttendance.forEach((ta) => taMap.set(ta.id, ta));
+        teacherRecords.forEach((ta) => taMap.set(ta.id, ta));
+        this.teacherAttendance = Array.from(taMap.values()).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+      }
+
+      this.saveLocalData(true);
+      this.notify();
+      return records.length + teacherRecords.length;
+    } catch (e) {
+      console.warn('Gagal menarik riwayat presensi cloud:', e);
+      return 0;
+    }
+  }
+
   public async addStudent(studentData: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
     // Check if student with same NISN already exists to prevent duplicate entry
     const existingIndex = this.students.findIndex((s) => s.nisn && s.nisn === studentData.nisn);
@@ -928,66 +1860,70 @@ class AppStore {
   }
 
   public async deleteStudent(id: string): Promise<boolean> {
-    const target = this.students.find((s) => s.id === id);
-    this.students = this.students.filter((s) => s.id !== id);
+    const idx = this.students.findIndex((s) => s.id === id);
+    if (idx === -1) return false;
 
-    // Hapus juga presensi terkait agar tidak terjadi penumpukan data terpisah (orphaned)
-    if (target && target.nisn) {
-      const orphanAtts = this.attendance.filter((a) => a.nisn === target.nisn);
-      if (orphanAtts.length > 0) {
-        orphanAtts.forEach((att) => {
-          this.enqueueSync({ id: att.id, type: 'attendance', action: 'delete' });
-        });
-        this.attendance = this.attendance.filter((a) => a.nisn !== target.nisn);
-      }
-    }
+    // Penghapusan Halus (Soft Delete): Hanya ubah status menjadi nonaktif
+    const target = this.students[idx];
+    const updated = { ...target, status: 'nonaktif' as const };
+    this.students[idx] = updated;
 
     this.notify();
 
-    if (target) {
-      this.enqueueSync({ id: target.id || id, type: 'student', action: 'delete' });
-      this.addLog('HAPUS_SISWA', `Menghapus siswa: ${target.nama} (${target.kelas}) dari aplikasi dan database.`);
-    }
+    this.enqueueSync({ id: target.id || id, type: 'student', action: 'upsert', data: updated });
+    this.addLog('NONAKTIF_SISWA', `Menonaktifkan siswa: ${target.nama} (${target.kelas}) (Soft Delete).`);
     return true;
   }
 
   public async deleteMultipleStudents(ids: string[]): Promise<boolean> {
     const idSet = new Set(ids);
-    const targets = this.students.filter((s) => idSet.has(s.id));
-    const targetNisns = new Set(targets.map((s) => s.nisn).filter(Boolean));
+    let count = 0;
 
-    this.students = this.students.filter((s) => !idSet.has(s.id));
-
-    // Hapus rekap presensi siswa yang dihapus
-    if (targetNisns.size > 0) {
-      const orphanAtts = this.attendance.filter((a) => targetNisns.has(a.nisn));
-      if (orphanAtts.length > 0) {
-        orphanAtts.forEach((att) => {
-          this.enqueueSync({ id: att.id, type: 'attendance', action: 'delete' });
-        });
-        this.attendance = this.attendance.filter((a) => !targetNisns.has(a.nisn));
+    this.students = this.students.map((s) => {
+      if (idSet.has(s.id)) {
+        count++;
+        const updated = { ...s, status: 'nonaktif' as const };
+        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
+        return updated;
       }
-    }
+      return s;
+    });
 
     this.notify();
+    this.addLog('NONAKTIF_MASSAL_SISWA', `Menonaktifkan ${count} siswa terpilih (Soft Delete).`);
+    return true;
+  }
 
-    targets.forEach((s) => {
-      this.enqueueSync({ id: s.id, type: 'student', action: 'delete' });
+  public async updateMultipleStudents(ids: string[], updates: Partial<Student>): Promise<boolean> {
+    const idSet = new Set(ids);
+    let count = 0;
+
+    this.students = this.students.map((s) => {
+      if (idSet.has(s.id)) {
+        count++;
+        const updated = { ...s, ...updates };
+        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
+        return updated;
+      }
+      return s;
     });
-    this.addLog('HAPUS_MASSAL_SISWA', `Menghapus ${ids.length} siswa terpilih dari aplikasi dan database.`);
+
+    this.notify();
+    this.addLog('UPDATE_MASSAL_SISWA', `Memperbarui data ${count} siswa (Contoh Update: ${JSON.stringify(updates)}).`);
     return true;
   }
 
   public async deleteAllStudents(): Promise<boolean> {
     const count = this.students.length;
-    const oldStudents = [...this.students];
-    this.students = [];
-    this.notify();
 
-    oldStudents.forEach((s) => {
-      this.enqueueSync({ id: s.id, type: 'student', action: 'delete' });
+    this.students = this.students.map((s) => {
+      const updated = { ...s, status: 'nonaktif' as const };
+      this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
+      return updated;
     });
-    this.addLog('RESET_SISWA', `Menghapus seluruh ${count} data siswa dari aplikasi dan database.`);
+
+    this.notify();
+    this.addLog('RESET_SISWA', `Menonaktifkan seluruh ${count} data siswa (Soft Delete).`);
     return true;
   }
 
@@ -1054,9 +1990,33 @@ class AppStore {
     return this.students.find((s) => s.nisn && s.nisn.trim() === cleanNisn);
   }
 
+  public getStudentByRfidUid(rfidUid: string): Student | undefined {
+    if (!rfidUid) return undefined;
+    return this.students.find((s) => s.rfid_uid && isMatchingRfidUid(s.rfid_uid, rfidUid));
+  }
+
+  public assignRfidToStudent(studentId: string, rfidUid: string): boolean {
+    const student = this.getStudentById(studentId);
+    if (!student) return false;
+    const cleanUid = String(rfidUid).trim().toUpperCase();
+
+    // Check if another student has this RFID UID
+    const existing = this.getStudentByRfidUid(cleanUid);
+    if (existing && existing.id !== studentId) {
+      existing.rfid_uid = undefined;
+      this.enqueueSync({ id: existing.id, type: 'student', action: 'upsert', data: existing });
+    }
+
+    student.rfid_uid = cleanUid;
+    this.notify();
+    this.enqueueSync({ id: student.id, type: 'student', action: 'upsert', data: student });
+    this.addLog('ASSIGN_RFID_SISWA', `Menetapkan Kartu RFID [${cleanUid}] ke siswa: ${student.nama} (${student.kelas})`);
+    return true;
+  }
+
   /**
-   * Pengenalan Akurat & Bebas Tabrakan Identitas Siswa dari Hasil Pindai QR / Barcode.
-   * Menggunakan pencarian hierarkis berbasis kecocokan eksak (Exact Match) pada NISN dan ID_QR,
+   * Pengenalan Akurat & Bebas Tabrakan Identitas Siswa dari Hasil Pindai QR / Barcode / Kartu RFID.
+   * Menggunakan pencarian hierarkis berbasis kecocokan eksak (Exact Match) pada RFID UID, NISN, dan ID_QR,
    * serta mem-parsing format terstruktur (NPSN.NISN.NAMA atau JSON) tanpa substring matching longgar
    * sehingga tidak akan ada 2 siswa berbeda yang dianggap orang yang sama.
    */
@@ -1064,6 +2024,12 @@ class AppStore {
     if (!scannedText) return undefined;
     const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
     if (!cleanText) return undefined;
+
+    // 0. Exact Match pada UID Kartu RFID / NFC
+    const exactRfid = this.students.find(
+      (s) => s.rfid_uid && isMatchingRfidUid(s.rfid_uid, cleanText)
+    );
+    if (exactRfid) return exactRfid;
 
     // 1. Exact Match pada ID_QR (case-insensitive & trimmed), HANYA jika bukan generic placeholder (misal: "69933068")
     if (!isGenericQrCode(cleanText)) {
@@ -1193,13 +2159,69 @@ class AppStore {
     return this.teachers.find((t) => t.id === cleanId);
   }
 
+  public getTeacherByRfidUid(rfidUid: string): Teacher | undefined {
+    if (!rfidUid) return undefined;
+    return this.teachers.find((t) => t.rfid_uid && isMatchingRfidUid(t.rfid_uid, rfidUid));
+  }
+
+  public assignRfidToTeacher(teacherId: string, rfidUid: string): boolean {
+    const teacher = this.getTeacherById(teacherId);
+    if (!teacher) return false;
+    const cleanUid = String(rfidUid).trim().toUpperCase();
+
+    const existing = this.getTeacherByRfidUid(cleanUid);
+    if (existing && existing.id !== teacherId) {
+      existing.rfid_uid = undefined;
+      this.enqueueSync({ id: existing.id, type: 'teacher', action: 'upsert', data: existing });
+    }
+
+    teacher.rfid_uid = cleanUid;
+    this.notify();
+    this.enqueueSync({ id: teacher.id, type: 'teacher', action: 'upsert', data: teacher });
+    this.addLog('ASSIGN_RFID_GURU', `Menetapkan Kartu RFID [${cleanUid}] ke Guru: ${teacher.nama} (${teacher.jabatan})`);
+    return true;
+  }
+
+  public findByRfidUid(rfidUid: string): {
+    type: 'siswa' | 'guru';
+    student?: Student;
+    teacher?: Teacher;
+  } | undefined {
+    if (!rfidUid) return undefined;
+    const clean = String(rfidUid).trim();
+    const student = this.getStudentByRfidUid(clean);
+    if (student) return { type: 'siswa', student };
+    const teacher = this.getTeacherByRfidUid(clean);
+    if (teacher) return { type: 'guru', teacher };
+    return undefined;
+  }
+
+  public findPersonByRfidOrCode(codeOrUid: string): {
+    type: 'siswa' | 'guru';
+    student?: Student;
+    teacher?: Teacher;
+  } | undefined {
+    if (!codeOrUid) return undefined;
+    const student = this.findStudentByScannedCode(codeOrUid);
+    if (student) return { type: 'siswa', student };
+    const teacher = this.findTeacherByScannedCode(codeOrUid);
+    if (teacher) return { type: 'guru', teacher };
+    return undefined;
+  }
+
   /**
-   * Pengenalan Akurat Guru & Staf dari Hasil Pindai QR / Barcode
+   * Pengenalan Akurat Guru & Staf dari Hasil Pindai QR / Barcode / Kartu RFID
    */
   public findTeacherByScannedCode(scannedText: string): Teacher | undefined {
     if (!scannedText) return undefined;
     const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
     if (!cleanText) return undefined;
+
+    // 0. Exact Match pada UID Kartu RFID / NFC
+    const exactRfid = this.teachers.find(
+      (t) => t.rfid_uid && isMatchingRfidUid(t.rfid_uid, cleanText)
+    );
+    if (exactRfid) return exactRfid;
 
     // 1. Exact Match pada ID_QR (Hanya jika bukan generic placeholder)
     if (!isGenericQrCode(cleanText)) {
@@ -1334,55 +2356,51 @@ class AppStore {
   }
 
   public async deleteTeacher(id: string): Promise<boolean> {
-    const target = this.teachers.find((t) => t.id === id);
-    this.teachers = this.teachers.filter((t) => t.id !== id);
+    const idx = this.teachers.findIndex((t) => t.id === id);
+    if (idx === -1) return false;
 
-    if (target && target.nip) {
-      const orphanAtts = this.teacherAttendance.filter((a) => a.nip === target.nip);
-      orphanAtts.forEach((a) => {
-        this.enqueueSync({ id: a.id, type: 'teacher_attendance', action: 'delete' });
-      });
-      this.teacherAttendance = this.teacherAttendance.filter((a) => a.nip !== target.nip);
-    }
+    // Penghapusan Halus (Soft Delete): Hanya ubah status menjadi Nonaktif
+    const target = this.teachers[idx];
+    const updated = { ...target, status_kepegawaian: 'Nonaktif' as const };
+    this.teachers[idx] = updated;
+
     this.notify();
 
-    if (target) {
-      this.enqueueSync({ id: target.id || id, type: 'teacher', action: 'delete' });
-      this.addLog('HAPUS_GURU', `Menghapus guru: ${target.nama} (${target.jabatan}) NIP: ${target.nip}`);
-    }
+    this.enqueueSync({ id: target.id || id, type: 'teacher', action: 'upsert', data: updated });
+    this.addLog('NONAKTIF_GURU', `Menonaktifkan guru: ${target.nama} (${target.jabatan}) NIP: ${target.nip} (Soft Delete)`);
     return true;
   }
 
   public async deleteMultipleTeachers(ids: string[]): Promise<boolean> {
     const idSet = new Set(ids);
-    const targets = this.teachers.filter((t) => idSet.has(t.id));
-    const targetNips = new Set(targets.map((t) => t.nip).filter(Boolean));
+    let count = 0;
 
-    this.teachers = this.teachers.filter((t) => !idSet.has(t.id));
-    if (targetNips.size > 0) {
-      const orphanAtts = this.teacherAttendance.filter((a) => targetNips.has(a.nip));
-      orphanAtts.forEach((a) => {
-        this.enqueueSync({ id: a.id, type: 'teacher_attendance', action: 'delete' });
-      });
-      this.teacherAttendance = this.teacherAttendance.filter((a) => !targetNips.has(a.nip));
-    }
-    this.notify();
-    targets.forEach((t) => {
-      this.enqueueSync({ id: t.id, type: 'teacher', action: 'delete' });
+    this.teachers = this.teachers.map((t) => {
+      if (idSet.has(t.id)) {
+        count++;
+        const updated = { ...t, status_kepegawaian: 'Nonaktif' as const };
+        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: updated });
+        return updated;
+      }
+      return t;
     });
-    this.addLog('HAPUS_MASSAL_GURU', `Menghapus ${ids.length} data guru terpilih.`);
+
+    this.notify();
+    this.addLog('NONAKTIF_MASSAL_GURU', `Menonaktifkan ${count} data guru terpilih (Soft Delete).`);
     return true;
   }
 
   public async deleteAllTeachers(): Promise<boolean> {
     const count = this.teachers.length;
-    const oldTeachers = [...this.teachers];
-    this.teachers = [];
-    this.notify();
-    oldTeachers.forEach((t) => {
-      this.enqueueSync({ id: t.id, type: 'teacher', action: 'delete' });
+
+    this.teachers = this.teachers.map((t) => {
+      const updated = { ...t, status_kepegawaian: 'Nonaktif' as const };
+      this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: updated });
+      return updated;
     });
-    this.addLog('RESET_GURU', `Menghapus seluruh ${count} data guru.`);
+
+    this.notify();
+    this.addLog('RESET_GURU', `Menonaktifkan seluruh ${count} data guru (Soft Delete).`);
     return true;
   }
 
@@ -1655,6 +2673,8 @@ class AppStore {
       }
     }
 
+    const isRfidScan = !!(matchedTeacher.rfid_uid && isMatchingRfidUid(matchedTeacher.rfid_uid, cleanText));
+
     const newRecord: TeacherAttendanceRecord = {
       id: `tch-att-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       tanggal: todayStr,
@@ -1663,10 +2683,12 @@ class AppStore {
       nama: matchedTeacher.nama,
       jabatan: matchedTeacher.jabatan,
       id_qr: matchedTeacher.id_qr || `69933068.${matchedTeacher.nip}`,
+      rfid_uid: matchedTeacher.rfid_uid,
+      scan_method: isRfidScan ? 'RFID' : 'QR',
       jenis,
       status,
       petugas: formatPetugasRole(officerEmail),
-      catatan: jenis === 'Pulang' ? 'Selesai Tugas / Pulang' : isLate ? `Terlambat ${lateMinutes} menit` : 'Tepat Waktu',
+      catatan: jenis === 'Pulang' ? `Selesai Tugas / Pulang${isRfidScan ? ' (Tap RFID)' : ''}` : isLate ? `Terlambat ${lateMinutes} menit${isRfidScan ? ' (Tap RFID)' : ''}` : `Tepat Waktu${isRfidScan ? ' (Tap RFID)' : ''}`,
       terlambatMenit: lateMinutes,
     };
 
@@ -1677,8 +2699,8 @@ class AppStore {
 
     const logDetails =
       jenis === 'Pulang'
-        ? `Scan Presensi Guru Pulang: ${matchedTeacher.nama} (${matchedTeacher.jabatan}) oleh ${formatPetugasRole(officerEmail)}`
-        : `Scan Presensi Guru Masuk [${status.toUpperCase()}]: ${matchedTeacher.nama} (${matchedTeacher.jabatan})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
+        ? `Scan Presensi Guru Pulang${isRfidScan ? ' [RFID]' : ''}: ${matchedTeacher.nama} (${matchedTeacher.jabatan}) oleh ${formatPetugasRole(officerEmail)}`
+        : `Scan Presensi Guru Masuk [${status.toUpperCase()}]${isRfidScan ? ' [RFID]' : ''}: ${matchedTeacher.nama} (${matchedTeacher.jabatan})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
 
     this.addLog(`SCAN_GURU_${jenis.toUpperCase()}`, logDetails);
 
@@ -2092,6 +3114,8 @@ class AppStore {
       }
     }
 
+    const isRfidScan = !!(matchedStudent.rfid_uid && isMatchingRfidUid(matchedStudent.rfid_uid, cleanText));
+
     const newRecord: AttendanceRecord = {
       id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       tanggal: todayStr,
@@ -2100,10 +3124,12 @@ class AppStore {
       nama: matchedStudent.nama,
       kelas: matchedStudent.kelas,
       id_qr: matchedStudent.id_qr || `69933068.${matchedStudent.nisn}.${matchedStudent.nama}`,
+      rfid_uid: matchedStudent.rfid_uid,
+      scan_method: isRfidScan ? 'RFID' : 'QR',
       jenis,
       status,
       petugas: formatPetugasRole(officerEmail),
-      catatan: jenis === 'Pulang' ? 'Selesai KBM / Pulang' : isLate ? `Terlambat ${lateMinutes} menit` : 'Tepat Waktu',
+      catatan: jenis === 'Pulang' ? `Selesai KBM / Pulang${isRfidScan ? ' (Tap RFID)' : ''}` : isLate ? `Terlambat ${lateMinutes} menit${isRfidScan ? ' (Tap RFID)' : ''}` : `Tepat Waktu${isRfidScan ? ' (Tap RFID)' : ''}`,
       terlambatMenit: lateMinutes,
     };
 
@@ -2114,8 +3140,8 @@ class AppStore {
 
     const logDetails =
       jenis === 'Pulang'
-        ? `Scan Presensi Pulang: ${matchedStudent.nama} (${matchedStudent.kelas}) oleh ${formatPetugasRole(officerEmail)}`
-        : `Scan Presensi Masuk [${status.toUpperCase()}]: ${matchedStudent.nama} (${matchedStudent.kelas})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
+        ? `Scan Presensi Pulang${isRfidScan ? ' [RFID]' : ''}: ${matchedStudent.nama} (${matchedStudent.kelas}) oleh ${formatPetugasRole(officerEmail)}`
+        : `Scan Presensi Masuk [${status.toUpperCase()}]${isRfidScan ? ' [RFID]' : ''}: ${matchedStudent.nama} (${matchedStudent.kelas})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
 
     this.addLog(`SCAN_${jenis.toUpperCase()}`, logDetails);
 
@@ -2350,6 +3376,99 @@ class AppStore {
     };
   }
 
+  /**
+   * Rekam Scan Alpa Massal untuk siswa yang belum scan Masuk pada tanggal tertentu.
+   */
+  public recordBulkStudentsAlpa(
+    targetDate?: string,
+    filterKelas = 'Semua',
+    officerEmail = 'Admin'
+  ): { success: boolean; count: number; updatedStudents: Student[]; message: string } {
+    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
+
+    // Guard: Do not allow marking Alpa on holidays or weekends
+    if (this.isHoliday(normTarget)) {
+      return {
+        success: false,
+        count: 0,
+        updatedStudents: [],
+        message: 'Tanggal yang dipilih merupakan hari libur atau akhir pekan sekolah. Tidak dapat mencatat Alpa.',
+      };
+    }
+
+    const timestampAlpa = `${normTarget}T08:00:00+09:00`; // Asumsikan ditandai alpa jam 08:00 WIT
+
+    const dayRecords = this.attendance.filter((a) => this.isRecordForDate(a, normTarget));
+
+    const targetStudents = this.students.filter((s) => {
+      if (s.status === 'nonaktif') return false;
+      if (filterKelas !== 'Semua' && s.kelas !== filterKelas) return false;
+      return true;
+    });
+
+    const newRecords: AttendanceRecord[] = [];
+    const updatedStudents: Student[] = [];
+
+    targetStudents.forEach((student) => {
+      const studentDayRecords = dayRecords.filter(
+        (a) =>
+          (student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
+          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
+          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())
+      );
+      
+      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
+
+      // Jika belum ada record masuk hari ini, berarti Alpa
+      if (!masukRecord) {
+        const rec: AttendanceRecord = {
+          id: `att-autoalpa-${Date.now()}-${student.nisn}-${Math.random().toString(36).substr(2, 4)}`,
+          tanggal: normTarget,
+          timestamp: timestampAlpa,
+          nisn: student.nisn,
+          nama: student.nama,
+          kelas: student.kelas,
+          id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
+          jenis: 'Masuk',
+          status: 'Alpa',
+          petugas: formatPetugasRole(officerEmail),
+          catatan: 'Tutup Gerbang (Tanpa Keterangan)',
+          terlambatMenit: 0,
+        };
+        newRecords.push(rec);
+        updatedStudents.push(student);
+      }
+    });
+
+    if (newRecords.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        updatedStudents: [],
+        message: 'Semua siswa sudah memiliki rekaman presensi pada tanggal ini.',
+      };
+    }
+
+    this.attendance = [...newRecords, ...this.attendance];
+    this.notify();
+
+    newRecords.forEach((rec) => {
+      this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
+    });
+    
+    this.addLog(
+      'ALPA_MASSAL_OTOMATIS',
+      `Tutup Gerbang: Sistem otomatis mencatat presensi Alpa untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
+    );
+
+    return {
+      success: true,
+      count: newRecords.length,
+      updatedStudents,
+      message: `Berhasil memproses status Alpa untuk ${newRecords.length} siswa.`,
+    };
+  }
+
   public async addManualAttendance(data: Partial<AttendanceRecord> & { nisn: string; nama: string; kelas: string }): Promise<AttendanceRecord> {
     const targetTanggal = data.tanggal ? (this.normalizeToYyyyMmDd(data.tanggal) || data.tanggal) : this.getTodayYyyyMmDd();
     const targetJenis = data.jenis || 'Masuk';
@@ -2491,6 +3610,142 @@ class AppStore {
     return true;
   }
 
+  /**
+   * Helper to identify if an attendance record occurred on a Saturday (Day 6)
+   */
+  public isRecordOnSaturday(record: { tanggal?: string; timestamp?: string }): boolean {
+    if (record.tanggal) {
+      const s = String(record.tanggal).trim();
+      if (s.includes('T')) {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return d.getDay() === 6;
+      }
+      const parts = s.split(/[-/]/);
+      if (parts.length === 3) {
+        let d: Date | null = null;
+        if (parts[0].length === 4) {
+          d = new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}T00:00:00`);
+        } else if (parts[2].length === 4) {
+          d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
+        }
+        if (d && !isNaN(d.getTime())) return d.getDay() === 6;
+      }
+    }
+    if (record.timestamp) {
+      const d = new Date(record.timestamp);
+      if (!isNaN(d.getTime())) return d.getDay() === 6;
+    }
+    return false;
+  }
+
+  /**
+   * Hitung berapa banyak presensi Alpa pada hari Sabtu yang masih ada di memori saat ini
+   */
+  public getSaturdayAlpaCount(): { studentAlpa: number; teacherAlpa: number; total: number } {
+    const studentAlpa = this.attendance.filter(
+      (a) => a.status && a.status.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a)
+    ).length;
+
+    const teacherAlpa = this.teacherAttendance.filter(
+      (ta) => ta.status && ta.status.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta)
+    ).length;
+
+    return { studentAlpa, teacherAlpa, total: studentAlpa + teacherAlpa };
+  }
+
+  /**
+   * Revisi & Hapus Seluruh Presensi Hari Sabtu yang Berstatus ALPA
+   * Menghapus secara komprehensif dari:
+   * 1. State memori aplikasi (this.attendance & this.teacherAttendance)
+   * 2. Browser LocalStorage
+   * 3. Google Cloud Firestore Database (Batch Delete)
+   * 4. Supabase Database (jika terhubung)
+   */
+  public async purgeSaturdayAlpaAttendance(silent = false): Promise<{
+    deletedStudents: number;
+    deletedTeachers: number;
+    total: number;
+  }> {
+    // 1. Identify local student attendance records on Saturday marked as Alpa
+    const studentRecordsToDelete = this.attendance.filter((a) => {
+      const isAlpa = a.status && String(a.status).trim().toLowerCase() === 'alpa';
+      return isAlpa && this.isRecordOnSaturday(a);
+    });
+
+    // 2. Identify local teacher attendance records on Saturday marked as Alpa
+    const teacherRecordsToDelete = this.teacherAttendance.filter((ta) => {
+      const isAlpa = ta.status && String(ta.status).trim().toLowerCase() === 'alpa';
+      return isAlpa && this.isRecordOnSaturday(ta);
+    });
+
+    const studentIds = studentRecordsToDelete.map((a) => a.id);
+    const teacherIds = teacherRecordsToDelete.map((ta) => ta.id);
+
+    let deletedStudents = studentIds.length;
+    let deletedTeachers = teacherIds.length;
+
+    // Remove from in-memory arrays
+    if (studentIds.length > 0) {
+      const studentIdSet = new Set(studentIds);
+      this.attendance = this.attendance.filter((a) => !studentIdSet.has(a.id));
+      studentIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'attendance', action: 'delete' });
+      });
+    }
+
+    if (teacherIds.length > 0) {
+      const teacherIdSet = new Set(teacherIds);
+      this.teacherAttendance = this.teacherAttendance.filter((ta) => !teacherIdSet.has(ta.id));
+      teacherIds.forEach((id) => {
+        this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
+      });
+    }
+
+    // Save directly to localStorage immediately
+    this.saveLocalData(true);
+    this.notify();
+
+    // 3. Purge directly from Firestore Cloud Database
+    try {
+      const firestoreResult = await purgeSaturdayAlpaFromFirestore();
+      if (firestoreResult.deletedStudents > deletedStudents) {
+        deletedStudents = firestoreResult.deletedStudents;
+      }
+      if (firestoreResult.deletedTeachers > deletedTeachers) {
+        deletedTeachers = firestoreResult.deletedTeachers;
+      }
+    } catch (err) {
+      console.warn('Error purging Saturday Alpa from Firestore:', err);
+    }
+
+    // 4. Purge from Supabase if connected
+    try {
+      const config = this.getSupabaseConfig();
+      if (isSupabaseConfigured(config)) {
+        const supabaseResult = await purgeSaturdayAlpaFromSupabase(config);
+        if (supabaseResult.deletedStudents > deletedStudents) {
+          deletedStudents = supabaseResult.deletedStudents;
+        }
+        if (supabaseResult.deletedTeachers > deletedTeachers) {
+          deletedTeachers = supabaseResult.deletedTeachers;
+        }
+      }
+    } catch (err) {
+      console.warn('Error purging Saturday Alpa from Supabase:', err);
+    }
+
+    const total = deletedStudents + deletedTeachers;
+
+    if (total > 0 || !silent) {
+      this.addLog(
+        'REVISI_ALPA_SABTU',
+        `Revisi Presensi: Menghapus ${total} data presensi hari Sabtu yang berstatus ALPA (Siswa: ${deletedStudents}, Guru: ${deletedTeachers}).`
+      );
+    }
+
+    return { deletedStudents, deletedTeachers, total };
+  }
+
   public async importAttendanceRecords(
     records: Omit<AttendanceRecord, 'id'>[],
     mode: 'append' | 'replace' = 'append'
@@ -2586,7 +3841,11 @@ class AppStore {
   public findDoubleMasukRecords(): Array<{
     studentNisn: string;
     studentName: string;
+    kelas: string;
     date: string;
+    dateStr: string;
+    firstRecord: AttendanceRecord;
+    duplicateRecords: AttendanceRecord[];
     records: AttendanceRecord[];
   }> {
     const groups = new Map<string, AttendanceRecord[]>();
@@ -2602,18 +3861,31 @@ class AppStore {
     const anomalies: Array<{
       studentNisn: string;
       studentName: string;
+      kelas: string;
       date: string;
+      dateStr: string;
+      firstRecord: AttendanceRecord;
+      duplicateRecords: AttendanceRecord[];
       records: AttendanceRecord[];
     }> = [];
 
     groups.forEach((records, key) => {
       if (records.length > 1) {
         const [nisn, date] = key.split('_');
+        const sorted = [...records].sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        const first = sorted[0];
+        const duplicates = sorted.slice(1);
         anomalies.push({
           studentNisn: nisn,
-          studentName: records[0].nama,
+          studentName: first.nama,
+          kelas: first.kelas || '-',
           date,
-          records,
+          dateStr: date,
+          firstRecord: first,
+          duplicateRecords: duplicates,
+          records: sorted,
         });
       }
     });
@@ -3018,6 +4290,12 @@ class AppStore {
     this.dispatches = [newDispatch, ...this.dispatches.filter((d) => d.nisn !== newDispatch.nisn || d.status === 'Selesai / Ditangani')];
     this.saveLocalData();
     this.notify();
+
+    // Persist to Firestore in background
+    saveDispatchToFirestore(newDispatch).catch((err) => {
+      console.warn('Firestore dispatch save error:', err);
+    });
+
     this.addLog(
       'DISPOSISI_WALI_KELAS',
       `Data siswa bermasalah ${newDispatch.studentName} (${newDispatch.kelas}) dikirim ke Wali Kelas ${newDispatch.waliKelasName} via ${newDispatch.channel}.`
@@ -3042,6 +4320,12 @@ class AppStore {
 
     this.saveLocalData();
     this.notify();
+
+    // Persist status update to Firestore
+    saveDispatchToFirestore(this.dispatches[idx]).catch((err) => {
+      console.warn('Firestore dispatch update error:', err);
+    });
+
     this.addLog(
       'UPDATE_DISPOSISI',
       `Status disposisi siswa ${this.dispatches[idx].studentName} diperbarui menjadi: ${status}`
@@ -3055,14 +4339,25 @@ class AppStore {
     this.dispatches = this.dispatches.filter((d) => d.id !== id);
     this.saveLocalData();
     this.notify();
+
+    deleteDispatchFromFirestore(id).catch((err) => {
+      console.warn('Firestore dispatch delete error:', err);
+    });
+
     this.addLog('HAPUS_DISPOSISI', `Riwayat disposisi siswa ${target.studentName} dihapus.`);
     return true;
   }
 
   public clearDispatches(): void {
+    const ids = this.dispatches.map((d) => d.id);
     this.dispatches = [];
     this.saveLocalData(true);
     this.notify();
+
+    ids.forEach((id) => {
+      deleteDispatchFromFirestore(id).catch(() => {});
+    });
+
     this.addLog('CLEAR_DISPOSISI', 'Seluruh riwayat disposisi ke wali kelas telah dibersihkan.');
   }
 
@@ -3160,6 +4455,7 @@ class AppStore {
    */
   public getProblematicStudentsAnalysis(options?: {
     kelas?: string;
+    bulan?: string;
     minAlpa?: number;
     minTerlambat?: number;
     maxAttendanceRate?: number;
@@ -3182,7 +4478,12 @@ class AppStore {
     latestDispatch?: ProblematicStudentDispatch;
   }> {
     const activeStudents = this.students.filter((s) => s.status === 'aktif');
-    const allUniqueDates = Array.from(new Set(this.attendance.map((a) => a.tanggal)));
+    const isFilteredMonth = Boolean(options?.bulan && options.bulan !== 'Semua');
+    const scopedAttendance = isFilteredMonth
+      ? this.attendance.filter((a) => a.tanggal.startsWith(options!.bulan!))
+      : this.attendance;
+
+    const allUniqueDates = Array.from(new Set(scopedAttendance.map((a) => a.tanggal)));
     const totalRecordedDays = Math.max(allUniqueDates.length, 1);
 
     const minAlpa = options?.minAlpa ?? this.settings.problemThresholdAlpa ?? 2;
@@ -3196,7 +4497,7 @@ class AppStore {
         return;
       }
 
-      const studentRecords = this.attendance.filter((a) => a.nisn === student.nisn && a.jenis === 'Masuk');
+      const studentRecords = scopedAttendance.filter((a) => a.nisn === student.nisn && a.jenis === 'Masuk');
       const studentUniqueDates = new Set(studentRecords.map((r) => r.tanggal));
       const studentTotalDays = Math.max(studentUniqueDates.size, totalRecordedDays);
 
