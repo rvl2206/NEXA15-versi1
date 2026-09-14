@@ -50,8 +50,17 @@ import {
   Wifi,
   WifiOff,
   CreditCard,
+  Upload,
+  AlertCircle,
+  ArrowRight,
+  ZoomIn,
+  ZoomOut,
+  Sun,
+  Maximize2,
+  Focus,
 } from 'lucide-react';
 import { toast } from '../lib/toast';
+import { LupaKartuModal } from './LupaKartuModal';
 
 interface QRScannerProps {
   currentOfficer: string;
@@ -64,7 +73,7 @@ interface ScanOutcome {
   isDuplicate?: boolean;
   isOffline?: boolean;
   targetMode?: ScanTargetMode;
-  scanMethod?: 'QR' | 'RFID';
+  scanMethod?: 'QR' | 'RFID' | 'Manual';
   student?: Student;
   teacher?: Teacher;
   record?: AttendanceRecord;
@@ -107,6 +116,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [availableCameras, setAvailableCameras] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [scanFlash, setScanFlash] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCheckingCamera, setIsCheckingCamera] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Solusi QR Kecil & Kamera Presisi Cepat
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [isSmallQrMode, setIsSmallQrMode] = useState<boolean>(false);
+  const [hasHardwareZoom, setHasHardwareZoom] = useState<boolean>(false);
+  const [hasTorch, setHasTorch] = useState<boolean>(false);
+  const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
+  const [scanResolution, setScanResolution] = useState<'hd' | 'fullhd' | 'auto'>('hd');
+  const [showQrTips, setShowQrTips] = useState<boolean>(false);
 
   const [countdown, setCountdown] = useState<number>(3);
   const [lastScannedQR, setLastScannedQR] = useState<string>('');
@@ -115,10 +136,64 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [selectedStudentForQR, setSelectedStudentForQR] = useState<string>('');
   const [selectedTeacherForQR, setSelectedTeacherForQR] = useState<string>('');
   const [manualInput, setManualInput] = useState('');
+  const [showLupaKartuModal, setShowLupaKartuModal] = useState<boolean>(false);
+  const [todayLupaKartuCount, setTodayLupaKartuCount] = useState<number>(() => store.getTodayLupaKartuList().total);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isProcessingRef = useRef<boolean>(false);
   const recentScanTimesRef = useRef<Map<string, number>>(new Map());
+
+  const handleLupaKartuRecorded = (result: {
+    success: boolean;
+    student?: Student;
+    teacher?: Teacher;
+    record?: AttendanceRecord;
+    teacherRecord?: TeacherAttendanceRecord;
+    type?: AttendanceType;
+    status?: AttendanceStatus | TeacherAttendanceStatus;
+    message: string;
+    isDuplicate?: boolean;
+    isLate?: boolean;
+    lateMinutes?: number;
+  }) => {
+    const targetName = result.student?.nama || result.teacher?.nama || 'Siswa/Guru';
+    const outcome: ScanOutcome = {
+      success: result.success,
+      isDuplicate: result.isDuplicate,
+      targetMode: result.student ? 'siswa' : 'guru',
+      scanMethod: 'Manual',
+      student: result.student,
+      teacher: result.teacher,
+      record: result.record,
+      teacherRecord: result.teacherRecord,
+      type: (result.type as 'Masuk' | 'Pulang') || 'Masuk',
+      status: result.status,
+      message: result.message,
+      scannedCode: result.student?.nisn || result.teacher?.nip || 'MANUAL-LUPA-KARTU',
+      timestamp: new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    };
+
+    setScanResult(outcome);
+    setScanFeed((prev) => [outcome, ...prev].slice(0, 30));
+
+    if (soundEnabled) {
+      if (result.success) {
+        playSuccessSound();
+        playVoiceFeedback(targetName, (result.status as string) || 'Hadir', true);
+      } else {
+        playErrorSound();
+      }
+    }
+
+    if (modalDuration > 0 && !rapidQueueMode) {
+      setShowModal(true);
+      setCountdown(modalDuration);
+    }
+  };
 
   const handleTriggerBulkPulang1430 = () => {
     const todayTarget = store.getTodayYyyyMmDd();
@@ -194,6 +269,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       setStudentsList(store.getStudents());
       setTeachersList(store.getTeachers());
       setOfflineQueueCount(store.getOfflineQueueCount());
+      setTodayLupaKartuCount(store.getTodayLupaKartuList().total);
     });
 
     fetchAvailableCameras();
@@ -314,7 +390,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
   const fetchAvailableCameras = async () => {
     try {
-      const devices = await Html5Qrcode.getCameras();
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+        return;
+      }
+      const devices = await Html5Qrcode.getCameras().catch(() => []);
       if (devices && devices.length > 0) {
         const formatted = devices.map((d) => ({
           id: d.id,
@@ -335,7 +414,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         setSelectedCameraId(backCam.id);
       }
     } catch (e) {
-      console.log('Failed to enumerate video devices:', e);
+      console.warn('Note: Video devices not enumerated:', e);
     }
   };
 
@@ -719,64 +798,349 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     setSelectedTeacherForQR('');
   };
 
+  const applyZoom = async (targetZoom: number, activeTrack?: MediaStreamTrack) => {
+    setZoomLevel(targetZoom);
+
+    // 1. Hardware Zoom on MediaStreamTrack
+    try {
+      let track = activeTrack;
+      if (!track) {
+        const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+        const stream = videoEl?.srcObject as MediaStream | null;
+        track = stream?.getVideoTracks()[0];
+      }
+      if (track) {
+        const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+        if (caps && caps.zoom) {
+          const minZ = caps.zoom.min || 1;
+          const maxZ = caps.zoom.max || 4;
+          const clamped = Math.max(minZ, Math.min(maxZ, targetZoom));
+          await track.applyConstraints({
+            advanced: [{ zoom: clamped } as any],
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Hardware zoom note:', err);
+    }
+
+    // 2. Universal Digital CSS Zoom on #reader video
+    const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+    if (videoEl) {
+      videoEl.style.transform = targetZoom > 1.02 ? `scale(${targetZoom})` : 'none';
+      videoEl.style.transformOrigin = 'center center';
+      videoEl.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+  };
+
+  const toggleTorch = async () => {
+    try {
+      const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+      const stream = videoEl?.srcObject as MediaStream | null;
+      const track = stream?.getVideoTracks()[0];
+      if (track) {
+        const nextState = !isTorchOn;
+        await track.applyConstraints({
+          advanced: [{ torch: nextState } as any],
+        });
+        setIsTorchOn(nextState);
+        if (nextState) {
+          toast.info('Lampu Kilat Menyala', 'Membantu pembacaan kode QR di tempat kurang cahaya.');
+        } else {
+          toast.info('Lampu Kilat Dimatikan');
+        }
+      }
+    } catch (e) {
+      toast.warning('Lampu Kilat Tidak Tersedia', 'Perangkat ini tidak mendukung kontrol lampu senter.');
+    }
+  };
+
+  const toggleSmallQrMode = async () => {
+    const nextMode = !isSmallQrMode;
+    setIsSmallQrMode(nextMode);
+    if (nextMode) {
+      await applyZoom(2.0);
+      toast.success(
+        'Mode QR Kecil Aktif (Zoom 2.0x)',
+        'Kamera otomatis diperbesar 2x. Posisikan kartu pada jarak 15–20 cm dari lensa agar fokus tajam & cepat terbaca.',
+        5000
+      );
+    } else {
+      await applyZoom(1.0);
+      toast.info('Mode Normal (1.0x)', 'Zoom kamera dikembalikan ke posisi standar.');
+    }
+  };
+
   const startCamera = async (camIdOverride?: string) => {
+    setIsCheckingCamera(true);
+    setCameraError(null);
+
     try {
       await stopCamera();
-      setIsCameraActive(true);
       setScanResult(null);
+
+      // Verify browser support for mediaDevices
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Browser ini tidak mendukung akses kamera langsung (MediaDevices API tidak tersedia).';
+        setCameraError(errorMsg);
+        setIsCameraActive(false);
+        setIsCheckingCamera(false);
+        toast.warning('Kamera Tidak Didukung', errorMsg, 5000);
+        return;
+      }
+
+      // Check available devices
+      let currentDevices: Array<{ id: string; label: string }> = availableCameras;
+      if (currentDevices.length === 0) {
+        try {
+          const fetched = await Html5Qrcode.getCameras();
+          if (fetched && fetched.length > 0) {
+            currentDevices = fetched.map((d) => ({
+              id: d.id,
+              label: d.label || `Kamera ${d.id.substring(0, 6)}`,
+            }));
+            setAvailableCameras(currentDevices);
+          }
+        } catch {
+          // getCameras might throw if no devices or permissions
+        }
+      }
 
       // Brief DOM mount pause
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const targetCamId = camIdOverride || selectedCameraId;
+      const readerEl = document.getElementById('reader');
+      if (!readerEl) {
+        setIsCheckingCamera(false);
+        return;
+      }
 
       const html5QrCode = new Html5Qrcode('reader', {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+        },
         verbose: false,
       });
       scannerRef.current = html5QrCode;
 
+      const getResConstraints = () => {
+        if (scanResolution === 'fullhd') {
+          return { width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } };
+        }
+        if (scanResolution === 'hd') {
+          return { width: { ideal: 1280, min: 960 }, height: { ideal: 720, min: 540 } };
+        }
+        return {};
+      };
+
       const config = {
         fps: scanFps,
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-          const edgeSize = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+          const factor = isSmallQrMode ? 0.85 : 0.75;
+          const edgeSize = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * factor);
           return { width: edgeSize, height: edgeSize };
         },
         aspectRatio: 1.0,
         disableFlip: false,
+        videoConstraints: {
+          ...getResConstraints(),
+          facingMode: 'environment',
+          focusMode: { ideal: 'continuous' } as any,
+        },
       };
 
-      const cameraConstraint = targetCamId
-        ? { deviceId: { exact: targetCamId } }
-        : { facingMode: 'environment' };
+      const targetCamId =
+        camIdOverride || selectedCameraId || (currentDevices.length > 0 ? currentDevices[0].id : '');
 
-      await html5QrCode.start(
-        cameraConstraint,
-        config,
-        (decodedText) => {
-          processScannedCode(decodedText);
-        },
-        () => {
-          // Ignore parse frames
+      let started = false;
+      let lastErr: any = null;
+
+      // Tier 1: Target camera ID if available
+      if (targetCamId) {
+        try {
+          await html5QrCode.start(
+            targetCamId,
+            config,
+            (decodedText) => processScannedCode(decodedText),
+            () => {}
+          );
+          started = true;
+          setSelectedCameraId(targetCamId);
+        } catch (e: any) {
+          lastErr = e;
+          console.warn('Camera start with targetCamId failed, attempting fallback:', e?.message || e);
         }
-      );
+      }
+
+      // Tier 2: Rear / environment camera
+      if (!started) {
+        try {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            (decodedText) => processScannedCode(decodedText),
+            () => {}
+          );
+          started = true;
+        } catch (e: any) {
+          lastErr = e;
+          console.warn('Camera start with facingMode environment failed, trying user camera:', e?.message || e);
+        }
+      }
+
+      // Tier 3: Front / user webcam
+      if (!started) {
+        try {
+          await html5QrCode.start(
+            { facingMode: 'user' },
+            config,
+            (decodedText) => processScannedCode(decodedText),
+            () => {}
+          );
+          started = true;
+        } catch (e: any) {
+          lastErr = e;
+          console.warn('Camera start with facingMode user failed:', e?.message || e);
+        }
+      }
+
+      // Tier 4: Try any detected camera device ID
+      if (!started && currentDevices.length > 0) {
+        try {
+          await html5QrCode.start(
+            currentDevices[0].id,
+            config,
+            (decodedText) => processScannedCode(decodedText),
+            () => {}
+          );
+          started = true;
+          setSelectedCameraId(currentDevices[0].id);
+        } catch (e: any) {
+          lastErr = e;
+        }
+      }
+
+      if (started) {
+        setIsCameraActive(true);
+        setCameraError(null);
+
+        // Inspect hardware capabilities (zoom & torch) and re-apply current zoom
+        setTimeout(() => {
+          try {
+            const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+            const stream = videoEl?.srcObject as MediaStream | null;
+            const track = stream?.getVideoTracks()[0];
+            if (track) {
+              const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+              if (caps && caps.zoom) {
+                setHasHardwareZoom(true);
+              } else {
+                setHasHardwareZoom(false);
+              }
+              if (caps && caps.torch) {
+                setHasTorch(true);
+              } else {
+                setHasTorch(false);
+              }
+
+              const targetZ = isSmallQrMode && zoomLevel === 1.0 ? 2.0 : zoomLevel;
+              if (targetZ > 1.0) {
+                applyZoom(targetZ, track);
+              }
+            }
+          } catch (e) {
+            console.warn('Track capabilities check error:', e);
+          }
+        }, 350);
+      } else {
+        throw lastErr || new Error('Tidak ada kamera yang dapat diakses');
+      }
     } catch (err: any) {
-      console.error('Camera activation error:', err);
+      console.warn('Camera activation note (device not found or access denied):', err?.message || err);
       setIsCameraActive(false);
+
+      const errMsg = err?.message || String(err || '');
+      let friendlyMessage = 'Kamera tidak dapat diakses atau tidak merespons.';
+
+      if (
+        errMsg.includes('NotFound') ||
+        err?.name === 'NotFoundError' ||
+        errMsg.includes('Requested device not found') ||
+        errMsg.includes('no camera') ||
+        errMsg.includes('DevicesNotFoundError')
+      ) {
+        friendlyMessage =
+          'Kamera tidak ditemukan pada perangkat ini. Pastikan webcam terhubung atau gunakan scanner USB / input manual NISN/NIP.';
+      } else if (
+        errMsg.includes('NotAllowed') ||
+        err?.name === 'NotAllowedError' ||
+        errMsg.includes('Permission')
+      ) {
+        friendlyMessage = 'Akses kamera ditolak. Silakan berikan izin kamera pada peramban (browser) Anda.';
+      } else if (
+        errMsg.includes('NotReadable') ||
+        err?.name === 'NotReadableError' ||
+        errMsg.includes('busy')
+      ) {
+        friendlyMessage = 'Kamera sedang digunakan oleh program atau aplikasi lain. Tutup aplikasi tersebut dan coba lagi.';
+      }
+
+      setCameraError(friendlyMessage);
+      toast.warning('Kamera Tidak Ditemukan / Nonaktif', friendlyMessage, 6000);
+    } finally {
+      setIsCheckingCamera(false);
     }
   };
 
   const stopCamera = async () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
+    if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
         scannerRef.current.clear();
       } catch (e) {
-        console.log('Scanner stop error:', e);
+        console.warn('Scanner stop note:', e);
       }
     }
     scannerRef.current = null;
     setIsCameraActive(false);
+    setIsTorchOn(false);
+
+    // Reset CSS zoom transform
+    const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+    if (videoEl) {
+      videoEl.style.transform = 'none';
+    }
+  };
+
+  const handleScanFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      toast.info('Memproses Gambar...', 'Mendeteksi QR Code dari gambar yang diunggah.');
+      let html5QrCode = scannerRef.current;
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode('reader', {
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          verbose: false,
+        });
+      }
+      const decodedText = await html5QrCode.scanFile(file, true);
+      if (decodedText) {
+        processScannedCode(decodedText);
+        toast.success('QR Code Berhasil Terbaca!', `Kode: ${decodedText}`);
+      }
+    } catch (err: any) {
+      console.warn('QR file scan error:', err);
+      toast.error('Gagal Membaca QR dari File', 'Pastikan gambar mengandung QR code yang jelas dan tidak buram.');
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   return (
@@ -863,6 +1227,23 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             >
               <Briefcase className="w-4 h-4" />
               <span>Presensi Guru & Staf</span>
+            </button>
+
+            {/* Dedicated Lupa Kartu Button for Picket & Admin */}
+            <button
+              type="button"
+              id="btn-lupa-kartu-piket"
+              onClick={() => setShowLupaKartuModal(true)}
+              className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-sm hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
+              title="Buka Formulir Presensi Siswa/Guru Lupa Kartu (Piket & Admin)"
+            >
+              <CreditCard className="w-4 h-4 text-amber-100" />
+              <span>Lupa Kartu (Piket)</span>
+              {todayLupaKartuCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 bg-white/30 text-white text-[10px] font-black rounded-full border border-white/40">
+                  {todayLupaKartuCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -1124,6 +1505,95 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             {/* Target element for html5-qrcode */}
             <div id="reader" className="w-full h-full"></div>
 
+            {/* Small QR Mode / Zoom Viewfinder Reticle Indicator */}
+            {isCameraActive && isSmallQrMode && (
+              <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-amber-400/80 rounded-2xl pointer-events-none z-10 flex flex-col justify-between p-2 shadow-inner">
+                <div className="flex justify-between items-center text-[10px] font-black text-amber-300">
+                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40">
+                    MACRO ZOOM {zoomLevel.toFixed(1)}X
+                  </span>
+                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40">
+                    HD SCAN
+                  </span>
+                </div>
+                <div className="self-center bg-slate-950/85 px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-200 border border-amber-500/40 backdrop-blur-sm shadow-md">
+                  Jarak Kartu Ideal: 15–20 cm
+                </div>
+              </div>
+            )}
+
+            {/* Viewfinder Floating Top Badge (Small QR Mode active) */}
+            {isCameraActive && (isSmallQrMode || zoomLevel > 1.05) && (
+              <div className="absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none">
+                <span className="bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-lg animate-pulse">
+                  <ZoomIn className="w-3.5 h-3.5" />
+                  <span>Mode QR Kecil ({zoomLevel.toFixed(1)}x)</span>
+                </span>
+                <span className="bg-slate-950/80 text-amber-200 px-2 py-0.5 rounded-lg text-[10px] font-bold border border-amber-500/40 backdrop-blur-sm shadow">
+                  Fokus Cepat Aktif
+                </span>
+              </div>
+            )}
+
+            {/* Viewfinder Floating Bottom Control HUD */}
+            {isCameraActive && (
+              <div className="absolute bottom-3 inset-x-3 z-20 flex items-center justify-between gap-1.5 p-1.5 bg-slate-950/85 backdrop-blur-md rounded-xl border border-white/10 shadow-xl">
+                {/* Zoom Quick Select Chips */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-extrabold text-slate-400 pl-1 flex items-center gap-0.5">
+                    <ZoomIn className="w-3 h-3 text-amber-400" />
+                    <span className="hidden sm:inline">Zoom:</span>
+                  </span>
+                  {[1.0, 1.5, 2.0, 2.5].map((z) => (
+                    <button
+                      key={z}
+                      type="button"
+                      onClick={() => applyZoom(z)}
+                      className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        Math.abs(zoomLevel - z) < 0.05
+                          ? 'bg-amber-400 text-slate-950 shadow-sm font-black'
+                          : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title={`Zoom ${z.toFixed(1)}x`}
+                    >
+                      {z.toFixed(1)}x
+                    </button>
+                  ))}
+                </div>
+
+                {/* Torch / Flashlight & Small QR Toggle */}
+                <div className="flex items-center gap-1">
+                  {hasTorch && (
+                    <button
+                      type="button"
+                      onClick={toggleTorch}
+                      className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                        isTorchOn
+                          ? 'bg-amber-400 text-slate-950 font-bold shadow'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title={isTorchOn ? 'Matikan Lampu Kilat' : 'Nyalakan Lampu Kilat Kamera (Senter)'}
+                    >
+                      <Sun className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleSmallQrMode}
+                    className={`px-2 py-1 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                      isSmallQrMode
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                        : 'bg-slate-800 text-amber-300 hover:bg-slate-700 border border-amber-500/30'
+                    }`}
+                    title="Aktifkan/Nonaktifkan pembesar kamera untuk QR berukuran kecil"
+                  >
+                    <Zap className="w-3 h-3 text-amber-300" />
+                    <span>{isSmallQrMode ? 'QR Kecil: ON' : 'QR Kecil'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Offline Viewfinder Warning Overlay Badge */}
             {!isOnline && isCameraActive && (
               <div className="absolute top-3 inset-x-3 z-30 pointer-events-none">
@@ -1140,23 +1610,54 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             )}
 
             {!isCameraActive && (
-              <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center text-center p-6 space-y-3 z-10">
-                <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center shadow-md">
-                  <QrCode className="w-8 h-8" />
+              <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center text-center p-6 space-y-3 z-10 overflow-y-auto">
+                <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center shadow-md flex-shrink-0">
+                  {cameraError ? (
+                    <CameraOff className="w-7 h-7 text-amber-400" />
+                  ) : (
+                    <QrCode className="w-7 h-7" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-base">Kamera Siap Diaktifkan</h3>
-                  <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                    Klik tombol di bawah untuk membuka pemindaian kamera secara langsung.
+                  <h3 className="text-white font-bold text-sm sm:text-base">
+                    {cameraError ? 'Kamera Tidak Terdeteksi / Siaga' : 'Kamera Siap Diaktifkan'}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 max-w-sm leading-relaxed">
+                    {cameraError ||
+                      'Klik tombol di bawah untuk membuka pemindaian kamera secara langsung.'}
                   </p>
                 </div>
-                <button
-                  onClick={() => startCamera()}
-                  className="mt-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Mulai Scan Kamera Now</span>
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    disabled={isCheckingCamera}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    {isCheckingCamera ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                    <span>{cameraError ? 'Coba Hubungkan Kamera' : 'Mulai Scan Kamera Now'}</span>
+                  </button>
+                  <label className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+                    <Upload className="w-4 h-4 text-cyan-400" />
+                    <span>Unggah Gambar QR</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScanFile}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {cameraError && (
+                  <p className="text-[11px] text-slate-400 max-w-xs mt-1">
+                    💡 <span className="font-semibold text-slate-300">Alternatif Cepat:</span> Gunakan input manual NISN/NIP atau alat scanner barcode/RFID USB pada kotak di bawah.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -1250,6 +1751,136 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </div>
           </div>
 
+          {/* Solusi Scan Cepat & Pembesar QR Kecil (Macro Zoom HD & Native Engine) */}
+          <div className="w-full mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/80 via-orange-50/50 to-amber-50/80 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 shadow-sm space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md flex-shrink-0">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                      Solusi Scan Cepat & QR Kecil
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                      Macro HD Engine
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Solusi agar QR fisik kecil (kartu pelajar/pegawai) terbaca seketika tanpa perlu menempelkan kartu terlalu dekat.
+                  </p>
+                </div>
+              </div>
+
+              {/* 1-Click Toggle Mode QR Kecil */}
+              <button
+                type="button"
+                id="btn-toggle-small-qr-mode"
+                onClick={toggleSmallQrMode}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                  isSmallQrMode
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white ring-2 ring-amber-400/50 shadow-md'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:border-amber-400'
+                }`}
+              >
+                <ZoomIn className={`w-4 h-4 ${isSmallQrMode ? 'text-white' : 'text-amber-500'}`} />
+                <span>{isSmallQrMode ? 'Mode QR Kecil (AKTIF 2.0x)' : 'Aktifkan Mode QR Kecil'}</span>
+              </button>
+            </div>
+
+            {/* Interactive Zoom Controls & Settings */}
+            <div className="pt-2.5 border-t border-amber-200/60 dark:border-amber-800/40 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {/* Zoom Presets */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <ZoomIn className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Tingkat Zoom Kamera:</span>
+                  </span>
+                  <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                    {zoomLevel.toFixed(1)}x {zoomLevel >= 2.0 ? '• Optimal QR Kecil' : '• Normal'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[1.0, 1.5, 2.0, 2.5, 3.0].map((z) => (
+                    <button
+                      key={z}
+                      type="button"
+                      onClick={() => applyZoom(z)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                        Math.abs(zoomLevel - z) < 0.05
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {z.toFixed(1)}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resolution & Engine Status */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <Maximize2 className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Resolusi Sensor:</span>
+                  </span>
+                  <select
+                    value={scanResolution}
+                    onChange={(e) => {
+                      const newRes = e.target.value as 'hd' | 'fullhd' | 'auto';
+                      setScanResolution(newRes);
+                      if (isCameraActive) startCamera(undefined);
+                    }}
+                    className="px-2 py-0.5 text-[11px] font-extrabold rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value="hd">HD 720p (Rekomendasi Cepat)</option>
+                    <option value="fullhd">Full HD 1080p (Paling Detail)</option>
+                    <option value="auto">Auto Resolusi</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    <span>Akselerasi BarcodeDetector Aktif</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrTips(!showQrTips)}
+                    className="text-amber-700 dark:text-amber-400 font-extrabold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Info className="w-3 h-3" />
+                    <span>{showQrTips ? 'Tutup Tips' : 'Tips Scan Cepat'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Explanatory Guide Box (Tips QR Kecil) */}
+            {showQrTips && (
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 text-[11px] text-slate-600 dark:text-slate-300 space-y-2 animate-fadeIn">
+                <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-amber-500" />
+                  <span>Petunjuk Agar QR Code Kecil Terbaca Kilat (0.1 Detik):</span>
+                </div>
+                <ul className="space-y-1.5 text-slate-600 dark:text-slate-400 list-disc list-inside">
+                  <li>
+                    <strong className="text-slate-800 dark:text-slate-200">Gunakan Zoom 2.0x (Macro):</strong> QR code yang kecil jangan didekatkan terlalu dekat (&lt;10 cm) karena lensa webcam akan blur/buram akibat melewati titik fokus terdekat. Dengan Zoom 2.0x, QR code langsung tampak besar dan tajam dari jarak aman.
+                  </li>
+                  <li>
+                    <strong className="text-slate-800 dark:text-slate-200">Jaga Jarak 15 – 20 cm:</strong> Ini adalah jarak optimal di mana sensor kamera dapat menangkap detail garis QR hitam-putih dengan kontras maksimal.
+                  </li>
+                  <li>
+                    <strong className="text-slate-800 dark:text-slate-200">Hindari Pantulan Lampu (Glare):</strong> Jika kartu siswa dilaminasi plastik berkilau, miringkan kartu sedikit 15° agar pantulan cahaya lampu ruangan tidak menutupi pola QR.
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+
           {/* Hardware Scanner, USB RFID Reader & Web NFC Card */}
           <div className="w-full mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex-wrap gap-2">
@@ -1311,6 +1942,22 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 <span>Proses Scan</span>
               </button>
             </form>
+
+            {/* Quick helper for Lupa Kartu */}
+            <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                <span>Siswa atau Guru tidak membawa kartu fisik?</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowLupaKartuModal(true)}
+                className="inline-flex items-center gap-1 text-xs font-extrabold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 underline decoration-amber-400 underline-offset-2 cursor-pointer"
+              >
+                <span>Buka Presensi Lupa Kartu</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1503,6 +2150,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                               className={`font-extrabold text-[9px] px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 border ${
                                 scanResult.scanMethod === 'RFID'
                                   ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                                  : scanResult.scanMethod === 'Manual'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                                   : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                               }`}
                             >
@@ -1510,6 +2159,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                                 <>
                                   <CreditCard className="w-2.5 h-2.5" />
                                   <span>RFID Card</span>
+                                </>
+                              ) : scanResult.scanMethod === 'Manual' ? (
+                                <>
+                                  <AlertCircle className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                  <span>Lupa Kartu (Piket)</span>
                                 </>
                               ) : (
                                 <>
@@ -1519,6 +2173,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                               )}
                             </span>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Display note or reason if available */}
+                      {scanResult.record?.catatan && (
+                        <div className="text-[11px] bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <span className="font-bold">Keterangan: </span>
+                          <span>{scanResult.record.catatan}</span>
                         </div>
                       )}
 
@@ -1975,6 +2637,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
         </div>
       )}
+
+      {/* Modal Presensi Lupa Kartu untuk Piket & Admin */}
+      <LupaKartuModal
+        isOpen={showLupaKartuModal}
+        onClose={() => setShowLupaKartuModal(false)}
+        currentOfficer={currentOfficer}
+        initialTarget={scanTargetMode === 'guru' ? 'guru' : 'siswa'}
+        onAttendanceRecorded={handleLupaKartuRecorded}
+      />
     </div>
   );
 };

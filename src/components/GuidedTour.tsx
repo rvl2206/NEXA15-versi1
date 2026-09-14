@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Joyride, CallBackProps, STATUS, Step } from 'react-joyride';
+import { Joyride, EventData, STATUS, Step } from 'react-joyride';
 
 interface GuidedTourProps {
   run: boolean;
@@ -25,7 +25,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
             </p>
           </div>
         ),
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: '.tour-step-dashboard',
@@ -38,7 +38,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
           </div>
         ),
         placement: 'right',
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: '.tour-step-dashboard-summary',
@@ -51,7 +51,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
           </div>
         ),
         placement: 'bottom',
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: '.tour-step-scan',
@@ -64,7 +64,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
           </div>
         ),
         placement: 'right',
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: '.tour-step-recap',
@@ -77,7 +77,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
           </div>
         ),
         placement: 'right',
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: '.tour-step-students',
@@ -90,7 +90,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
           </div>
         ),
         placement: 'right',
-        disableBeacon: true,
+        skipBeacon: true,
       },
       {
         target: 'body',
@@ -103,36 +103,35 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ run, onFinish, activeTab
             </p>
           </div>
         ),
+        skipBeacon: true,
       },
     ]);
-  }, [activeTab]); // Include activeTab if dynamic re-render is needed, but mostly static.
+  }, [activeTab]);
 
-  const handleJoyrideCallback = (data: CallBackProps) => {
+  const handleJoyrideCallback = (data: EventData) => {
     const { status } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
-    if (finishedStatuses.includes(status)) {
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       onFinish();
     }
   };
 
   return (
     <Joyride
-      callback={handleJoyrideCallback}
+      onEvent={handleJoyrideCallback}
       continuous
-      hideCloseButton
       run={run}
       scrollToFirstStep
-      showProgress
-      showSkipButton
       steps={steps}
+      options={{
+        zIndex: 10000,
+        primaryColor: '#3b82f6',
+        backgroundColor: '#ffffff',
+        textColor: '#1e293b',
+        buttons: ['back', 'skip', 'primary'],
+        showProgress: true,
+      }}
       styles={{
-        options: {
-          zIndex: 10000,
-          primaryColor: '#3b82f6', // blue-500
-          backgroundColor: '#ffffff',
-          textColor: '#1e293b', // slate-800
-        },
-        buttonNext: {
+        buttonPrimary: {
           backgroundColor: '#3b82f6',
           fontSize: '12px',
           padding: '8px 12px',

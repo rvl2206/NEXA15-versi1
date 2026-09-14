@@ -3166,6 +3166,371 @@ class AppStore {
     };
   }
 
+  /**
+   * Fitur Presensi Lupa Kartu untuk Siswa atau Guru & Tenaga Kependidikan.
+   * Memudahkan petugas piket dan admin mencatat presensi tanpa kartu fisik (RFID/QR).
+   * Menandai metode scan sebagai 'Manual', melampirkan alasan lupa kartu, dan mencatat petugas pencatat.
+   */
+  public recordLupaKartu(params: {
+    targetType: 'siswa' | 'guru';
+    targetId: string;
+    jenis?: AttendanceType | 'Auto';
+    statusOverride?: AttendanceStatus | TeacherAttendanceStatus;
+    alasan: string;
+    catatanTambahan?: string;
+    officer?: string;
+  }): {
+    success: boolean;
+    isDuplicate?: boolean;
+    record?: AttendanceRecord;
+    teacherRecord?: TeacherAttendanceRecord;
+    student?: Student;
+    teacher?: Teacher;
+    message: string;
+    type?: AttendanceType;
+    status?: AttendanceStatus | TeacherAttendanceStatus;
+    isLate?: boolean;
+    lateMinutes?: number;
+  } {
+    const todayStr = this.getTodayFormatted();
+    const now = new Date();
+    const nowISO = now.toISOString();
+    const officerName = formatPetugasRole(params.officer || 'Petugas Piket');
+    const alasanClean = params.alasan.trim() || 'Kartu Tertinggal di Rumah';
+    const noteSuffix = params.catatanTambahan?.trim() ? ` • ${params.catatanTambahan.trim()}` : '';
+    const fullNote = `[LUPA KARTU] ${alasanClean}${noteSuffix}`;
+
+    // Determine current hour in WIT (UTC+9)
+    let currentHourWIT = now.getHours();
+    let currentMinuteWIT = now.getMinutes();
+    try {
+      const witTimeParts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jayapura',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(now);
+      const hPart = witTimeParts.find((p) => p.type === 'hour');
+      const mPart = witTimeParts.find((p) => p.type === 'minute');
+      if (hPart) currentHourWIT = parseInt(hPart.value, 10);
+      if (mPart) currentMinuteWIT = parseInt(mPart.value, 10);
+    } catch {
+      // Fallback
+    }
+
+    if (params.targetType === 'guru') {
+      const teacher = this.teachers.find(
+        (t) =>
+          t.id === params.targetId ||
+          (t.nip && t.nip.trim() === params.targetId.trim()) ||
+          t.nama.toLowerCase() === params.targetId.toLowerCase()
+      );
+
+      if (!teacher) {
+        return { success: false, message: 'Data guru tidak ditemukan di database.' };
+      }
+
+      if (teacher.status === 'nonaktif') {
+        return { success: false, teacher, message: `Guru ${teacher.nama} berstatus nonaktif di sistem.` };
+      }
+
+      const teacherDayRecords = this.teacherAttendance.filter(
+        (a) =>
+          this.isTeacherRecordForToday(a) &&
+          ((teacher.nip && a.nip && a.nip.trim() === teacher.nip.trim()) || a.nama.trim().toLowerCase() === teacher.nama.trim().toLowerCase())
+      );
+
+      const masukRecord = teacherDayRecords.find((a) => a.jenis === 'Masuk' && a.status !== 'Alpa');
+      const pulangRecord = teacherDayRecords.find((a) => a.jenis === 'Pulang');
+
+      let jenis: AttendanceType = 'Masuk';
+      if (params.jenis && params.jenis !== 'Auto') {
+        jenis = params.jenis;
+      } else if (masukRecord && !pulangRecord) {
+        jenis = 'Pulang';
+      } else {
+        jenis = 'Masuk';
+      }
+
+      // Duplicate check
+      if (masukRecord && pulangRecord) {
+        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
+        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          teacher,
+          teacherRecord: pulangRecord,
+          type: 'Pulang',
+          status: pulangRecord.status,
+          message: `DITOLAK: Guru ${teacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
+        };
+      }
+
+      if (jenis === 'Masuk' && masukRecord) {
+        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          teacher,
+          teacherRecord: masukRecord,
+          type: 'Masuk',
+          status: masukRecord.status,
+          message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${masukRecord.status}).`,
+        };
+      }
+
+      if (jenis === 'Pulang' && pulangRecord) {
+        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          teacher,
+          teacherRecord: pulangRecord,
+          type: 'Pulang',
+          status: pulangRecord.status,
+          message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI PULANG hari ini pada pukul ${pTime}.`,
+        };
+      }
+
+      let status: TeacherAttendanceStatus = (params.statusOverride as TeacherAttendanceStatus) || 'Hadir';
+      let isLate = false;
+      let lateMinutes = 0;
+
+      if (jenis === 'Masuk' && !params.statusOverride) {
+        const cutoffTimeStr = this.settings.cutoffTime || '07:15';
+        const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
+        const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
+        const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
+
+        if (nowMinutes > cutoffMinutes) {
+          status = 'Terlambat';
+          isLate = true;
+          lateMinutes = nowMinutes - cutoffMinutes;
+        }
+      } else if (jenis === 'Pulang' && !params.statusOverride && masukRecord) {
+        status = masukRecord.status;
+      }
+
+      const newRecord: TeacherAttendanceRecord = {
+        id: `att-t-lk-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        tanggal: todayStr,
+        timestamp: nowISO,
+        nip: teacher.nip,
+        nama: teacher.nama,
+        jabatan: teacher.jabatan,
+        id_qr: teacher.id_qr || `NEXA15.GURU.${teacher.nip}.${teacher.nama}`,
+        rfid_uid: teacher.rfid_uid,
+        scan_method: 'Manual',
+        jenis,
+        status,
+        petugas: officerName,
+        catatan: fullNote,
+        terlambatMenit: lateMinutes,
+      };
+
+      this.teacherAttendance.unshift(newRecord);
+      this.notify();
+      this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
+
+      const logDetails = `Presensi Lupa Kartu Guru [${jenis.toUpperCase()}-${status.toUpperCase()}]: ${teacher.nama} (${teacher.jabatan}) - Alasan: ${alasanClean} oleh ${officerName}`;
+      this.addLog(`LUPA_KARTU_GURU_${jenis.toUpperCase()}`, logDetails);
+
+      const timeFormatted = this.formatRecordTimeWIT(nowISO);
+      const msg = `Presensi LUPA KARTU (${jenis.toUpperCase()} - ${status.toUpperCase()}) berhasil dicatat untuk ${teacher.nama} pada ${timeFormatted}.`;
+
+      return {
+        success: true,
+        isDuplicate: false,
+        teacherRecord: newRecord,
+        teacher,
+        message: msg,
+        type: jenis,
+        status,
+        isLate,
+        lateMinutes,
+      };
+    } else {
+      // Siswa
+      const student = this.students.find(
+        (s) =>
+          s.id === params.targetId ||
+          (s.nisn && s.nisn.trim() === params.targetId.trim()) ||
+          s.nama.toLowerCase() === params.targetId.toLowerCase()
+      );
+
+      if (!student) {
+        return { success: false, message: 'Data siswa tidak ditemukan di database.' };
+      }
+
+      if (student.status === 'nonaktif') {
+        return { success: false, student, message: `Siswa ${student.nama} berstatus nonaktif di sistem.` };
+      }
+
+      const studentDayRecords = this.attendance.filter(
+        (a) =>
+          this.isRecordForToday(a) &&
+          ((student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
+            a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase())
+      );
+
+      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk' && a.status !== 'Alpa');
+      const pulangRecord = studentDayRecords.find((a) => a.jenis === 'Pulang');
+      const autoAlpaRecord = studentDayRecords.find((a) => a.status === 'Alpa');
+
+      let jenis: AttendanceType = 'Masuk';
+      if (params.jenis && params.jenis !== 'Auto') {
+        jenis = params.jenis;
+      } else if (masukRecord && !pulangRecord) {
+        jenis = 'Pulang';
+      } else {
+        jenis = 'Masuk';
+      }
+
+      // Duplicate check
+      if (masukRecord && pulangRecord) {
+        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
+        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          student,
+          record: pulangRecord,
+          type: 'Pulang',
+          status: pulangRecord.status,
+          message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
+        };
+      }
+
+      if (jenis === 'Masuk' && masukRecord) {
+        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          student,
+          record: masukRecord,
+          type: 'Masuk',
+          status: masukRecord.status,
+          message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${masukRecord.status}).`,
+        };
+      }
+
+      if (jenis === 'Pulang' && pulangRecord) {
+        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+        return {
+          success: false,
+          isDuplicate: true,
+          student,
+          record: pulangRecord,
+          type: 'Pulang',
+          status: pulangRecord.status,
+          message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) SUDAH PRESENSI PULANG hari ini pada pukul ${pTime}.`,
+        };
+      }
+
+      // Remove autoAlpaRecord placeholder if present
+      if (autoAlpaRecord) {
+        this.enqueueSync({ id: autoAlpaRecord.id, type: 'attendance', action: 'delete' });
+        this.attendance = this.attendance.filter((a) => a.id !== autoAlpaRecord.id);
+      }
+
+      let status: AttendanceStatus = (params.statusOverride as AttendanceStatus) || 'Hadir';
+      let isLate = false;
+      let lateMinutes = 0;
+
+      if (jenis === 'Masuk' && !params.statusOverride) {
+        const cutoffTimeStr = this.settings.cutoffTime || '07:15';
+        const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
+        const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
+        const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
+
+        if (nowMinutes > cutoffMinutes) {
+          status = 'Terlambat';
+          isLate = true;
+          lateMinutes = nowMinutes - cutoffMinutes;
+        }
+      } else if (jenis === 'Pulang' && !params.statusOverride && masukRecord) {
+        status = masukRecord.status;
+      }
+
+      const newRecord: AttendanceRecord = {
+        id: `att-lk-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        tanggal: todayStr,
+        timestamp: nowISO,
+        nisn: student.nisn,
+        nama: student.nama,
+        kelas: student.kelas,
+        id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
+        rfid_uid: student.rfid_uid,
+        scan_method: 'Manual',
+        jenis,
+        status,
+        petugas: officerName,
+        catatan: fullNote,
+        terlambatMenit: lateMinutes,
+      };
+
+      this.attendance.unshift(newRecord);
+      this.notify();
+      this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
+
+      const logDetails = `Presensi Lupa Kartu Siswa [${jenis.toUpperCase()}-${status.toUpperCase()}]: ${student.nama} (${student.kelas})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} - Alasan: ${alasanClean} oleh ${officerName}`;
+      this.addLog(`LUPA_KARTU_SISWA_${jenis.toUpperCase()}`, logDetails);
+
+      const timeFormatted = this.formatRecordTimeWIT(nowISO);
+      const msg = `Presensi LUPA KARTU (${jenis.toUpperCase()} - ${status.toUpperCase()}) berhasil dicatat untuk ${student.nama} pada ${timeFormatted}.`;
+
+      return {
+        success: true,
+        isDuplicate: false,
+        record: newRecord,
+        student,
+        message: msg,
+        type: jenis,
+        status,
+        isLate,
+        lateMinutes,
+      };
+    }
+  }
+
+  /**
+   * Rekap daftar presensi berstatus 'Lupa Kartu' (Manual) untuk hari ini.
+   */
+  public getTodayLupaKartuList(): {
+    students: Array<{ record: AttendanceRecord; student?: Student }>;
+    teachers: Array<{ record: TeacherAttendanceRecord; teacher?: Teacher }>;
+    total: number;
+  } {
+    const todayYmd = this.getTodayYyyyMmDd();
+    const studentRecords = this.attendance.filter(
+      (a) =>
+        this.isRecordForDate(a, todayYmd) &&
+        (a.scan_method === 'Manual' || (a.catatan && a.catatan.includes('[LUPA KARTU]')))
+    );
+    const teacherRecords = this.teacherAttendance.filter(
+      (a) =>
+        this.isTeacherRecordForToday(a) &&
+        (a.scan_method === 'Manual' || (a.catatan && a.catatan.includes('[LUPA KARTU]')))
+    );
+
+    const students = studentRecords.map((r) => ({
+      record: r,
+      student: this.students.find((s) => s.nisn === r.nisn || s.nama.toLowerCase() === r.nama.toLowerCase()),
+    }));
+
+    const teachers = teacherRecords.map((r) => ({
+      record: r,
+      teacher: this.teachers.find((t) => t.nip === r.nip || t.nama.toLowerCase() === r.nama.toLowerCase()),
+    }));
+
+    return {
+      students,
+      teachers,
+      total: students.length + teachers.length,
+    };
+  }
+
   public normalizeToYyyyMmDd(dateStr: string): string {
     if (!dateStr) return '';
     const str = String(dateStr).trim();
