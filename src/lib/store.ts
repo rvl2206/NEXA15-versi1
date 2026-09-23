@@ -74,75 +74,58 @@ import {
   isHashedPassword,
   ensureHashedPassword,
 } from './bcrypt';
+import {
+  getTodayFormatted,
+  getTodayYyyyMmDd,
+  formatRecordTimeWIT,
+  normalizeToYyyyMmDd,
+  buildIsoTimestamp,
+  isRecordForDate,
+  isRecordForToday,
+  isRecordOnSaturday,
+} from './dateUtils';
+import {
+  formatScanLogDetails,
+  formatTeacherScanLogDetails,
+} from './auditLogUtils';
+import {
+  calculateLateMinutes,
+  buildAttendanceCompositeKey,
+  generateDeterministicAutoAlpaId,
+  isSaturdayAlpaRecord,
+  evaluateScanEligibility,
+  LateCalculationResult,
+  ScanEligibilityResult,
+  ScanDuplicateReason,
+} from './attendanceRules';
+import {
+  findDoubleMasukRecords,
+  getMissingAttendanceItemsFromLogs,
+  DoubleMasukAnomaly,
+} from './attendanceRepair';
+import {
+  STORAGE_KEYS,
+  INITIAL_USERS,
+  DEFAULT_SETTINGS,
+  isGenericQrCode,
+  isMatchingNisn,
+  isMatchingNip,
+  isMatchingRfidUid,
+} from './constants';
 
-const STORAGE_KEYS = {
-  SETTINGS: 'nexa15_settings_v3',
-  PASSWORDS: 'nexa15_passwords_v3',
-  CURRENT_USER: 'nexa15_user_v3',
-  USERS: 'nexa15_users_v3',
-  STUDENTS: 'nexa15_students_v3',
-  ATTENDANCE: 'nexa15_attendance_v3',
-  TEACHERS: 'nexa15_teachers_v3',
-  TEACHER_ATTENDANCE: 'nexa15_teacher_attendance_v3',
-  LOGS: 'nexa15_logs_v3',
-  SYNC_QUEUE: 'nexa15_sync_queue_v3',
-  DISPATCHES: 'nexa15_dispatches_v3',
+export {
+  STORAGE_KEYS,
+  INITIAL_USERS,
+  DEFAULT_SETTINGS,
+  isGenericQrCode,
+  isMatchingNisn,
+  isMatchingNip,
+  isMatchingRfidUid,
+  evaluateScanEligibility,
+  findDoubleMasukRecords,
+  getMissingAttendanceItemsFromLogs,
 };
-
-export const INITIAL_USERS: User[] = [
-  {
-    uid: 'usr-admin',
-    username: 'admin',
-    email: 'admin@sman15.sch.id',
-    name: 'Super Administrator (NEXA15)',
-    role: 'Admin',
-    subRole: 'Super Admin',
-    assignedClass: '',
-    password: hashPasswordSync('admin'),
-    status: 'aktif',
-    createdAt: new Date().toISOString(),
-    notes: 'Akun Utama Administrator Sistem',
-  },
-  {
-    uid: 'usr-piket',
-    username: 'guru_piket',
-    email: 'piket@sman15.sch.id',
-    name: 'Petugas Guru Piket',
-    role: 'Guru',
-    subRole: 'Guru Piket',
-    assignedClass: '',
-    password: hashPasswordSync('piket'),
-    status: 'aktif',
-    createdAt: new Date().toISOString(),
-    notes: 'Petugas Piket Presensi Harian',
-  },
-  {
-    uid: 'usr-kepsek',
-    username: 'kepsek',
-    email: 'kepsek@sman15.sch.id',
-    name: 'Drs. H. Rustam Rumra, M.Pd',
-    role: 'Kepala Sekolah',
-    subRole: 'Kepala Sekolah',
-    assignedClass: '',
-    password: hashPasswordSync('kepsek'),
-    status: 'aktif',
-    createdAt: new Date().toISOString(),
-    notes: 'Kepala SMA Negeri 15 Ambon',
-  },
-  {
-    uid: 'usr-wali-x1',
-    username: 'wali_x1',
-    email: 'wali.x1@sman15.sch.id',
-    name: 'Dra. Siti Aminah, M.Pd',
-    role: 'Guru',
-    subRole: 'Wali Kelas',
-    assignedClass: 'X-1',
-    password: hashPasswordSync('wali'),
-    status: 'aktif',
-    createdAt: new Date().toISOString(),
-    notes: 'Wali Kelas X-1',
-  },
-];
+export type { LateCalculationResult, ScanEligibilityResult, ScanDuplicateReason, DoubleMasukAnomaly };
 
 export interface SyncQueueItem {
   id: string;
@@ -173,118 +156,6 @@ export interface HealthCheckResult {
   };
   discrepancies: string[];
   recommendations: string[];
-}
-
-export const DEFAULT_SETTINGS: SchoolSettings = {
-  schoolName: 'SMA NEGERI 15 AMBON',
-  schoolNPSN: '69933068',
-  schoolLogo: '', // No hardcoded logo by default - allows upload/import in settings
-  cutoffTime: '07:15',
-  autoAlpaCutoffTime: '14:30',
-  enableAutoAlpa: true,
-  schoolDays: 6, // 6 = 6 Hari Sekolah (Senin - Sabtu), 5 = 5 Hari Sekolah (Senin - Jumat)
-  academicYear: '2026/2027',
-  enableWaNotif: true,
-  waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-  waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ⏰ *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-  waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-  waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: ❌ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-  waTemplateWaliKelas: 'Yth. Bapak/Ibu Wali Kelas *{kelas}* (*{wali_kelas}*),\n\nBerikut kami teruskan *Laporan Disposisi Siswa Butuh Perhatian Khusus / Bermasalah* dari Tim Kedisiplinan & Presensi Digital *{sekolah}*:\n\n👤 *Nama Siswa:* {nama}\n🔢 *NISN:* {nisn}\n🏫 *Kelas:* {kelas}\n📱 *No. HP/WA Ortu:* {no_hp_ortu}\n\n📊 *Catatan Kehadiran & Rekam Kedisiplinan:*\n• 📈 Persentase Kehadiran: *{persentase_kehadiran}*\n• ❌ Jumlah Alpa (Tanpa Keterangan): *{alpa} hari*\n• ⏰ Jumlah Keterlambatan: *{terlambat} kali*\n• 🩺 Jumlah Sakit/Izin: *{sakit_izin} hari*\n\n🚨 *Indikasi Masalah:*\n{alasan_masalah}\n\n💡 *Rekomendasi Tindak Lanjut Wali Kelas & BK:*\n{rekomendasi}\n\n📝 *Catatan Tambahan Petugas:*\n{catatan_petugas}\n\nMohon Bapak/Ibu Wali Kelas dapat segera menindaklanjuti dengan pembinaan internal, koordinasi Guru BK, serta pemanggilan Orang Tua / Wali murid ke sekolah jika diperlukan.\n\nTerima kasih atas dedikasi dan kerja sama Bapak/Ibu.\n_Tim Presensi & Kesiswaan {sekolah}_\n📅 {tanggal}',
-  problemThresholdAlpa: 2,
-  problemThresholdTerlambat: 3,
-  problemThresholdMinRate: 75,
-  homeroomAssignments: {},
-  supabaseUrl: 'https://tpxyvbfbahsjssqwubfl.supabase.co',
-  supabaseKey: 'sb_publishable_oH-2538e28kbMbpk8ESZ7w_LpeIn1Jh',
-  enableSupabaseAutoSync: true,
-  holidays: [],
-  // RFID & Contactless Card Support
-  enableRfidReader: true,
-  rfidReaderMode: 'auto',
-  rfidBeepSound: true,
-  rfidFastTapDelay: 1500,
-  rfidPrefix: '',
-  rfidSuffix: '',
-};
-
-/**
- * Helper to check if a QR identifier is a generic template/NPSN placeholder rather than a unique student/teacher QR
- */
-export function isGenericQrCode(qr?: string): boolean {
-  if (!qr) return true;
-  const v = qr.trim().toLowerCase();
-  return (
-    v === '' ||
-    v === '69933068' ||
-    v === 'smanegeri15ambon_template' ||
-    v === 'templatesma15ambon' ||
-    v === '69933068..' ||
-    v === '69933068.'
-  );
-}
-
-/**
- * Strict and resilient NISN matcher that compares exact and digit-normalized strings (ignoring leading zeros)
- */
-export function isMatchingNisn(nisnA?: string, nisnB?: string): boolean {
-  if (!nisnA || !nisnB) return false;
-  const cleanA = String(nisnA).trim();
-  const cleanB = String(nisnB).trim();
-  if (!cleanA || !cleanB) return false;
-  if (cleanA === cleanB) return true;
-
-  // Compare digit sequences without leading zeros
-  const normA = cleanA.replace(/\D/g, '').replace(/^0+/, '');
-  const normB = cleanB.replace(/\D/g, '').replace(/^0+/, '');
-  if (normA && normB && normA === normB && normA.length >= 3) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Strict NIP matcher for teachers
- */
-export function isMatchingNip(nipA?: string, nipB?: string): boolean {
-  if (!nipA || !nipB) return false;
-  const cleanA = String(nipA).trim();
-  const cleanB = String(nipB).trim();
-  if (!cleanA || !cleanB) return false;
-  if (cleanA === cleanB) return true;
-
-  const normA = cleanA.replace(/\D/g, '').replace(/^0+/, '');
-  const normB = cleanB.replace(/\D/g, '').replace(/^0+/, '');
-  if (normA && normB && normA === normB && normA.length >= 3) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Strict and resilient RFID / NFC UID matcher (supports Hex, Decimal, colons/spaces stripped)
- */
-export function isMatchingRfidUid(uidA?: string, uidB?: string): boolean {
-  if (!uidA || !uidB) return false;
-  const cleanA = String(uidA).replace(/[\s:-]+/g, '').trim().toUpperCase();
-  const cleanB = String(uidB).replace(/[\s:-]+/g, '').trim().toUpperCase();
-  if (!cleanA || !cleanB) return false;
-  if (cleanA === cleanB) return true;
-
-  // Check if one is 10-digit decimal representation of 8-character hex UID (standard Wiegand-26 / Wiegand-34 / HID conversion)
-  if (/^\d{8,12}$/.test(cleanA) && /^[0-9A-F]{6,16}$/i.test(cleanB)) {
-    try {
-      const decB = parseInt(cleanB, 16);
-      if (!isNaN(decB) && (String(decB) === cleanA || String(decB).padStart(10, '0') === cleanA)) return true;
-    } catch {}
-  }
-  if (/^\d{8,12}$/.test(cleanB) && /^[0-9A-F]{6,16}$/i.test(cleanA)) {
-    try {
-      const decA = parseInt(cleanA, 16);
-      if (!isNaN(decA) && (String(decA) === cleanB || String(decA).padStart(10, '0') === cleanB)) return true;
-    } catch {}
-  }
-
-  return false;
 }
 
 class AppStore {
@@ -382,15 +253,15 @@ class AppStore {
       }
 
       // Purge any Saturday Alpa records immediately from memory & local storage
-      const hadSatAlpa = this.attendance.some((a) => a.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a));
+      const hadSatAlpa = this.attendance.some((a) => isSaturdayAlpaRecord(a));
       if (hadSatAlpa) {
-        this.attendance = this.attendance.filter((a) => !(a.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a)));
+        this.attendance = this.attendance.filter((a) => !isSaturdayAlpaRecord(a));
         localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
       }
 
-      const hadSatTeacherAlpa = this.teacherAttendance.some((ta) => ta.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta));
+      const hadSatTeacherAlpa = this.teacherAttendance.some((ta) => isSaturdayAlpaRecord(ta));
       if (hadSatTeacherAlpa) {
-        this.teacherAttendance = this.teacherAttendance.filter((ta) => !(ta.status?.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta)));
+        this.teacherAttendance = this.teacherAttendance.filter((ta) => !isSaturdayAlpaRecord(ta));
         localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
       }
       const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
@@ -413,9 +284,9 @@ class AppStore {
 
     // Set up network & visibility listeners to ensure zero data is lost
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => {
-        this.processPendingSyncQueue();
-        this.fetchFromServer();
+      window.addEventListener('online', async () => {
+        await this.processPendingSyncQueue();
+        await this.fetchFromServer();
       });
       window.addEventListener('focus', () => {
         if (this.syncQueue.length > 0) {
@@ -439,6 +310,11 @@ class AppStore {
 
       // Automatic 30-second background retry mechanism for flushing queued attendance records to the server
       this.startBackgroundAttendanceRetry(30000);
+    }
+
+    // Process any pending local offline mutations FIRST before syncing or fetching remote state
+    if (this.syncQueue.length > 0) {
+      await this.processPendingSyncQueue();
     }
 
     // Synchronize all database records, settings, and users with Firestore cloud in background
@@ -611,25 +487,8 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    // If offline, notify user that data is saved locally and waiting to be sent to database
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const typeLabel =
-        item.type === 'attendance'
-          ? 'Presensi Siswa'
-          : item.type === 'teacher_attendance'
-          ? 'Presensi Guru'
-          : item.type === 'student'
-          ? 'Data Siswa'
-          : item.type === 'teacher'
-          ? 'Data Guru'
-          : 'Catatan Aktivitas';
-      toast.warning(
-        'Data Belum Terkirim ke Database',
-        `${typeLabel} tersimpan sementara di memori perangkat (Mode Offline). Segera hubungkan ke internet untuk mengirim data ke database Cloud.`,
-        5000
-      );
-    } else {
-      // Trigger background sync immediately
+    // If online, trigger background sync immediately
+    if (typeof navigator === 'undefined' || navigator.onLine) {
       this.processPendingSyncQueue().catch(() => {});
     }
   }
@@ -662,13 +521,15 @@ class AppStore {
 
     try {
       const queueSnapshot = [...this.syncQueue];
-      const successfulIds = new Set<string>();
+      const getQueueItemKey = (q: SyncQueueItem) => `${q.type}:${q.id}:${q.action}:${q.timestamp}`;
+      const successfulKeys = new Set<string>();
       const hasSupabase = isSupabaseConfigured(config);
 
-      // 1. Process attendance items
-      const attendanceUpserts = queueSnapshot
+      // 1. Process attendance items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      const attendanceQueueItems = queueSnapshot
         .filter((q) => q.type === 'attendance' && q.action === 'upsert' && q.data)
-        .map((q) => q.data as AttendanceRecord);
+        .slice(0, 400);
+      const attendanceUpserts = attendanceQueueItems.map((q) => q.data as AttendanceRecord);
 
       if (attendanceUpserts.length > 0) {
         let firestoreOk = false;
@@ -681,23 +542,21 @@ class AppStore {
         if (hasSupabase) {
           const res = await syncAttendanceToSupabase(attendanceUpserts, config);
           if (res.success || firestoreOk) {
-            queueSnapshot
-              .filter((q) => q.type === 'attendance' && q.action === 'upsert')
-              .forEach((q) => successfulIds.add(q.id));
+            attendanceQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += attendanceUpserts.length;
           }
         } else if (firestoreOk) {
-          queueSnapshot
-            .filter((q) => q.type === 'attendance' && q.action === 'upsert')
-            .forEach((q) => successfulIds.add(q.id));
+          attendanceQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
           processedCount += attendanceUpserts.length;
         }
       }
+      this.lastSyncQueueTimestamp = Date.now();
 
-      // 2. Process teacher attendance items
-      const teacherAttUpserts = queueSnapshot
+      // 2. Process teacher attendance items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      const teacherAttQueueItems = queueSnapshot
         .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data)
-        .map((q) => q.data as TeacherAttendanceRecord);
+        .slice(0, 400);
+      const teacherAttUpserts = teacherAttQueueItems.map((q) => q.data as TeacherAttendanceRecord);
 
       if (teacherAttUpserts.length > 0) {
         let firestoreOk = false;
@@ -710,23 +569,21 @@ class AppStore {
         if (hasSupabase) {
           const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
           if (res.success || firestoreOk) {
-            queueSnapshot
-              .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert')
-              .forEach((q) => successfulIds.add(q.id));
+            teacherAttQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += teacherAttUpserts.length;
           }
         } else if (firestoreOk) {
-          queueSnapshot
-            .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert')
-            .forEach((q) => successfulIds.add(q.id));
+          teacherAttQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
           processedCount += teacherAttUpserts.length;
         }
       }
+      this.lastSyncQueueTimestamp = Date.now();
 
-      // 3. Process student items
-      const studentUpserts = queueSnapshot
+      // 3. Process student items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      const studentQueueItems = queueSnapshot
         .filter((q) => q.type === 'student' && q.action === 'upsert' && q.data)
-        .map((q) => q.data as Student);
+        .slice(0, 400);
+      const studentUpserts = studentQueueItems.map((q) => q.data as Student);
 
       if (studentUpserts.length > 0) {
         let firestoreOk = false;
@@ -739,23 +596,21 @@ class AppStore {
         if (hasSupabase) {
           const res = await syncStudentsToSupabase(studentUpserts, config);
           if (res.success || firestoreOk) {
-            queueSnapshot
-              .filter((q) => q.type === 'student' && q.action === 'upsert')
-              .forEach((q) => successfulIds.add(q.id));
+            studentQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += studentUpserts.length;
           }
         } else if (firestoreOk) {
-          queueSnapshot
-            .filter((q) => q.type === 'student' && q.action === 'upsert')
-            .forEach((q) => successfulIds.add(q.id));
+          studentQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
           processedCount += studentUpserts.length;
         }
       }
+      this.lastSyncQueueTimestamp = Date.now();
 
-      // 4. Process teacher items
-      const teacherUpserts = queueSnapshot
+      // 4. Process teacher items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      const teacherQueueItems = queueSnapshot
         .filter((q) => q.type === 'teacher' && q.action === 'upsert' && q.data)
-        .map((q) => q.data as Teacher);
+        .slice(0, 400);
+      const teacherUpserts = teacherQueueItems.map((q) => q.data as Teacher);
 
       if (teacherUpserts.length > 0) {
         let firestoreOk = false;
@@ -768,52 +623,53 @@ class AppStore {
         if (hasSupabase) {
           const res = await syncTeachersToSupabase(teacherUpserts, config);
           if (res.success || firestoreOk) {
-            queueSnapshot
-              .filter((q) => q.type === 'teacher' && q.action === 'upsert')
-              .forEach((q) => successfulIds.add(q.id));
+            teacherQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += teacherUpserts.length;
           }
         } else if (firestoreOk) {
-          queueSnapshot
-            .filter((q) => q.type === 'teacher' && q.action === 'upsert')
-            .forEach((q) => successfulIds.add(q.id));
+          teacherQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
           processedCount += teacherUpserts.length;
         }
       }
+      this.lastSyncQueueTimestamp = Date.now();
 
-      // 5. Process log items
-      const logUpserts = queueSnapshot
-        .filter((q) => q.type === 'log' && q.action === 'upsert' && q.data)
-        .map((q) => q.data as ActivityLog);
+      // 5. Process log items (evaluasi granular per-item agar log gagal tetap di-retain)
+      const logQueueItems = queueSnapshot
+        .filter((q) => q.type === 'log' && q.action === 'upsert' && q.data);
+      const logUpserts = logQueueItems.map((q) => q.data as ActivityLog);
 
       if (logUpserts.length > 0) {
-        let firestoreOk = false;
+        let firestoreResults: boolean[] = [];
         try {
-          const results = await Promise.all(logUpserts.map((l) => saveLogToFirestore(l)));
-          firestoreOk = results.some((r) => r === true);
+          firestoreResults = await Promise.all(logUpserts.map((l) => saveLogToFirestore(l)));
         } catch {
-          firestoreOk = false;
+          firestoreResults = new Array(logUpserts.length).fill(false);
         }
 
         if (hasSupabase) {
           const res = await syncLogsToSupabase(logUpserts, config);
-          if (res.success || firestoreOk) {
-            queueSnapshot
-              .filter((q) => q.type === 'log' && q.action === 'upsert')
-              .forEach((q) => successfulIds.add(q.id));
-            processedCount += logUpserts.length;
-          }
-        } else if (firestoreOk) {
-          queueSnapshot
-            .filter((q) => q.type === 'log' && q.action === 'upsert')
-            .forEach((q) => successfulIds.add(q.id));
-          processedCount += logUpserts.length;
+          logQueueItems.forEach((q, idx) => {
+            const isItemOk = res.success || firestoreResults[idx] === true;
+            if (isItemOk) {
+              successfulKeys.add(getQueueItemKey(q));
+              processedCount++;
+            }
+          });
+        } else {
+          logQueueItems.forEach((q, idx) => {
+            if (firestoreResults[idx] === true) {
+              successfulKeys.add(getQueueItemKey(q));
+              processedCount++;
+            }
+          });
         }
       }
+      this.lastSyncQueueTimestamp = Date.now();
 
       // 6. Process delete actions
       const deleteItems = queueSnapshot.filter((q) => q.action === 'delete');
       for (const item of deleteItems) {
+        this.lastSyncQueueTimestamp = Date.now();
         try {
           let ok = false;
           if (item.type === 'student') {
@@ -852,7 +708,7 @@ class AppStore {
             }
           }
           if (ok) {
-            successfulIds.add(item.id);
+            successfulKeys.add(getQueueItemKey(item));
             processedCount++;
           }
         } catch {
@@ -861,8 +717,8 @@ class AppStore {
       }
 
       // Remove all successfully synchronized items from queue
-      if (successfulIds.size > 0) {
-        this.syncQueue = this.syncQueue.filter((q) => !successfulIds.has(q.id));
+      if (successfulKeys.size > 0) {
+        this.syncQueue = this.syncQueue.filter((q) => !successfulKeys.has(getQueueItemKey(q)));
         this.saveLocalData(true);
         this.notify();
       }
@@ -1133,7 +989,7 @@ class AppStore {
       const existing = this.attendance.some((a) => a.nisn === student.nisn && this.isRecordForDate(a, checkDate));
       if (!existing) {
         const newRecord: AttendanceRecord = {
-          id: `att-autoalpa-${student.nisn}-${checkDate}`,
+          id: generateDeterministicAutoAlpaId(student.nisn, checkDate),
           tanggal: formattedDate,
           timestamp: `${checkDate}T${cutoffStr}:00.000Z`,
           nisn: student.nisn,
@@ -1152,6 +1008,9 @@ class AppStore {
     if (newRecords.length > 0) {
       this.attendance = [...this.attendance, ...newRecords];
       this.notify();
+      newRecords.forEach((rec) => {
+        this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
+      });
       this.addLog('AUTO_ALPA_MASSAL', `Sistem Otopresensi (${cutoffStr}): Otomatis mencatat ${newRecords.length} siswa sebagai Alpa pada tanggal ${checkDate}.`);
       syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
     }
@@ -1705,23 +1564,118 @@ class AppStore {
 
       let changed = false;
       if (remoteStudents !== null && remoteStudents.length > 0) {
-        this.students = remoteStudents;
+        const pendingDeleteIds = new Set(
+          this.syncQueue.filter((q) => q.type === 'student' && q.action === 'delete').map((q) => q.id)
+        );
+        const pendingUpserts = this.syncQueue.filter(
+          (q) => q.type === 'student' && q.action === 'upsert' && q.data
+        );
+        const sMap = new Map<string, Student>();
+        remoteStudents.forEach((s) => {
+          const key = s.id || s.nisn;
+          if (!pendingDeleteIds.has(s.id) && !pendingDeleteIds.has(key)) {
+            sMap.set(key, s);
+          }
+        });
+        pendingUpserts.forEach((q) => {
+          if (q.data) {
+            const key = q.data.id || q.data.nisn || q.id;
+            sMap.set(key, q.data);
+          }
+        });
+        this.students = Array.from(sMap.values());
         changed = true;
       }
       if (remoteAttendance !== null && remoteAttendance.length > 0) {
-        this.attendance = remoteAttendance;
+        const pendingDeleteIds = new Set(
+          this.syncQueue.filter((q) => q.type === 'attendance' && q.action === 'delete').map((q) => q.id)
+        );
+        const pendingUpserts = this.syncQueue.filter(
+          (q) => q.type === 'attendance' && q.action === 'upsert' && q.data
+        );
+        const aMap = new Map<string, AttendanceRecord>();
+        remoteAttendance.forEach((a) => {
+          if (!pendingDeleteIds.has(a.id)) {
+            aMap.set(a.id, a);
+          }
+        });
+        pendingUpserts.forEach((q) => {
+          if (q.data) {
+            aMap.set(q.data.id || q.id, q.data);
+          }
+        });
+        this.attendance = Array.from(aMap.values()).sort(
+          (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+        );
         changed = true;
       }
       if (remoteTeachers !== null && remoteTeachers.length > 0) {
-        this.teachers = remoteTeachers;
+        const pendingDeleteIds = new Set(
+          this.syncQueue.filter((q) => q.type === 'teacher' && q.action === 'delete').map((q) => q.id)
+        );
+        const pendingUpserts = this.syncQueue.filter(
+          (q) => q.type === 'teacher' && q.action === 'upsert' && q.data
+        );
+        const tMap = new Map<string, Teacher>();
+        remoteTeachers.forEach((t) => {
+          const key = t.id || t.nip;
+          if (!pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
+            tMap.set(key, t);
+          }
+        });
+        pendingUpserts.forEach((q) => {
+          if (q.data) {
+            const key = q.data.id || q.data.nip || q.id;
+            tMap.set(key, q.data);
+          }
+        });
+        this.teachers = Array.from(tMap.values());
         changed = true;
       }
       if (remoteTeacherAttendance !== null && remoteTeacherAttendance.length > 0) {
-        this.teacherAttendance = remoteTeacherAttendance;
+        const pendingDeleteIds = new Set(
+          this.syncQueue.filter((q) => q.type === 'teacher_attendance' && q.action === 'delete').map((q) => q.id)
+        );
+        const pendingUpserts = this.syncQueue.filter(
+          (q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data
+        );
+        const taMap = new Map<string, TeacherAttendanceRecord>();
+        remoteTeacherAttendance.forEach((ta) => {
+          if (!pendingDeleteIds.has(ta.id)) {
+            taMap.set(ta.id, ta);
+          }
+        });
+        pendingUpserts.forEach((q) => {
+          if (q.data) {
+            taMap.set(q.data.id || q.id, q.data);
+          }
+        });
+        this.teacherAttendance = Array.from(taMap.values()).sort(
+          (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+        );
         changed = true;
       }
       if (remoteLogs !== null && remoteLogs.length > 0) {
-        this.logs = remoteLogs;
+        const pendingDeleteIds = new Set(
+          this.syncQueue.filter((q) => q.type === 'log' && q.action === 'delete').map((q) => q.id)
+        );
+        const pendingUpserts = this.syncQueue.filter(
+          (q) => q.type === 'log' && q.action === 'upsert' && q.data
+        );
+        const lMap = new Map<string, ActivityLog>();
+        remoteLogs.forEach((l) => {
+          if (!pendingDeleteIds.has(l.id)) {
+            lMap.set(l.id, l);
+          }
+        });
+        pendingUpserts.forEach((q) => {
+          if (q.data) {
+            lMap.set(q.data.id || q.id, q.data);
+          }
+        });
+        this.logs = Array.from(lMap.values()).sort(
+          (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+        );
         changed = true;
       }
 
@@ -1757,19 +1711,11 @@ class AppStore {
       if (!lRes.success) errors.push(`Log: ${lRes.error || 'Gagal'}`);
 
       if (errors.length === 0) {
-        const hadQueue = this.syncQueue.length;
-        // Since all in-memory entities are fully upserted to Supabase, clear the offline sync queue
-        this.syncQueue = [];
-        try {
-          localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
-        } catch {}
-        this.saveLocalData(true);
-        this.notify();
-
-        const queueMsg = hadQueue > 0 ? ` serta membersihkan ${hadQueue} antrian pengiriman (0 antrian tersisa)` : ' (0 antrian tersisa)';
+        const remainingQueue = this.syncQueue.length;
+        const queueMsg = remainingQueue > 0 ? ` (${remainingQueue} antrian tetap tersimpan untuk sinkronisasi)` : ' (0 antrian tersisa)';
         const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi siswa, ${tRes.count} guru, ${taRes.count} presensi guru, dan ${lRes.count} log ke Supabase Cloud PostgreSQL${queueMsg}.`;
         this.updateSettings({ lastSupabaseSync: new Date().toISOString() });
-        return { success: true, message: msg, remainingQueue: 0 };
+        return { success: true, message: msg, remainingQueue };
       }
 
       return {
@@ -2139,9 +2085,7 @@ class AppStore {
     return undefined;
   }
 
-  // ==========================================
-  // TEACHER (GURU & STAF) DATA MANAGEMENT
-  // ==========================================
+  // Teacher data management
 
   public getTeachers(): Teacher[] {
     return [...this.teachers];
@@ -2458,52 +2402,22 @@ class AppStore {
     return true;
   }
 
-  // ==========================================
-  // TEACHER (GURU) ATTENDANCE MANAGEMENT
-  // ==========================================
+  // Teacher attendance management
 
   public getTeacherAttendance(): TeacherAttendanceRecord[] {
     return [...this.teacherAttendance];
   }
 
   public isTeacherRecordForDate(r: TeacherAttendanceRecord, targetYyyyMmDd: string): boolean {
-    if (!r || !targetYyyyMmDd) return false;
-    const targetNorm = this.normalizeToYyyyMmDd(targetYyyyMmDd);
-
-    if (r.tanggal) {
-      const recordNorm = this.normalizeToYyyyMmDd(r.tanggal);
-      if (recordNorm === targetNorm) return true;
-      if (r.tanggal.includes(targetYyyyMmDd) || targetYyyyMmDd.includes(r.tanggal)) return true;
-    }
-
-    if (r.timestamp) {
-      const tsNorm = this.normalizeToYyyyMmDd(r.timestamp);
-      if (tsNorm === targetNorm) return true;
-    }
-
-    return false;
+    return isRecordForDate(r, targetYyyyMmDd);
   }
 
   public isTeacherRecordForToday(r: TeacherAttendanceRecord): boolean {
-    return this.isTeacherRecordForDate(r, this.getTodayYyyyMmDd());
+    return isRecordForToday(r);
   }
 
   public formatRecordTimeWIT(isoString?: string): string {
-    if (!isoString) return '';
-    try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return '';
-      return (
-        d.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'Asia/Jayapura',
-          hour12: false,
-        }) + ' WIT'
-      );
-    } catch {
-      return '';
-    }
+    return formatRecordTimeWIT(isoString);
   }
 
   public recordTeacherScan(
@@ -2590,66 +2504,49 @@ class AppStore {
       return a.nama.trim().toLowerCase() === matchedTeacher.nama.trim().toLowerCase();
     });
 
-    const masukRecord = teacherTodayRecords.find((a) => a.jenis === 'Masuk');
-    const pulangRecord = teacherTodayRecords.find((a) => a.jenis === 'Pulang');
+    const eligibility = evaluateScanEligibility(teacherTodayRecords, forcedType, currentHourWIT);
 
-    let jenis: AttendanceType = 'Masuk';
+    if (!eligibility.allowed) {
+      const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
+      const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
 
-    // 1. Determine target scan type (forced or auto)
-    if (forcedType === 'Masuk') {
-      jenis = 'Masuk';
-    } else if (forcedType === 'Pulang') {
-      jenis = 'Pulang';
-    } else {
-      // Auto mode: Pagi hari (Sebelum 10:00 WIT) -> Presensi Masuk. Siang/Sore hari (Mulai 10:00 WIT ke atas) -> Presensi Pulang
-      const isAfternoonSession = currentHourWIT >= 10;
-      if (isAfternoonSession) {
-        jenis = masukRecord && !pulangRecord ? 'Pulang' : 'Pulang';
-      } else {
-        jenis = 'Masuk';
+      if (eligibility.reason === 'BOTH_COMPLETED') {
+        return {
+          success: false,
+          isDuplicate: true,
+          teacher: matchedTeacher,
+          record: eligibility.conflictingRecord,
+          type: 'Pulang',
+          status: eligibility.conflictingRecord?.status,
+          message: `DITOLAK: Guru ${matchedTeacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini. Scan ganda ditolak!`,
+        };
       }
-    }
 
-    // 2. STRICT DUPLICATE SCAN PREVENTION (CEGAH SCAN GANDA & TOLAK LANGSUNG)
-    if (masukRecord && pulangRecord) {
-      const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-      const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+      if (eligibility.reason === 'ALREADY_MASUK') {
+        return {
+          success: false,
+          isDuplicate: true,
+          teacher: matchedTeacher,
+          record: eligibility.conflictingRecord,
+          type: 'Masuk',
+          status: eligibility.conflictingRecord?.status,
+          message: `DITOLAK: Guru ${matchedTeacher.nama} SUDAH SCAN MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}). Scan ganda langsung ditolak!`,
+        };
+      }
+
       return {
         success: false,
         isDuplicate: true,
         teacher: matchedTeacher,
-        record: pulangRecord,
+        record: eligibility.conflictingRecord,
         type: 'Pulang',
-        status: pulangRecord.status,
-        message: `DITOLAK: Guru ${matchedTeacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini. Scan ganda ditolak!`,
-      };
-    }
-
-    if (jenis === 'Masuk' && masukRecord) {
-      const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-      return {
-        success: false,
-        isDuplicate: true,
-        teacher: matchedTeacher,
-        record: masukRecord,
-        type: 'Masuk',
-        status: masukRecord.status,
-        message: `DITOLAK: Guru ${matchedTeacher.nama} SUDAH SCAN MASUK hari ini pada pukul ${mTime} (${masukRecord.status}). Scan ganda langsung ditolak!`,
-      };
-    }
-
-    if (jenis === 'Pulang' && pulangRecord) {
-      const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
-      return {
-        success: false,
-        isDuplicate: true,
-        teacher: matchedTeacher,
-        record: pulangRecord,
-        type: 'Pulang',
-        status: pulangRecord.status,
+        status: eligibility.conflictingRecord?.status,
         message: `DITOLAK: Guru ${matchedTeacher.nama} SUDAH SCAN PULANG hari ini pada pukul ${pTime}. Scan ganda langsung ditolak!`,
       };
     }
+
+    const jenis = eligibility.targetJenis;
+    const masukRecord = eligibility.masukRecord;
 
     // Calculate late status if Masuk
     let status: TeacherAttendanceStatus = 'Hadir';
@@ -2657,15 +2554,11 @@ class AppStore {
     let lateMinutes = 0;
 
     if (jenis === 'Masuk') {
-      const cutoffTimeStr = this.settings.cutoffTime || '07:15';
-      const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
-      const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
-      const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
-
-      if (nowMinutes > cutoffMinutes) {
+      const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
+      if (lateCalc.isLate) {
         status = 'Terlambat';
         isLate = true;
-        lateMinutes = nowMinutes - cutoffMinutes;
+        lateMinutes = lateCalc.lateMinutes;
       }
     } else if (jenis === 'Pulang') {
       if (masukRecord) {
@@ -2697,10 +2590,15 @@ class AppStore {
 
     this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
 
-    const logDetails =
-      jenis === 'Pulang'
-        ? `Scan Presensi Guru Pulang${isRfidScan ? ' [RFID]' : ''}: ${matchedTeacher.nama} (${matchedTeacher.jabatan}) oleh ${formatPetugasRole(officerEmail)}`
-        : `Scan Presensi Guru Masuk [${status.toUpperCase()}]${isRfidScan ? ' [RFID]' : ''}: ${matchedTeacher.nama} (${matchedTeacher.jabatan})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
+    const logDetails = formatTeacherScanLogDetails({
+      nama: matchedTeacher.nama,
+      jabatan: matchedTeacher.jabatan,
+      status,
+      jenis,
+      isRfidScan,
+      lateMinutes,
+      officer: formatPetugasRole(officerEmail),
+    });
 
     this.addLog(`SCAN_GURU_${jenis.toUpperCase()}`, logDetails);
 
@@ -2851,12 +2749,12 @@ class AppStore {
     } else {
       const map = new Map<string, TeacherAttendanceRecord>();
       this.teacherAttendance.forEach((a) => {
-        const key = `${a.nip}_${a.tanggal}_${a.jenis}`;
+        const key = buildAttendanceCompositeKey(a.nip, a.tanggal, a.jenis);
         map.set(key, a);
       });
 
       records.forEach((r, idx) => {
-        const key = `${r.nip}_${r.tanggal}_${r.jenis}`;
+        const key = buildAttendanceCompositeKey(r.nip, r.tanggal, r.jenis);
         const existing = map.get(key);
         if (existing) {
           map.set(key, { ...existing, ...r, id: existing.id });
@@ -2880,47 +2778,42 @@ class AppStore {
   }
 
   public getTodayFormatted(): string {
-    const today = new Date();
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Jayapura',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    return formatter.format(today).replace(/\//g, '-');
+    return getTodayFormatted();
   }
 
   public getTodayYyyyMmDd(): string {
-    const today = new Date();
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Jayapura',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    return formatter.format(today);
+    return getTodayYyyyMmDd();
   }
 
   public isRecordForDate(r: AttendanceRecord, targetYyyyMmDd: string): boolean {
-    if (!r || !targetYyyyMmDd) return false;
-    const targetNorm = this.normalizeToYyyyMmDd(targetYyyyMmDd);
-
-    if (r.tanggal) {
-      const recordNorm = this.normalizeToYyyyMmDd(r.tanggal);
-      if (recordNorm === targetNorm) return true;
-      if (r.tanggal.includes(targetYyyyMmDd) || targetYyyyMmDd.includes(r.tanggal)) return true;
-    }
-
-    if (r.timestamp) {
-      const tsNorm = this.normalizeToYyyyMmDd(r.timestamp);
-      if (tsNorm === targetNorm) return true;
-    }
-
-    return false;
+    return isRecordForDate(r, targetYyyyMmDd);
   }
 
   public isRecordForToday(r: AttendanceRecord): boolean {
-    return this.isRecordForDate(r, this.getTodayYyyyMmDd());
+    return isRecordForToday(r);
+  }
+
+  public calculateLateMinutes(
+    currentHourWIT: number,
+    currentMinuteWIT: number,
+    cutoffTimeStr?: string
+  ): LateCalculationResult {
+    return calculateLateMinutes(currentHourWIT, currentMinuteWIT, cutoffTimeStr || this.settings.cutoffTime || '07:15');
+  }
+
+  public buildAttendanceCompositeKey(
+    identifier: string,
+    tanggal: string,
+    jenis: string
+  ): string {
+    return buildAttendanceCompositeKey(identifier, tanggal, jenis);
+  }
+
+  public generateDeterministicAutoAlpaId(
+    nisn: string,
+    checkDate: string
+  ): string {
+    return generateDeterministicAutoAlpaId(nisn, checkDate);
   }
 
   public recordScan(
@@ -3019,71 +2912,49 @@ class AppStore {
       (a) => a.id?.startsWith('att-autoalpa-') || a.catatan?.includes('Alpa Otomatis')
     );
 
-    // Real recorded attendance (not auto-alpa)
-    const realTodayRecords = studentTodayRecords.filter(
-      (a) => !(a.id?.startsWith('att-autoalpa-') || a.catatan?.includes('Alpa Otomatis'))
-    );
+    const eligibility = evaluateScanEligibility(studentTodayRecords, forcedType, currentHourWIT);
 
-    const masukRecord = realTodayRecords.find((a) => a.jenis === 'Masuk');
-    const pulangRecord = realTodayRecords.find((a) => a.jenis === 'Pulang');
+    if (!eligibility.allowed) {
+      const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
+      const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
 
-    let jenis: AttendanceType = 'Masuk';
-
-    // 1. Determine target scan type (forced or auto)
-    if (forcedType === 'Masuk') {
-      jenis = 'Masuk';
-    } else if (forcedType === 'Pulang') {
-      jenis = 'Pulang';
-    } else {
-      // Auto mode: Pagi hari (Sebelum 10:00 WIT) -> Presensi Masuk. Siang/Sore hari (Mulai 10:00 WIT ke atas) -> Presensi Pulang
-      const isAfternoonSession = currentHourWIT >= 10;
-      if (isAfternoonSession) {
-        jenis = masukRecord && !pulangRecord ? 'Pulang' : 'Pulang';
-      } else {
-        jenis = 'Masuk';
+      if (eligibility.reason === 'BOTH_COMPLETED') {
+        return {
+          success: false,
+          isDuplicate: true,
+          student: matchedStudent,
+          record: eligibility.conflictingRecord,
+          type: 'Pulang',
+          status: eligibility.conflictingRecord?.status,
+          message: `DITOLAK: Siswa ${matchedStudent.nama} (${matchedStudent.kelas}) sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini. Scan ganda ditolak!`,
+        };
       }
-    }
 
-    // 2. STRICT DUPLICATE SCAN PREVENTION (CEGAH SCAN GANDA & TOLAK LANGSUNG)
-    if (masukRecord && pulangRecord) {
-      const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-      const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+      if (eligibility.reason === 'ALREADY_MASUK') {
+        return {
+          success: false,
+          isDuplicate: true,
+          student: matchedStudent,
+          record: eligibility.conflictingRecord,
+          type: 'Masuk',
+          status: eligibility.conflictingRecord?.status,
+          message: `DITOLAK: Siswa ${matchedStudent.nama} (${matchedStudent.kelas}) SUDAH SCAN MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}). Scan ganda langsung ditolak!`,
+        };
+      }
+
       return {
         success: false,
         isDuplicate: true,
         student: matchedStudent,
-        record: pulangRecord,
+        record: eligibility.conflictingRecord,
         type: 'Pulang',
-        status: pulangRecord.status,
-        message: `DITOLAK: Siswa ${matchedStudent.nama} (${matchedStudent.kelas}) sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini. Scan ganda ditolak!`,
-      };
-    }
-
-    if (jenis === 'Masuk' && masukRecord) {
-      const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-      return {
-        success: false,
-        isDuplicate: true,
-        student: matchedStudent,
-        record: masukRecord,
-        type: 'Masuk',
-        status: masukRecord.status,
-        message: `DITOLAK: Siswa ${matchedStudent.nama} (${matchedStudent.kelas}) SUDAH SCAN MASUK hari ini pada pukul ${mTime} (${masukRecord.status}). Scan ganda langsung ditolak!`,
-      };
-    }
-
-    if (jenis === 'Pulang' && pulangRecord) {
-      const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
-      return {
-        success: false,
-        isDuplicate: true,
-        student: matchedStudent,
-        record: pulangRecord,
-        type: 'Pulang',
-        status: pulangRecord.status,
+        status: eligibility.conflictingRecord?.status,
         message: `DITOLAK: Siswa ${matchedStudent.nama} (${matchedStudent.kelas}) SUDAH SCAN PULANG hari ini pada pukul ${pTime}. Scan ganda langsung ditolak!`,
       };
     }
+
+    const jenis = eligibility.targetJenis;
+    const masukRecord = eligibility.masukRecord;
 
     // If an auto-alpa record existed and this is a genuine scan, remove the auto-alpa placeholder
     if (autoAlpaRecord) {
@@ -3097,15 +2968,11 @@ class AppStore {
     let lateMinutes = 0;
 
     if (jenis === 'Masuk') {
-      const cutoffTimeStr = this.settings.cutoffTime || '07:15';
-      const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
-      const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
-      const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
-
-      if (nowMinutes > cutoffMinutes) {
+      const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
+      if (lateCalc.isLate) {
         status = 'Terlambat';
         isLate = true;
-        lateMinutes = nowMinutes - cutoffMinutes;
+        lateMinutes = lateCalc.lateMinutes;
       }
     } else if (jenis === 'Pulang') {
       // Inherit the student's status for the day if they scanned Masuk earlier
@@ -3138,10 +3005,15 @@ class AppStore {
 
     this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
 
-    const logDetails =
-      jenis === 'Pulang'
-        ? `Scan Presensi Pulang${isRfidScan ? ' [RFID]' : ''}: ${matchedStudent.nama} (${matchedStudent.kelas}) oleh ${formatPetugasRole(officerEmail)}`
-        : `Scan Presensi Masuk [${status.toUpperCase()}]${isRfidScan ? ' [RFID]' : ''}: ${matchedStudent.nama} (${matchedStudent.kelas})${isLate ? ` Terlambat ${lateMinutes} mnt` : ''} oleh ${formatPetugasRole(officerEmail)}`;
+    const logDetails = formatScanLogDetails({
+      nama: matchedStudent.nama,
+      kelas: matchedStudent.kelas,
+      status,
+      jenis,
+      isRfidScan,
+      lateMinutes,
+      officer: formatPetugasRole(officerEmail),
+    });
 
     this.addLog(`SCAN_${jenis.toUpperCase()}`, logDetails);
 
@@ -3240,73 +3112,60 @@ class AppStore {
           ((teacher.nip && a.nip && a.nip.trim() === teacher.nip.trim()) || a.nama.trim().toLowerCase() === teacher.nama.trim().toLowerCase())
       );
 
-      const masukRecord = teacherDayRecords.find((a) => a.jenis === 'Masuk' && a.status !== 'Alpa');
-      const pulangRecord = teacherDayRecords.find((a) => a.jenis === 'Pulang');
+      const eligibility = evaluateScanEligibility(teacherDayRecords, params.jenis);
 
-      let jenis: AttendanceType = 'Masuk';
-      if (params.jenis && params.jenis !== 'Auto') {
-        jenis = params.jenis;
-      } else if (masukRecord && !pulangRecord) {
-        jenis = 'Pulang';
-      } else {
-        jenis = 'Masuk';
-      }
+      if (!eligibility.allowed) {
+        const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
+        const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
 
-      // Duplicate check
-      if (masukRecord && pulangRecord) {
-        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+        if (eligibility.reason === 'BOTH_COMPLETED') {
+          return {
+            success: false,
+            isDuplicate: true,
+            teacher,
+            teacherRecord: eligibility.conflictingRecord,
+            type: 'Pulang',
+            status: eligibility.conflictingRecord?.status,
+            message: `DITOLAK: Guru ${teacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
+          };
+        }
+
+        if (eligibility.reason === 'ALREADY_MASUK') {
+          return {
+            success: false,
+            isDuplicate: true,
+            teacher,
+            teacherRecord: eligibility.conflictingRecord,
+            type: 'Masuk',
+            status: eligibility.conflictingRecord?.status,
+            message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}).`,
+          };
+        }
+
         return {
           success: false,
           isDuplicate: true,
           teacher,
-          teacherRecord: pulangRecord,
+          teacherRecord: eligibility.conflictingRecord,
           type: 'Pulang',
-          status: pulangRecord.status,
-          message: `DITOLAK: Guru ${teacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
-        };
-      }
-
-      if (jenis === 'Masuk' && masukRecord) {
-        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-        return {
-          success: false,
-          isDuplicate: true,
-          teacher,
-          teacherRecord: masukRecord,
-          type: 'Masuk',
-          status: masukRecord.status,
-          message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${masukRecord.status}).`,
-        };
-      }
-
-      if (jenis === 'Pulang' && pulangRecord) {
-        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
-        return {
-          success: false,
-          isDuplicate: true,
-          teacher,
-          teacherRecord: pulangRecord,
-          type: 'Pulang',
-          status: pulangRecord.status,
+          status: eligibility.conflictingRecord?.status,
           message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI PULANG hari ini pada pukul ${pTime}.`,
         };
       }
+
+      const jenis = eligibility.targetJenis;
+      const masukRecord = eligibility.masukRecord;
 
       let status: TeacherAttendanceStatus = (params.statusOverride as TeacherAttendanceStatus) || 'Hadir';
       let isLate = false;
       let lateMinutes = 0;
 
       if (jenis === 'Masuk' && !params.statusOverride) {
-        const cutoffTimeStr = this.settings.cutoffTime || '07:15';
-        const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
-        const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
-        const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
-
-        if (nowMinutes > cutoffMinutes) {
+        const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
+        if (lateCalc.isLate) {
           status = 'Terlambat';
           isLate = true;
-          lateMinutes = nowMinutes - cutoffMinutes;
+          lateMinutes = lateCalc.lateMinutes;
         }
       } else if (jenis === 'Pulang' && !params.statusOverride && masukRecord) {
         status = masukRecord.status;
@@ -3374,59 +3233,51 @@ class AppStore {
             a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase())
       );
 
-      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk' && a.status !== 'Alpa');
-      const pulangRecord = studentDayRecords.find((a) => a.jenis === 'Pulang');
       const autoAlpaRecord = studentDayRecords.find((a) => a.status === 'Alpa');
 
-      let jenis: AttendanceType = 'Masuk';
-      if (params.jenis && params.jenis !== 'Auto') {
-        jenis = params.jenis;
-      } else if (masukRecord && !pulangRecord) {
-        jenis = 'Pulang';
-      } else {
-        jenis = 'Masuk';
-      }
+      const eligibility = evaluateScanEligibility(studentDayRecords, params.jenis);
 
-      // Duplicate check
-      if (masukRecord && pulangRecord) {
-        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
+      if (!eligibility.allowed) {
+        const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
+        const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
+
+        if (eligibility.reason === 'BOTH_COMPLETED') {
+          return {
+            success: false,
+            isDuplicate: true,
+            student,
+            record: eligibility.conflictingRecord,
+            type: 'Pulang',
+            status: eligibility.conflictingRecord?.status,
+            message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
+          };
+        }
+
+        if (eligibility.reason === 'ALREADY_MASUK') {
+          return {
+            success: false,
+            isDuplicate: true,
+            student,
+            record: eligibility.conflictingRecord,
+            type: 'Masuk',
+            status: eligibility.conflictingRecord?.status,
+            message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}).`,
+          };
+        }
+
         return {
           success: false,
           isDuplicate: true,
           student,
-          record: pulangRecord,
+          record: eligibility.conflictingRecord,
           type: 'Pulang',
-          status: pulangRecord.status,
-          message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
-        };
-      }
-
-      if (jenis === 'Masuk' && masukRecord) {
-        const mTime = this.formatRecordTimeWIT(masukRecord.timestamp);
-        return {
-          success: false,
-          isDuplicate: true,
-          student,
-          record: masukRecord,
-          type: 'Masuk',
-          status: masukRecord.status,
-          message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${masukRecord.status}).`,
-        };
-      }
-
-      if (jenis === 'Pulang' && pulangRecord) {
-        const pTime = this.formatRecordTimeWIT(pulangRecord.timestamp);
-        return {
-          success: false,
-          isDuplicate: true,
-          student,
-          record: pulangRecord,
-          type: 'Pulang',
-          status: pulangRecord.status,
+          status: eligibility.conflictingRecord?.status,
           message: `DITOLAK: Siswa ${student.nama} (${student.kelas}) SUDAH PRESENSI PULANG hari ini pada pukul ${pTime}.`,
         };
       }
+
+      const jenis = eligibility.targetJenis;
+      const masukRecord = eligibility.masukRecord;
 
       // Remove autoAlpaRecord placeholder if present
       if (autoAlpaRecord) {
@@ -3439,15 +3290,11 @@ class AppStore {
       let lateMinutes = 0;
 
       if (jenis === 'Masuk' && !params.statusOverride) {
-        const cutoffTimeStr = this.settings.cutoffTime || '07:15';
-        const [cutoffHour, cutoffMin] = cutoffTimeStr.split(':').map(Number);
-        const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
-        const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
-
-        if (nowMinutes > cutoffMinutes) {
+        const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
+        if (lateCalc.isLate) {
           status = 'Terlambat';
           isLate = true;
-          lateMinutes = nowMinutes - cutoffMinutes;
+          lateMinutes = lateCalc.lateMinutes;
         }
       } else if (jenis === 'Pulang' && !params.statusOverride && masukRecord) {
         status = masukRecord.status;
@@ -3532,55 +3379,11 @@ class AppStore {
   }
 
   public normalizeToYyyyMmDd(dateStr: string): string {
-    if (!dateStr) return '';
-    const str = String(dateStr).trim();
-    if (str.includes('T')) {
-      const d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jayapura' });
-      }
-      const datePart = str.split('T')[0];
-      if (datePart.split('-')[0].length === 4) return datePart;
-    }
-    if (str.includes('-')) {
-      const parts = str.split('-');
-      if (parts[0].length === 4) {
-        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}`;
-      }
-      if (parts[2]?.length === 4) {
-        const [d, m, y] = parts;
-        return `${y.slice(0, 4)}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-      }
-    }
-    if (str.includes('/')) {
-      const parts = str.split('/');
-      if (parts.length === 3) {
-        if (parts[2].length === 4) {
-          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-        if (parts[0].length === 4) {
-          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-        }
-      }
-    }
-    return str;
+    return normalizeToYyyyMmDd(dateStr);
   }
 
   public buildIsoTimestamp(tanggalYyyyMmDd: string, jamHhMm: string): string {
-    const normDate = this.normalizeToYyyyMmDd(tanggalYyyyMmDd) || this.getTodayYyyyMmDd();
-    const timeClean = (jamHhMm || '07:00').trim();
-    const parts = timeClean.split(':');
-    const h = (parseInt(parts[0], 10) || 0).toString().padStart(2, '0');
-    const m = (parseInt(parts[1], 10) || 0).toString().padStart(2, '0');
-    const s = parts[2] ? (parseInt(parts[2], 10) || 0).toString().padStart(2, '0') : '00';
-
-    // Sekolah berlokasi di Ambon (Zona Waktu WIT / Asia/Jayapura, UTC+09:00)
-    const dateWithTz = `${normDate}T${h}:${m}:${s}+09:00`;
-    const d = new Date(dateWithTz);
-    if (!isNaN(d.getTime())) {
-      return d.toISOString();
-    }
-    return new Date().toISOString();
+    return buildIsoTimestamp(tanggalYyyyMmDd, jamHhMm);
   }
 
   /**
@@ -3979,42 +3782,22 @@ class AppStore {
    * Helper to identify if an attendance record occurred on a Saturday (Day 6)
    */
   public isRecordOnSaturday(record: { tanggal?: string; timestamp?: string }): boolean {
-    if (record.tanggal) {
-      const s = String(record.tanggal).trim();
-      if (s.includes('T')) {
-        const d = new Date(s);
-        if (!isNaN(d.getTime())) return d.getDay() === 6;
-      }
-      const parts = s.split(/[-/]/);
-      if (parts.length === 3) {
-        let d: Date | null = null;
-        if (parts[0].length === 4) {
-          d = new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].slice(0, 2).padStart(2, '0')}T00:00:00`);
-        } else if (parts[2].length === 4) {
-          d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
-        }
-        if (d && !isNaN(d.getTime())) return d.getDay() === 6;
-      }
-    }
-    if (record.timestamp) {
-      const d = new Date(record.timestamp);
-      if (!isNaN(d.getTime())) return d.getDay() === 6;
-    }
-    return false;
+    return isRecordOnSaturday(record);
+  }
+
+  /**
+   * Helper to identify if an attendance record is marked as Alpa on a Saturday
+   */
+  public isSaturdayAlpaRecord(record?: { tanggal?: string; timestamp?: string; status?: string } | null): boolean {
+    return isSaturdayAlpaRecord(record);
   }
 
   /**
    * Hitung berapa banyak presensi Alpa pada hari Sabtu yang masih ada di memori saat ini
    */
   public getSaturdayAlpaCount(): { studentAlpa: number; teacherAlpa: number; total: number } {
-    const studentAlpa = this.attendance.filter(
-      (a) => a.status && a.status.toLowerCase() === 'alpa' && this.isRecordOnSaturday(a)
-    ).length;
-
-    const teacherAlpa = this.teacherAttendance.filter(
-      (ta) => ta.status && ta.status.toLowerCase() === 'alpa' && this.isRecordOnSaturday(ta)
-    ).length;
-
+    const studentAlpa = this.attendance.filter((a) => isSaturdayAlpaRecord(a)).length;
+    const teacherAlpa = this.teacherAttendance.filter((ta) => isSaturdayAlpaRecord(ta)).length;
     return { studentAlpa, teacherAlpa, total: studentAlpa + teacherAlpa };
   }
 
@@ -4032,16 +3815,10 @@ class AppStore {
     total: number;
   }> {
     // 1. Identify local student attendance records on Saturday marked as Alpa
-    const studentRecordsToDelete = this.attendance.filter((a) => {
-      const isAlpa = a.status && String(a.status).trim().toLowerCase() === 'alpa';
-      return isAlpa && this.isRecordOnSaturday(a);
-    });
+    const studentRecordsToDelete = this.attendance.filter((a) => isSaturdayAlpaRecord(a));
 
     // 2. Identify local teacher attendance records on Saturday marked as Alpa
-    const teacherRecordsToDelete = this.teacherAttendance.filter((ta) => {
-      const isAlpa = ta.status && String(ta.status).trim().toLowerCase() === 'alpa';
-      return isAlpa && this.isRecordOnSaturday(ta);
-    });
+    const teacherRecordsToDelete = this.teacherAttendance.filter((ta) => isSaturdayAlpaRecord(ta));
 
     const studentIds = studentRecordsToDelete.map((a) => a.id);
     const teacherIds = teacherRecordsToDelete.map((ta) => ta.id);
@@ -4133,12 +3910,12 @@ class AppStore {
       // Append mode dengan pencegahan duplikasi berdasarkan NISN + Tanggal + Jenis
       const map = new Map<string, AttendanceRecord>();
       this.attendance.forEach((a) => {
-        const key = `${a.nisn}_${a.tanggal}_${a.jenis}`;
+        const key = buildAttendanceCompositeKey(a.nisn, a.tanggal, a.jenis);
         map.set(key, a);
       });
 
       records.forEach((r, idx) => {
-        const key = `${r.nisn}_${r.tanggal}_${r.jenis}`;
+        const key = buildAttendanceCompositeKey(r.nisn, r.tanggal, r.jenis);
         const existing = map.get(key);
         if (existing) {
           map.set(key, { ...existing, ...r, id: existing.id });
@@ -4203,59 +3980,8 @@ class AppStore {
   }
 
   // Double Masuk scan repair helpers
-  public findDoubleMasukRecords(): Array<{
-    studentNisn: string;
-    studentName: string;
-    kelas: string;
-    date: string;
-    dateStr: string;
-    firstRecord: AttendanceRecord;
-    duplicateRecords: AttendanceRecord[];
-    records: AttendanceRecord[];
-  }> {
-    const groups = new Map<string, AttendanceRecord[]>();
-    this.attendance.forEach((r) => {
-      if (r.jenis === 'Masuk') {
-        const key = `${r.nisn}_${r.tanggal}`;
-        const existing = groups.get(key) || [];
-        existing.push(r);
-        groups.set(key, existing);
-      }
-    });
-
-    const anomalies: Array<{
-      studentNisn: string;
-      studentName: string;
-      kelas: string;
-      date: string;
-      dateStr: string;
-      firstRecord: AttendanceRecord;
-      duplicateRecords: AttendanceRecord[];
-      records: AttendanceRecord[];
-    }> = [];
-
-    groups.forEach((records, key) => {
-      if (records.length > 1) {
-        const [nisn, date] = key.split('_');
-        const sorted = [...records].sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-        const first = sorted[0];
-        const duplicates = sorted.slice(1);
-        anomalies.push({
-          studentNisn: nisn,
-          studentName: first.nama,
-          kelas: first.kelas || '-',
-          date,
-          dateStr: date,
-          firstRecord: first,
-          duplicateRecords: duplicates,
-          records: sorted,
-        });
-      }
-    });
-
-    return anomalies;
+  public findDoubleMasukRecords(): DoubleMasukAnomaly<AttendanceRecord>[] {
+    return findDoubleMasukRecords(this.attendance);
   }
 
   public repairDoubleMasukRecords(selectedRecordIds?: string[]): number {
@@ -4312,7 +4038,7 @@ class AppStore {
     const newStudents: Student[] = [];
     orphanedMap.forEach((att, nisn) => {
       const newStudent: Student = {
-        id: `std-repaired-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `std-repaired-${nisn}`,
         nisn: nisn,
         nama: att.nama || `Siswa ${nisn}`,
         kelas: att.kelas || 'X',
@@ -4327,6 +4053,9 @@ class AppStore {
     if (newStudents.length > 0) {
       this.students = [...this.students, ...newStudents];
       this.notify();
+      newStudents.forEach((student) => {
+        this.enqueueSync({ id: student.id, type: 'student', action: 'upsert', data: student });
+      });
       syncStudentsToSupabase(newStudents, this.getSupabaseConfig()).catch(() => {});
       this.addLog(
         'REPAIR_SISWA_DARI_PRESENSI',
@@ -4341,89 +4070,7 @@ class AppStore {
   }
 
   public getMissingAttendanceItemsFromLogs(): MissingAttendanceLogItem[] {
-    const missing: MissingAttendanceLogItem[] = [];
-    const studentMapByName = new Map<string, Student>();
-    this.students.forEach((s) => {
-      if (s.nama) studentMapByName.set(s.nama.toLowerCase().trim(), s);
-    });
-
-    this.logs.forEach((log) => {
-      if (!log.action || (!log.action.startsWith('SCAN_') && !log.action.startsWith('PRESENSI_'))) {
-        return;
-      }
-
-      const dateStr = this.normalizeToYyyyMmDd(log.timestamp);
-      const isPulang = log.action.includes('PULANG') || log.details.toLowerCase().includes('pulang');
-      const jenis: AttendanceType = isPulang ? 'Pulang' : 'Masuk';
-
-      // Parse Nama, Kelas, Status from details
-      // e.g., "Scan Presensi Masuk [HADIR]: DADANG BUAMONA (XI IPA 1) oleh Petugas Piket"
-      // or "Scan Presensi Masuk [TERLAMBAT]: NAMA (KELAS) Terlambat 10 mnt oleh..."
-      // or "Menambahkan presensi manual: NAMA (KELAS) - Hadir"
-      let parsedNama = '';
-      let parsedKelas = '';
-      let parsedStatus: AttendanceStatus = 'Hadir';
-
-      const scanMatch = log.details.match(/Scan Presensi (?:Masuk|Pulang)(?: \[(.*?)\])?: ([^(]+) \(([^)]+)\)/i);
-      const manualMatch = log.details.match(/presensi manual: ([^(]+) \(([^)]+)\) - (\w+)/i);
-
-      if (scanMatch) {
-        if (scanMatch[1]) {
-          const rawSt = scanMatch[1].trim().toUpperCase();
-          if (rawSt.includes('TERLAMBAT')) parsedStatus = 'Terlambat';
-          else if (rawSt.includes('IZIN')) parsedStatus = 'Izin';
-          else if (rawSt.includes('SAKIT')) parsedStatus = 'Sakit';
-          else if (rawSt.includes('ALPA')) parsedStatus = 'Alpa';
-          else parsedStatus = 'Hadir';
-        }
-        parsedNama = scanMatch[2]?.trim() || '';
-        parsedKelas = scanMatch[3]?.trim() || '';
-      } else if (manualMatch) {
-        parsedNama = manualMatch[1]?.trim() || '';
-        parsedKelas = manualMatch[2]?.trim() || '';
-        const rawSt = manualMatch[3]?.trim().toUpperCase();
-        if (rawSt.includes('TERLAMBAT')) parsedStatus = 'Terlambat';
-        else if (rawSt.includes('IZIN')) parsedStatus = 'Izin';
-        else if (rawSt.includes('SAKIT')) parsedStatus = 'Sakit';
-        else if (rawSt.includes('ALPA')) parsedStatus = 'Alpa';
-        else parsedStatus = 'Hadir';
-      }
-
-      if (!parsedNama) return;
-
-      const matchedStudent = studentMapByName.get(parsedNama.toLowerCase().trim());
-      const nisn = matchedStudent ? matchedStudent.nisn : `manual-${parsedNama.replace(/\s+/g, '').toLowerCase()}`;
-      const kelas = matchedStudent ? matchedStudent.kelas : (parsedKelas || 'X');
-
-      // Check if this attendance event exists in this.attendance
-      const exists = this.attendance.some(
-        (a) =>
-          (a.nisn === nisn || a.nama.toLowerCase().trim() === parsedNama.toLowerCase().trim()) &&
-          this.isRecordForDate(a, dateStr) &&
-          a.jenis === jenis
-      );
-
-      if (!exists) {
-        const parts = dateStr.split('-');
-        const dateFormatted = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
-
-        missing.push({
-          logId: log.id,
-          timestamp: log.timestamp,
-          dateFormatted,
-          nama: parsedNama,
-          nisn,
-          kelas,
-          jenis,
-          status: parsedStatus,
-          petugas: log.user || 'Petugas Piket',
-          action: log.action,
-          details: log.details,
-        });
-      }
-    });
-
-    return missing;
+    return getMissingAttendanceItemsFromLogs(this.logs, this.attendance, this.students);
   }
 
   public restoreSpecificMissingAttendanceItems(ids: string[]): boolean {
@@ -4438,7 +4085,7 @@ class AppStore {
       const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : t.dateFormatted;
 
       return {
-        id: `att-recovered-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `att-recovered-${t.logId}`,
         tanggal: formattedDate,
         timestamp: t.timestamp,
         nisn: t.nisn,
@@ -4455,6 +4102,9 @@ class AppStore {
 
     this.attendance = [...this.attendance, ...newRecords];
     this.notify();
+    newRecords.forEach((rec) => {
+      this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
+    });
     syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
     this.addLog('RESTORASI_PRESENSI_DARI_LOG', `Memulihkan ${newRecords.length} rekaman presensi dari catatan log aktivitas.`);
     return true;
@@ -4634,9 +4284,7 @@ class AppStore {
     this.fetchFromServer();
   }
 
-  // ==========================================
-  // WALI KELAS & PROBLEMATIC STUDENT DISPATCH
-  // ==========================================
+  // Problematic student dispatches
 
   public getDispatches(): ProblematicStudentDispatch[] {
     return [...this.dispatches];

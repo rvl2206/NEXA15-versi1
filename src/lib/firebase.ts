@@ -62,9 +62,7 @@ export {
   orderBy
 };
 
-// =========================================================================
-// 1. APP USERS MANAGEMENT & PERSISTENCE
-// =========================================================================
+// App users persistence
 
 /**
  * Fetch all registered application users from Firestore collection 'app_users'
@@ -147,9 +145,7 @@ export const deleteUserFromFirestore = async (userId: string): Promise<boolean> 
   }
 };
 
-// =========================================================================
-// 2. SCHOOL SETTINGS & HOMEROOM MAPPING (PEMETAAN WALI KELAS)
-// =========================================================================
+// School settings and homeroom mapping
 
 /**
  * Fetch school settings and homeroom assignments from Firestore
@@ -186,9 +182,7 @@ export const saveSettingsToFirestore = async (settings: Partial<SchoolSettings>)
   }
 };
 
-// =========================================================================
-// 3. PROBLEMATIC STUDENT DISPATCHES (DISPOSISI WALI KELAS & BK)
-// =========================================================================
+// Problematic student dispatches
 
 /**
  * Fetch all problematic student dispatches from Firestore
@@ -236,9 +230,7 @@ export const deleteDispatchFromFirestore = async (dispatchId: string): Promise<b
   }
 };
 
-// =========================================================================
-// 4. STUDENTS MASTER DATA
-// =========================================================================
+// Students master data
 
 /**
  * Fetch all students from Firestore
@@ -304,9 +296,7 @@ export const deleteStudentFromFirestore = async (studentId: string): Promise<boo
   }
 };
 
-// =========================================================================
-// 5. TEACHERS MASTER DATA
-// =========================================================================
+// Teachers master data
 
 /**
  * Fetch all teachers from Firestore
@@ -372,9 +362,7 @@ export const deleteTeacherFromFirestore = async (teacherId: string): Promise<boo
   }
 };
 
-// =========================================================================
-// 6. STUDENT ATTENDANCE RECORDS
-// =========================================================================
+// Student attendance records
 
 /**
  * Fetch attendance records from Firestore
@@ -452,9 +440,7 @@ export const deleteAttendanceFromFirestore = async (recordId: string): Promise<b
   }
 };
 
-// =========================================================================
-// 7. TEACHER ATTENDANCE RECORDS
-// =========================================================================
+// Teacher attendance records
 
 /**
  * Fetch teacher attendance records from Firestore
@@ -625,9 +611,7 @@ export const purgeSaturdayAlpaFromFirestore = async (): Promise<{
   return { deletedStudents, deletedTeachers };
 };
 
-// =========================================================================
-// 8. ACTIVITY LOGS AUDIT TRAIL
-// =========================================================================
+// Activity logs audit trail
 
 /**
  * Fetch activity logs from Firestore
@@ -662,9 +646,7 @@ export const saveLogToFirestore = async (log: ActivityLog): Promise<boolean> => 
   }
 };
 
-// =========================================================================
-// 9. GOOGLE AUTHENTICATION HELPERS
-// =========================================================================
+// Google authentication helpers
 
 export const signInWithGoogle = async () => {
   try {

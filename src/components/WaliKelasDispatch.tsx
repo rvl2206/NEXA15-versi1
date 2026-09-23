@@ -1513,9 +1513,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: INDIVIDUAL WHATSAPP DISPATCH PREVIEW & EDIT                      */}
-      {/* ========================================================================= */}
+      {/* Modal: Individual WhatsApp dispatch preview and edit */}
       {selectedItemForDispatch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -1637,9 +1635,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: BATCH CLASS REKAP WHATSAPP DISPATCH PREVIEW                      */}
-      {/* ========================================================================= */}
+      {/* Modal: Batch class recap WhatsApp dispatch preview */}
       {batchModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -1733,9 +1729,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: FOLLOW-UP STATUS UPDATE MODAL                                    */}
-      {/* ========================================================================= */}
+      {/* Modal: Follow-up status update */}
       {selectedDispatchForFollowUp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
@@ -1809,9 +1803,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* HIDDEN PRINTABLE CASE DISPOSITION SHEET (A4 STANDARD FORMAT)              */}
-      {/* ========================================================================= */}
+      {/* Printable case disposition sheet */}
       <div id="printable-disposition-area" className="hidden">
         {printSlipItem && (
           <div className="max-w-3xl mx-auto p-4 text-black bg-white">

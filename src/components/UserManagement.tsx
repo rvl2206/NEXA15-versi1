@@ -644,9 +644,7 @@ export const UserManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 1. Modal: Tambah Akun Baru                                                */}
-      {/* ========================================================================= */}
+      {/* Modal: Tambah Akun Baru */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
@@ -902,9 +900,7 @@ export const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 2. Modal: Edit Data Akun                                                  */}
-      {/* ========================================================================= */}
+      {/* Modal: Edit Data Akun */}
       {isEditModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
@@ -1113,9 +1109,7 @@ export const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 3. Modal: Reset Kata Sandi                                                */}
-      {/* ========================================================================= */}
+      {/* Modal: Reset Kata Sandi */}
       {isResetPassModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden">
@@ -1196,9 +1190,7 @@ export const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. Modal: Hapus Akun                                                      */}
-      {/* ========================================================================= */}
+      {/* Modal: Hapus Akun */}
       {isDeleteModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden p-6 space-y-4">

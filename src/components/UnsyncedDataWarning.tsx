@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   CloudAlert,
@@ -43,29 +43,6 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [syncSuccessJustFinished, setSyncSuccessJustFinished] = useState<boolean>(false);
-  const hasAutoOpenedRef = useRef<boolean>(false);
-
-  // Sound alert context
-  const playAlertSound = () => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
-    } catch {
-      // Audio playback may be restricted before user interaction
-    }
-  };
 
   useEffect(() => {
     const handleOnline = () => {
@@ -87,15 +64,6 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
     const unsubscribe = store.subscribe(() => {
       const current = store.getSyncQueueDetails();
       setQueueDetails(current);
-
-      // Auto-popup for duty officer if there is unsynced data and hasn't auto-opened yet
-      if (current.total > 0 && !hasAutoOpenedRef.current) {
-        hasAutoOpenedRef.current = true;
-        setIsModalOpen(true);
-        playAlertSound();
-      } else if (current.total === 0) {
-        hasAutoOpenedRef.current = false;
-      }
     });
 
     return () => {

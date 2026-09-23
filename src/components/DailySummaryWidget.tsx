@@ -631,7 +631,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
               <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <div>
                   <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Daftar Siswa —</span>
+                    <span>Daftar Siswa:</span>
                     <span className="capitalize text-blue-600 dark:text-blue-400">
                       {modalFilter === 'belum_absen'
                         ? 'Belum Scan Hari Ini'

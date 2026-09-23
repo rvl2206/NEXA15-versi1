@@ -1571,9 +1571,7 @@ export function exportLateGuidanceToPDF(items: LateGuidanceExportItem[], periodT
   doc.save(`Laporan_Resmi_Kedisiplinan_Alpa_${filterKelas}_NEXA15.pdf`);
 }
 
-// =========================================================================
-// EXPORT & IMPORT UTILITIES FOR TEACHERS (GURU & STAF)
-// =========================================================================
+// Teacher export and import utilities
 
 export function exportTeacherListToExcel(teachers: Teacher[], schoolName = 'SMA NEGERI 15 AMBON') {
   const data = teachers.map((t, idx) => ({

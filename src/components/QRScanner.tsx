@@ -108,7 +108,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   // Performance & Queue Options - Mode Scan Massal starts DISABLED so popup info shows for 3 seconds
   const [rapidQueueMode, setRapidQueueMode] = useState<boolean>(false); // Mode Antrean Cepat (false by default)
   const [debounceSeconds, setDebounceSeconds] = useState<number>(3); // 3 seconds debounce per same QR
-  const [scanFps, setScanFps] = useState<number>(15); // 15 FPS
+  const [scanFps, setScanFps] = useState<number>(20); // 20 FPS (Smooth & Rapid Barcode/QR detection)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [modalDuration, setModalDuration] = useState<number>(3); // Durasi popup 3 detik
 
@@ -124,6 +124,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isSmallQrMode, setIsSmallQrMode] = useState<boolean>(false);
   const [hasHardwareZoom, setHasHardwareZoom] = useState<boolean>(false);
+  const [hasContinuousFocus, setHasContinuousFocus] = useState<boolean>(false);
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
   const [scanResolution, setScanResolution] = useState<'hd' | 'fullhd' | 'auto'>('hd');
@@ -546,133 +547,128 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
-    recentScanTimesRef.current.set(raw, now);
-    setLastScannedQR(raw);
+    try {
+      recentScanTimesRef.current.set(raw, now);
+      setLastScannedQR(raw);
 
-    const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
-    if (currentlyOffline) {
-      toast.warning(
-        'Mode Offline: Disimpan di Cache Lokal',
-        'Koneksi internet terputus. Data presensi tetap tersimpan aman di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
-        5000
-      );
-    }
+      const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
 
-    // Visual flash effect
-    setScanFlash(true);
-    setTimeout(() => setScanFlash(false), 300);
+      // Visual flash effect
+      setScanFlash(true);
+      setTimeout(() => setScanFlash(false), 200);
 
-    const timeStr =
-      new Date().toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZone: 'Asia/Jayapura',
-      }) + ' WIT';
+      const timeStr =
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          timeZone: 'Asia/Jayapura',
+        }) + ' WIT';
 
-    // Smart target resolution: check if target explicitly matches student or teacher
-    let effectiveTarget: ScanTargetMode = scanTargetMode;
-    if (scanTargetMode === 'auto') {
-      const match = store.findPersonByRfidOrCode(raw);
-      if (match) {
-        effectiveTarget = match.type === 'guru' ? 'guru' : 'siswa';
-      } else {
-        effectiveTarget = 'siswa';
-      }
-    } else if (scanTargetMode === 'siswa') {
-      const studentMatch = store.findStudentByScannedCode(raw);
-      if (!studentMatch) {
-        const teacherMatch = store.findTeacherByScannedCode(raw);
-        if (teacherMatch) {
-          effectiveTarget = 'guru';
-        }
-      }
-    } else if (scanTargetMode === 'guru') {
-      const teacherMatch = store.findTeacherByScannedCode(raw);
-      if (!teacherMatch) {
-        const studentMatch = store.findStudentByScannedCode(raw);
-        if (studentMatch) {
+      // Smart target resolution: check if target explicitly matches student or teacher
+      let effectiveTarget: ScanTargetMode = scanTargetMode;
+      if (scanTargetMode === 'auto') {
+        const match = store.findPersonByRfidOrCode(raw);
+        if (match) {
+          effectiveTarget = match.type === 'guru' ? 'guru' : 'siswa';
+        } else {
           effectiveTarget = 'siswa';
         }
+      } else if (scanTargetMode === 'siswa') {
+        const studentMatch = store.findStudentByScannedCode(raw);
+        if (!studentMatch) {
+          const teacherMatch = store.findTeacherByScannedCode(raw);
+          if (teacherMatch) {
+            effectiveTarget = 'guru';
+          }
+        }
+      } else if (scanTargetMode === 'guru') {
+        const teacherMatch = store.findTeacherByScannedCode(raw);
+        if (!teacherMatch) {
+          const studentMatch = store.findStudentByScannedCode(raw);
+          if (studentMatch) {
+            effectiveTarget = 'siswa';
+          }
+        }
       }
-    }
 
-    if (effectiveTarget === 'guru') {
-      // Record scan in teacher attendance store with scan type mode
-      const result = store.recordTeacherScan(raw, raw, raw, currentOfficer, scanTypeMode);
+      if (effectiveTarget === 'guru') {
+        // Record scan in teacher attendance store with scan type mode
+        const result = store.recordTeacherScan(raw, raw, raw, currentOfficer, scanTypeMode);
 
-      if (result.success) {
-        playSuccessSound();
-        if (result.teacher?.nama) playVoiceFeedback(result.teacher.nama, result.status || '', true);
+        if (result.success) {
+          playSuccessSound();
+          if (result.teacher?.nama) playVoiceFeedback(result.teacher.nama, result.status || '', true);
+        } else {
+          playErrorSound();
+          playVoiceFeedback('', '', false);
+        }
+
+        const isRfid = result.record?.scan_method === 'RFID' || (result.teacher?.rfid_uid && raw.toUpperCase().includes(result.teacher.rfid_uid.toUpperCase()));
+
+        const outcome: ScanOutcome = {
+          success: result.success,
+          isDuplicate: result.isDuplicate,
+          isOffline: currentlyOffline,
+          targetMode: 'guru',
+          scanMethod: isRfid ? 'RFID' : 'QR',
+          teacher: result.teacher,
+          teacherRecord: result.record,
+          type: result.type,
+          status: result.status,
+          message: result.message,
+          scannedCode: raw,
+          timestamp: timeStr,
+        };
+
+        setScanResult(outcome);
+        setScanFeed((prev) => [outcome, ...prev].slice(0, 30));
+
+        if (!rapidQueueMode) {
+          setShowModal(true);
+        }
       } else {
-        playErrorSound();
-        playVoiceFeedback('', '', false);
+        // Record scan in student attendance store with scan type mode
+        const result = store.recordScan(raw, raw, raw, currentOfficer, scanTypeMode);
+
+        if (result.success) {
+          playSuccessSound();
+          if (result.student?.nama) playVoiceFeedback(result.student.nama, result.status || '', true);
+        } else {
+          playErrorSound();
+          playVoiceFeedback('', '', false);
+        }
+
+        const isRfid = result.record?.scan_method === 'RFID' || (result.student?.rfid_uid && raw.toUpperCase().includes(result.student.rfid_uid.toUpperCase()));
+
+        const outcome: ScanOutcome = {
+          success: result.success,
+          isDuplicate: result.isDuplicate,
+          isOffline: currentlyOffline,
+          targetMode: 'siswa',
+          scanMethod: isRfid ? 'RFID' : 'QR',
+          student: result.student,
+          record: result.record,
+          type: result.type,
+          status: result.status,
+          message: result.message,
+          scannedCode: raw,
+          timestamp: timeStr,
+        };
+
+        setScanResult(outcome);
+        setScanFeed((prev) => [outcome, ...prev].slice(0, 30));
+
+        if (!rapidQueueMode) {
+          setShowModal(true);
+        }
       }
-
-      const isRfid = result.record?.scan_method === 'RFID' || (result.teacher?.rfid_uid && raw.toUpperCase().includes(result.teacher.rfid_uid.toUpperCase()));
-
-      const outcome: ScanOutcome = {
-        success: result.success,
-        isDuplicate: result.isDuplicate,
-        isOffline: currentlyOffline,
-        targetMode: 'guru',
-        scanMethod: isRfid ? 'RFID' : 'QR',
-        teacher: result.teacher,
-        teacherRecord: result.record,
-        type: result.type,
-        status: result.status,
-        message: result.message,
-        scannedCode: raw,
-        timestamp: timeStr,
-      };
-
-      setScanResult(outcome);
-      setScanFeed((prev) => [outcome, ...prev].slice(0, 30));
-
-      if (!rapidQueueMode) {
-        setShowModal(true);
-      }
-    } else {
-      // Record scan in student attendance store with scan type mode
-      const result = store.recordScan(raw, raw, raw, currentOfficer, scanTypeMode);
-
-      if (result.success) {
-        playSuccessSound();
-        if (result.student?.nama) playVoiceFeedback(result.student.nama, result.status || '', true);
-      } else {
-        playErrorSound();
-        playVoiceFeedback('', '', false);
-      }
-
-      const isRfid = result.record?.scan_method === 'RFID' || (result.student?.rfid_uid && raw.toUpperCase().includes(result.student.rfid_uid.toUpperCase()));
-
-      const outcome: ScanOutcome = {
-        success: result.success,
-        isDuplicate: result.isDuplicate,
-        isOffline: currentlyOffline,
-        targetMode: 'siswa',
-        scanMethod: isRfid ? 'RFID' : 'QR',
-        student: result.student,
-        record: result.record,
-        type: result.type,
-        status: result.status,
-        message: result.message,
-        scannedCode: raw,
-        timestamp: timeStr,
-      };
-
-      setScanResult(outcome);
-      setScanFeed((prev) => [outcome, ...prev].slice(0, 30));
-
-      if (!rapidQueueMode) {
-        setShowModal(true);
-      }
+    } finally {
+      // Rapid lock release to ensure zero skipped frames in queue
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, 150);
     }
-
-    // Reset processing lock
-    setTimeout(() => {
-      isProcessingRef.current = false;
-    }, 250);
   };
 
   const handleAssignRfidToStudent = (rfidUid: string, studentId: string) => {
@@ -700,13 +696,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     const result = store.recordScan(codeToConnect, codeToConnect, codeToConnect, currentOfficer);
 
     const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
-    if (currentlyOffline) {
-      toast.warning(
-        'Mode Offline: Disimpan di Cache Lokal',
-        'Koneksi internet terputus. Data presensi disimpan di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
-        5000
-      );
-    }
 
     if (result.success) {
       playSuccessSound();
@@ -755,13 +744,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     );
 
     const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
-    if (currentlyOffline) {
-      toast.warning(
-        'Mode Offline: Disimpan di Cache Lokal',
-        'Koneksi internet terputus. Data presensi disimpan di perangkat dan akan disinkronkan ke Supabase Cloud saat online.',
-        5000
-      );
-    }
 
     if (result.success) {
       playSuccessSound();
@@ -862,12 +844,39 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       await applyZoom(2.0);
       toast.success(
         'Mode QR Kecil Aktif (Zoom 2.0x)',
-        'Kamera otomatis diperbesar 2x. Posisikan kartu pada jarak 15–20 cm dari lensa agar fokus tajam & cepat terbaca.',
+        'Kamera otomatis diperbesar 2x. Posisikan kartu pada jarak 15-20 cm dari lensa agar fokus tajam & cepat terbaca.',
         5000
       );
     } else {
       await applyZoom(1.0);
       toast.info('Mode Normal (1.0x)', 'Zoom kamera dikembalikan ke posisi standar.');
+    }
+  };
+
+  const triggerAutoFocus = async () => {
+    try {
+      const videoEl = document.querySelector('#reader video') as HTMLVideoElement | null;
+      const stream = videoEl?.srcObject as MediaStream | null;
+      const track = stream?.getVideoTracks()[0];
+      if (track) {
+        const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+        if (caps && caps.focusMode && Array.isArray(caps.focusMode)) {
+          if (caps.focusMode.includes('continuous')) {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'continuous' } as any],
+            });
+          } else if (caps.focusMode.includes('single-shot')) {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'single-shot' } as any],
+            });
+          }
+          toast.success('Fokus Diperbarui', 'Lensa kamera telah dikalibrasi ulang untuk ketajaman optimal.');
+          return;
+        }
+      }
+      toast.info('Fokus Otomatis Aktif', 'Sensor kamera memproses fokus otomatis secara kontinu.');
+    } catch {
+      toast.info('Fokus Otomatis Aktif', 'Sensor kamera memproses fokus otomatis secara kontinu.');
     }
   };
 
@@ -916,7 +925,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       }
 
       const html5QrCode = new Html5Qrcode('reader', {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.EAN_13,
+        ],
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true,
         },
@@ -1042,6 +1056,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 setHasTorch(true);
               } else {
                 setHasTorch(false);
+              }
+              if (caps && caps.focusMode) {
+                setHasContinuousFocus(true);
+              } else {
+                setHasContinuousFocus(false);
               }
 
               const targetZ = isSmallQrMode && zoomLevel === 1.0 ? 2.0 : zoomLevel;
@@ -1318,7 +1337,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                    Aplikasi presensi mengandalkan koneksi database remote Supabase Cloud PostgreSQL. Karena internet terputus, Anda tetap dapat melakukan scan QR — data akan disimpan sementara di memori lokal browser dan otomatis disinkronkan ke server cloud saat internet terhubung kembali.
+                    Aplikasi presensi mengandalkan koneksi database remote Supabase Cloud PostgreSQL. Karena internet terputus, Anda tetap dapat melakukan scan QR - data akan disimpan sementara di memori lokal browser dan otomatis disinkronkan ke server cloud saat internet terhubung kembali.
                   </p>
                 </div>
               </div>
@@ -1505,6 +1524,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             {/* Target element for html5-qrcode */}
             <div id="reader" className="w-full h-full"></div>
 
+            {/* Active Scanning Laser Line Overlay */}
+            {isCameraActive && (
+              <div className="scanner-laser-line" />
+            )}
+
             {/* Small QR Mode / Zoom Viewfinder Reticle Indicator */}
             {isCameraActive && isSmallQrMode && (
               <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-amber-400/80 rounded-2xl pointer-events-none z-10 flex flex-col justify-between p-2 shadow-inner">
@@ -1517,7 +1541,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   </span>
                 </div>
                 <div className="self-center bg-slate-950/85 px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-200 border border-amber-500/40 backdrop-blur-sm shadow-md">
-                  Jarak Kartu Ideal: 15–20 cm
+                  Jarak Kartu Ideal: 15-20 cm
                 </div>
               </div>
             )}
@@ -1563,6 +1587,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
                 {/* Torch / Flashlight & Small QR Toggle */}
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={triggerAutoFocus}
+                    className="p-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-slate-800 text-sky-400 hover:bg-slate-700 border border-sky-500/30"
+                    title="Kunci / Segarkan Fokus Kamera Otomatis"
+                  >
+                    <Focus className="w-3.5 h-3.5" />
+                  </button>
                   {hasTorch && (
                     <button
                       type="button"
@@ -1730,7 +1762,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 FPS Frame:
               </span>
-              {[10, 15, 20].map((fps) => (
+              {[10, 15, 20, 30].map((fps) => (
                 <button
                   key={fps}
                   type="button"
@@ -1740,7 +1772,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   }}
                   className={`px-2 py-0.5 text-[10px] font-extrabold rounded-lg border transition-all ${
                     scanFps === fps
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                   }`}
                   title={`${fps} Frame Per Second`}
@@ -1871,7 +1903,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     <strong className="text-slate-800 dark:text-slate-200">Gunakan Zoom 2.0x (Macro):</strong> QR code yang kecil jangan didekatkan terlalu dekat (&lt;10 cm) karena lensa webcam akan blur/buram akibat melewati titik fokus terdekat. Dengan Zoom 2.0x, QR code langsung tampak besar dan tajam dari jarak aman.
                   </li>
                   <li>
-                    <strong className="text-slate-800 dark:text-slate-200">Jaga Jarak 15 – 20 cm:</strong> Ini adalah jarak optimal di mana sensor kamera dapat menangkap detail garis QR hitam-putih dengan kontras maksimal.
+                    <strong className="text-slate-800 dark:text-slate-200">Jaga Jarak 15 - 20 cm:</strong> Ini adalah jarak optimal di mana sensor kamera dapat menangkap detail garis QR hitam-putih dengan kontras maksimal.
                   </li>
                   <li>
                     <strong className="text-slate-800 dark:text-slate-200">Hindari Pantulan Lampu (Glare):</strong> Jika kartu siswa dilaminasi plastik berkilau, miringkan kartu sedikit 15° agar pantulan cahaya lampu ruangan tidak menutupi pola QR.

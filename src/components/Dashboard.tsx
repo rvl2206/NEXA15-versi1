@@ -279,14 +279,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               </span>
               <span className="text-slate-300 dark:text-slate-700 font-normal">•</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 normal-case tracking-normal">
-                {(store.getSettings().schoolDays || 6) === 5 ? 'Sekolah 5 Hari (Senin–Jumat)' : 'Sekolah 6 Hari (Senin–Sabtu)'}
+                {(store.getSettings().schoolDays || 6) === 5 ? 'Sekolah 5 Hari (Senin - Jumat)' : 'Sekolah 6 Hari (Senin - Sabtu)'}
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Dashboard Kehadiran NEXA15
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              SMA Negeri 15 Ambon — Ringkasan presensi harian & statistik kedisiplinan.
+              SMA Negeri 15 Ambon. Ringkasan presensi harian dan statistik kedisiplinan.
             </p>
           </div>
         </div>
@@ -370,7 +370,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               HARI LIBUR SEKOLAH ({selectedDate.split('-').reverse().join('-')})
             </span>
             <span className="text-[11px] text-purple-700 dark:text-purple-300">
-              {store.getHolidayDescription(selectedDate) || 'Akhir Pekan'} — Penalti presensi nonaktif pada hari libur.
+              {store.getHolidayDescription(selectedDate) || 'Akhir Pekan'}: Penalti presensi nonaktif pada hari libur.
             </span>
           </div>
         </div>

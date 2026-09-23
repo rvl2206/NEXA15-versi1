@@ -628,7 +628,7 @@ export const DigitalCardTemplate: React.FC = () => {
                       <div className="text-xs font-bold text-amber-400 mb-3 print:hidden flex items-center justify-between border-b border-slate-800 pb-2">
                         <span>Halaman Cetak {pageIdx + 1} ({pageStudents.length * (activeSide === 'both' ? 2 : 1)} Kartu)</span>
                         <span className="text-[10px] text-slate-400 font-normal">
-                          Standard A4 — {activeSide === 'both' ? 'Maksimal 2 Siswa (4 Kartu Depan & Belakang)' : 'Maksimal 9 Kartu Per Halaman (Grid 3x3)'}
+                          Standard A4 - {activeSide === 'both' ? 'Maksimal 2 Siswa (4 Kartu Depan & Belakang)' : 'Maksimal 9 Kartu Per Halaman (Grid 3x3)'}
                         </span>
                       </div>
                       <div

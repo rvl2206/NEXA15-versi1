@@ -131,36 +131,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans select-none">
-      {/* Background Ambient Glows */}
-      <div className="absolute top-[-15%] left-[-10%] w-[65%] h-[65%] bg-blue-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[65%] h-[65%] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
-
       <div className="w-full max-w-md relative z-10 my-4">
-        <div className="bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-black/80 border border-slate-800/80 overflow-hidden ring-1 ring-white/10">
+        <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden">
           
           {/* Header Card */}
           <div className="pt-8 pb-6 px-6 sm:px-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-600/10 via-transparent to-transparent pointer-events-none" />
-
-            <div className="relative z-10 flex justify-center mb-4">
-              <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 shadow-md">
-                <SchoolLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md" />
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60 shadow-sm">
+                <SchoolLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-sm" />
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/15 rounded-full border border-blue-400/30 text-cyan-300 text-[11px] font-extrabold mb-2">
-              <GraduationCap className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-400/20 text-blue-400 text-[11px] font-extrabold mb-2">
+              <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
               <span>SMA NEGERI 15 AMBON</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-wider text-white">
-              <span className="bg-gradient-to-r from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent">
-                NEXA15
-              </span>{' '}
-              <span className="text-cyan-400 text-lg font-bold">SMART</span>
+              NEXA15 <span className="text-blue-500 text-lg font-bold">SMART</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
-              Sistem Manajemen Presensi & Disiplin Digital Terpadu
+              Sistem Manajemen Presensi dan Disiplin Digital Terpadu
             </p>
           </div>
 
@@ -169,7 +160,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
             
             {/* Error Message */}
             {error && (
-              <div className="p-3.5 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl flex items-start gap-2.5 animate-in fade-in duration-200">
+              <div className="p-3.5 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl flex items-start gap-2.5 animate-in fade-in duration-200">
                 <span className="font-bold text-rose-400 text-sm mt-[-1px]">⚠️</span>
                 <span className="leading-relaxed">{error}</span>
               </div>
@@ -322,7 +313,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
       {/* Forgot Password Modal */}
       {isForgotModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden text-slate-100">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden text-slate-100">
             <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/80">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl">

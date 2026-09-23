@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
                       } rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer group ${
                         isActive
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25 scale-[1.01]'
+                          ? 'bg-blue-600 text-white shadow-sm scale-[1.01]'
                           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
                       }`}
                     >
@@ -362,7 +362,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onClick={() => handleSelectTab(item.id)}
                           className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                             isActive
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25 scale-[1.01]'
+                              ? 'bg-blue-600 text-white shadow-sm scale-[1.01]'
                               : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                           }`}
                         >

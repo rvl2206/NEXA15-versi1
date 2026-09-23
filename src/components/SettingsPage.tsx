@@ -872,7 +872,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           Sekolah 5 Hari
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                          Senin – Jumat
+                          Senin - Jumat
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -919,7 +919,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           Sekolah 6 Hari
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                          Senin – Sabtu
+                          Senin - Sabtu
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -2109,8 +2109,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             <span>Daftar Hari Libur Terdaftar ({settings.holidays?.length || 0})</span>
             <span className="text-[11px] text-purple-600 dark:text-purple-400 font-normal">
               {(settings.schoolDays || 6) === 5
-                ? '* Hari Sabtu & Minggu otomatis dianggap Hari Libur (Senin – Jumat aktif sekolah)'
-                : '* Hari Minggu otomatis dianggap Hari Libur (Senin – Sabtu aktif sekolah)'}
+                ? '* Hari Sabtu & Minggu otomatis dianggap Hari Libur (Senin - Jumat aktif sekolah)'
+                : '* Hari Minggu otomatis dianggap Hari Libur (Senin - Sabtu aktif sekolah)'}
             </span>
           </div>
 

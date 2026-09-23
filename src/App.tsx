@@ -20,6 +20,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { UserManagement } from './components/UserManagement';
 import { ToastContainer } from './components/ToastContainer';
 import { UnsyncedDataWarning } from './components/UnsyncedDataWarning';
+import { ExitUnsyncedDataModal } from './components/ExitUnsyncedDataModal';
 import { GuidedTour } from './components/GuidedTour';
 
 export function App() {
@@ -35,6 +36,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [showExitModal, setShowExitModal] = useState<boolean>(false);
   const [settings, setSettings] = useState<SchoolSettings>(() => {
     try {
       return store.getSettings();
@@ -158,22 +160,53 @@ export function App() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (store.getOfflineQueueCount() > 0) {
         e.preventDefault();
-        e.returnValue = 'Peringatan: Terdapat data presensi/sistem yang belum terkirim ke database Cloud. Yakin ingin menutup halaman?';
+        e.returnValue = 'Peringatan: Terdapat data presensi/sistem yang belum terkirim ke database Cloud. Yakin ingin keluar dari aplikasi?';
         return e.returnValue;
       }
     };
+
+    // Mobile & browser back button trap when unsynced data exists
+    try {
+      window.history.pushState({ app: 'nexa15' }, '', window.location.href);
+    } catch {
+      // Ignore
+    }
+
+    const handlePopState = () => {
+      const unsyncedCount = store.getOfflineQueueCount();
+      if (unsyncedCount > 0) {
+        try {
+          window.history.pushState({ app: 'nexa15' }, '', window.location.href);
+        } catch {
+          // Ignore
+        }
+        setShowExitModal(true);
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const handleLogout = () => {
     const unsyncedCount = store.getOfflineQueueCount();
     if (unsyncedCount > 0) {
-      const confirmLogout = window.confirm(
-        `PERINGATAN SINKRONISASI:\n\nMasih ada ${unsyncedCount} data presensi/perubahan yang BELUM TERKIRIM ke database Cloud!\n\nJika Anda keluar sekarang dan memori browser dibersihkan, data berisiko tidak terekam di server.\n\nApakah Anda tetap ingin keluar?`
-      );
-      if (!confirmLogout) return;
+      // Tampilkan popup modal peringatan jika ada data yang belum terkirim ke database
+      setShowExitModal(true);
+      return;
     }
+    // Jika data sudah bersih / terkirim semua, keluar langsung dengan aman
+    store.setCurrentUser(null);
+    setCurrentUser(null);
+  };
+
+  const handleForceConfirmExit = () => {
+    setShowExitModal(false);
     store.setCurrentUser(null);
     setCurrentUser(null);
   };
@@ -241,6 +274,11 @@ export function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
       <GuidedTour run={runTour} onFinish={handleTourFinish} activeTab={activeTab} />
       <ToastContainer />
+      <ExitUnsyncedDataModal
+        isOpen={showExitModal}
+        onClose={() => setShowExitModal(false)}
+        onConfirmExit={handleForceConfirmExit}
+      />
       {/* Top Navbar */}
       <Navbar
         currentUser={currentUser}

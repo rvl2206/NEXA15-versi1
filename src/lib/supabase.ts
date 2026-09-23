@@ -230,9 +230,7 @@ export async function testSupabaseConnection(customConfig?: SupabaseConfig): Pro
   }
 }
 
-// ==========================================
-// STUDENTS SYNC & FETCH
-// ==========================================
+// Students sync and fetch
 
 export async function syncStudentsToSupabase(
   students: Student[],
@@ -322,9 +320,7 @@ export async function deleteStudentFromSupabase(identifier: string, customConfig
   }
 }
 
-// ==========================================
-// ATTENDANCE SYNC & FETCH
-// ==========================================
+// Attendance sync and fetch
 
 export async function syncAttendanceToSupabase(
   attendance: AttendanceRecord[],
@@ -420,9 +416,7 @@ export async function deleteAttendanceFromSupabase(id: string, customConfig?: Su
   }
 }
 
-// ==========================================
-// TEACHERS SYNC & FETCH
-// ==========================================
+// Teachers sync and fetch
 
 export async function syncTeachersToSupabase(
   teachers: Teacher[],
@@ -512,9 +506,7 @@ export async function deleteTeacherFromSupabase(identifier: string, customConfig
   }
 }
 
-// ==========================================
-// TEACHER ATTENDANCE SYNC & FETCH
-// ==========================================
+// Teacher attendance sync and fetch
 
 export async function syncTeacherAttendanceToSupabase(
   attendance: TeacherAttendanceRecord[],
@@ -610,9 +602,7 @@ export async function deleteTeacherAttendanceFromSupabase(id: string, customConf
   }
 }
 
-// ==========================================
-// ACTIVITY LOGS SYNC & FETCH
-// ==========================================
+// Activity logs sync and fetch
 
 export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: SupabaseConfig): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient(customConfig);
@@ -681,9 +671,7 @@ export async function deleteLogFromSupabase(id: string, customConfig?: SupabaseC
   }
 }
 
-// ==========================================
-// SQL SCHEMA GENERATOR
-// ==========================================
+// SQL schema generator
 
 export function getSupabaseTeacherOnlySchemaSQL(): string {
   return `-- ==============================================================================
