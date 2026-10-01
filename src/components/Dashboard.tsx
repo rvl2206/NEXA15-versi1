@@ -266,7 +266,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
   return (
     <div className="space-y-6">
       {/* Overview Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="card-premium bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             <SchoolLogo className="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-xs" />
@@ -319,10 +319,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-extrabold text-[11px]">Sync 30s</span>
+            <span className="font-extrabold text-[11px] tabular-nums">Sync 30s</span>
             <button
               onClick={handleManualRefresh}
-              className="p-0.5 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded text-emerald-600 dark:text-emerald-300 transition-colors cursor-pointer"
+              className="p-1 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded-lg text-emerald-600 dark:text-emerald-300 transition-colors cursor-pointer btn-press"
               title="Perbarui data sekarang dari server"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -334,7 +334,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             <span className="text-[10px] text-blue-700 dark:text-blue-300 font-extrabold block uppercase tracking-wider">
               {activeMetricTab === 'siswa' ? 'Kehadiran Siswa' : 'Kehadiran Guru'}
             </span>
-            <span className="text-base font-black text-blue-900 dark:text-blue-100">
+            <span className="text-base font-black text-blue-900 dark:text-blue-100 tabular-nums">
               {activeMetricTab === 'siswa' ? `${studentPercentage}%` : `${teacherPercentage}%`}
             </span>
           </div>
@@ -382,7 +382,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <button
             type="button"
             onClick={() => setActiveMetricTab('siswa')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer btn-press ${
               activeMetricTab === 'siswa'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -390,7 +390,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           >
             <GraduationCap className="w-4 h-4" />
             <span>Presensi Siswa</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 tabular-nums">
               {totalSiswaMasuk}/{totalStudents}
             </span>
           </button>
@@ -398,7 +398,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <button
             type="button"
             onClick={() => setActiveMetricTab('guru')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer btn-press ${
               activeMetricTab === 'guru'
                 ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -406,7 +406,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           >
             <Briefcase className="w-4 h-4" />
             <span>Presensi Guru & Staf</span>
-            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 tabular-nums">
               {teacherTotalMasuk}/{totalActiveTeachers}
             </span>
           </button>
@@ -414,7 +414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <button
             type="button"
             onClick={() => setActiveMetricTab('grafik')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer btn-press ${
               activeMetricTab === 'grafik'
                 ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -427,7 +427,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           <button
             type="button"
             onClick={() => setActiveMetricTab('peringatan')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer btn-press ${
               activeMetricTab === 'peringatan'
                 ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -463,69 +463,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
         <div className="space-y-6 animate-in fade-in duration-150">
           {/* Guru Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Guru</span>
                 <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400">
                   <Briefcase className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">{totalActiveTeachers}</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white mt-2 tabular-nums">{totalActiveTeachers}</div>
               <span className="text-[10px] text-slate-400 font-medium">Guru & Pegawai</span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Hadir Tepat</span>
                 <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
                   <UserCheck className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-2">{teacherTotalHadir}</div>
+              <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-2 tabular-nums">{teacherTotalHadir}</div>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">&le; 07:15 WIT</span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-950/10 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-950/10 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Terlambat</span>
                 <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
                   <Clock className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-2">{teacherTotalTerlambat}</div>
+              <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-2 tabular-nums">{teacherTotalTerlambat}</div>
               <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">&gt; 07:15 WIT</span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/20 dark:bg-blue-950/10 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/20 dark:bg-blue-950/10 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Izin / Cuti</span>
                 <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                   <FileCheck className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-blue-950 dark:text-blue-100 mt-2">{teacherTotalIzin + teacherTotalCuti}</div>
+              <div className="text-2xl font-black text-blue-950 dark:text-blue-100 mt-2 tabular-nums">{teacherTotalIzin + teacherTotalCuti}</div>
               <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Izin Resmi</span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-indigo-200/80 dark:border-indigo-800/50 bg-indigo-50/20 dark:bg-indigo-950/10 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-indigo-200/80 dark:border-indigo-800/50 bg-indigo-50/20 dark:bg-indigo-950/10 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Dinas Luar</span>
                 <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
                   <Briefcase className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-indigo-950 dark:text-indigo-100 mt-2">{teacherTotalDinas}</div>
+              <div className="text-2xl font-black text-indigo-950 dark:text-indigo-100 mt-2 tabular-nums">{teacherTotalDinas}</div>
               <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Tugas Dinas</span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-800/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-xs">
+            <div className="card-premium bg-white dark:bg-slate-900 p-4 rounded-2xl border border-rose-200/80 dark:border-rose-800/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-rose-800 dark:text-rose-300">Sakit / Alpa</span>
                 <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
                   <XCircle className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-rose-950 dark:text-rose-100 mt-2">{teacherTotalSakit + teacherTotalAlpa}</div>
+              <div className="text-2xl font-black text-rose-950 dark:text-rose-100 mt-2 tabular-nums">{teacherTotalSakit + teacherTotalAlpa}</div>
               <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Tidak Masuk</span>
             </div>
           </div>

@@ -2,12 +2,21 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 html {
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   background-color: #f8fafc;
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  letter-spacing: -0.011em;
+  scroll-behavior: smooth;
 }
 
 html.dark {
@@ -23,6 +32,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-color: #f8fafc;
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html.dark body,
@@ -39,6 +52,45 @@ html.dark #root {
   display: flex;
   flex-direction: column;
   background-color: #f8fafc;
+}
+
+/* Tabular figures for time, NISN, NIP, and statistics */
+.tabular-nums,
+[data-tabular-nums="true"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Premium Card & Surface Elevation */
+.card-premium {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.card-premium:hover {
+  transform: translateY(-2px);
+}
+
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, filter 0.15s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.975);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+html.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
 
 /* Scanner & Camera Hardware Acceleration Optimization */

@@ -152,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onToggleMobileSidebar}
-                className="md:hidden p-2 sm:px-2.5 sm:py-2 text-cyan-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/40 rounded-xl transition-all shadow-sm flex items-center gap-1.5 font-black text-xs cursor-pointer active:scale-95"
+                className="md:hidden p-2 sm:px-2.5 sm:py-2 text-cyan-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/40 rounded-xl transition-all shadow-xs flex items-center gap-1.5 font-black text-xs cursor-pointer btn-press"
                 title="Buka Menu Sidebar"
                 aria-label="Buka Menu Sidebar"
               >
@@ -229,12 +229,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={handleForceSync}
                 disabled={isSyncing}
-                className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs btn-press ${
                   isSyncing
                     ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40 animate-pulse'
                     : offlineQueueCount > 0
                     ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white border-rose-400 font-black shadow-md ring-2 ring-rose-500/40 animate-pulse'
-                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border-slate-700'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border-slate-700 hover:border-slate-600'
                 }`}
                 title={
                   offlineQueueCount > 0
@@ -245,34 +245,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <RefreshCw
                   className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : offlineQueueCount > 0 ? 'text-white' : 'text-sky-300'}`}
                 />
-                <span className="text-[10px] sm:text-[11px]">
+                <span className="text-[10px] sm:text-[11px] tabular-nums">
                   {isSyncing ? 'Mengirim...' : offlineQueueCount > 0 ? `${offlineQueueCount} Tertunda` : 'Sync'}
                 </span>
               </button>
             </div>
 
             {/* Realtime Clock (Desktop only) */}
-            <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/80 font-mono shadow-xs">
+            <div className="hidden xl:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/80 font-mono shadow-xs tabular-nums">
               <Clock className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span>{time}</span>
+              <span className="tracking-tight">{time}</span>
             </div>
 
             {/* Global Dark Mode Theme Toggle */}
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-1.5 sm:p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center gap-1 text-xs font-semibold cursor-pointer shrink-0"
+                className="p-1.5 sm:p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 hover:border-slate-600 rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0 btn-press"
                 title={theme === 'dark' ? 'Ganti ke Mode Terang (Light Mode)' : 'Ganti ke Mode Gelap (Dark Mode)'}
               >
                 {theme === 'dark' ? (
                   <>
                     <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 animate-spin-slow" />
-                    <span className="hidden xl:inline text-amber-200 text-[11px]">Terang</span>
+                    <span className="hidden xl:inline text-amber-200 text-[11px] font-bold">Terang</span>
                   </>
                 ) : (
                   <>
                     <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300" />
-                    <span className="hidden xl:inline text-cyan-100 text-[11px]">Gelap</span>
+                    <span className="hidden xl:inline text-cyan-100 text-[11px] font-bold">Gelap</span>
                   </>
                 )}
               </button>
@@ -283,7 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <>
                 <button
                   onClick={onStartTour}
-                  className="hidden md:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 hover:bg-indigo-500/30 transition-all font-semibold cursor-pointer shrink-0"
+                  className="hidden md:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 hover:bg-indigo-500/30 transition-all font-semibold cursor-pointer shrink-0 btn-press"
                   title="Mulai Tur Panduan Aplikasi"
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-indigo-300" />
@@ -291,10 +291,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('ai-analysis')}
-                  className={`hidden lg:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer shrink-0 ${
+                  className={`hidden lg:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer shrink-0 btn-press ${
                     activeTab === 'ai-analysis'
                       ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
-                      : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80'
+                      : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80 hover:border-amber-400/50'
                   }`}
                   title="Analisis AI Gemini"
                 >
@@ -316,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center justify-center"
+                  className="p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 hover:border-amber-400/50 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center justify-center btn-press"
                   title="Pengaturan & Kata Sandi"
                   aria-label="Pengaturan Sekolah"
                 >
@@ -325,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={onLogout}
-                  className="p-1.5 sm:p-2 text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-600/80 border border-rose-500/30 hover:border-rose-500 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-1 font-bold text-xs"
+                  className="p-1.5 sm:p-2 text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-600/90 border border-rose-500/30 hover:border-rose-500 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-1 font-bold text-xs btn-press"
                   title="Keluar / Ganti Akun"
                   aria-label="Keluar Aplikasi"
                 >

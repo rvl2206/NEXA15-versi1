@@ -330,7 +330,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           whileHover={{ y: -2 }}
           transition={{ duration: 0.15 }}
           onClick={() => openModalWithFilter('hadir')}
-          className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs cursor-pointer hover:border-emerald-400 transition-all group relative overflow-hidden"
+          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs cursor-pointer hover:border-emerald-400 transition-all group relative overflow-hidden btn-press"
         >
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-bl-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-2">
@@ -338,15 +338,15 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
               <UserCheck className="w-3.5 h-3.5" />
               <span>Hadir Tepat</span>
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 tabular-nums">
               {totalMasuk > 0 ? `${onTimeRate}%` : '0%'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 tabular-nums">
               {hadirCount}
             </span>
-            <span className="text-xs text-slate-400 font-medium">/ {totalActive} Siswa</span>
+            <span className="text-xs text-slate-400 font-medium tabular-nums">/ {totalActive} Siswa</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-medium pt-2 border-t border-emerald-100/60 dark:border-emerald-900/40">
             <span>&le; 07:15 WIT</span>
@@ -361,7 +361,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           whileHover={{ y: -2 }}
           transition={{ duration: 0.15 }}
           onClick={() => openModalWithFilter('terlambat')}
-          className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/90 dark:border-amber-800/60 shadow-xs cursor-pointer hover:border-amber-400 transition-all group relative overflow-hidden"
+          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/90 dark:border-amber-800/60 shadow-xs cursor-pointer hover:border-amber-400 transition-all group relative overflow-hidden btn-press"
         >
           <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-2">
@@ -369,12 +369,12 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
               <Clock className="w-3.5 h-3.5" />
               <span>Terlambat</span>
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 tabular-nums">
               {totalMasuk > 0 ? `${Math.round((terlambatCount / totalMasuk) * 100)}%` : '0%'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-amber-950 dark:text-amber-100">
+            <span className="text-2xl sm:text-3xl font-black text-amber-950 dark:text-amber-100 tabular-nums">
               {terlambatCount}
             </span>
             <span className="text-xs text-slate-400 font-medium">Siswa Terlambat</span>
@@ -392,7 +392,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           whileHover={{ y: -2 }}
           transition={{ duration: 0.15 }}
           onClick={() => openModalWithFilter('belum_absen')}
-          className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-sky-200/90 dark:border-sky-800/60 shadow-xs cursor-pointer hover:border-sky-400 transition-all group relative overflow-hidden"
+          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-sky-200/90 dark:border-sky-800/60 shadow-xs cursor-pointer hover:border-sky-400 transition-all group relative overflow-hidden btn-press"
         >
           <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/5 rounded-bl-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-2">
@@ -400,12 +400,12 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Belum Scan</span>
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 tabular-nums">
               {totalActive > 0 ? `${Math.round((belumAbsenCount / totalActive) * 100)}%` : '0%'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-sky-950 dark:text-sky-100">
+            <span className="text-2xl sm:text-3xl font-black text-sky-950 dark:text-sky-100 tabular-nums">
               {belumAbsenCount}
             </span>
             <span className="text-xs text-slate-400 font-medium">Belum Tercatat</span>
@@ -423,7 +423,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           whileHover={{ y: -2 }}
           transition={{ duration: 0.15 }}
           onClick={() => openModalWithFilter('alpa')}
-          className="bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/90 dark:border-rose-800/60 shadow-xs cursor-pointer hover:border-rose-400 transition-all group relative overflow-hidden"
+          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/90 dark:border-rose-800/60 shadow-xs cursor-pointer hover:border-rose-400 transition-all group relative overflow-hidden btn-press"
         >
           <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 rounded-bl-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-2">
@@ -431,15 +431,15 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
               <XCircle className="w-3.5 h-3.5" />
               <span>Alpa / Izin</span>
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 tabular-nums">
               Alpa: {alpaCount}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-rose-950 dark:text-rose-100">
+            <span className="text-2xl sm:text-3xl font-black text-rose-950 dark:text-rose-100 tabular-nums">
               {alpaCount + izinCount + sakitCount}
             </span>
-            <span className="text-xs text-slate-400 font-medium">
+            <span className="text-xs text-slate-400 font-medium tabular-nums">
               (Izin: {izinCount}, Sakit: {sakitCount})
             </span>
           </div>

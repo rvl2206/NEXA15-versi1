@@ -242,9 +242,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       title={isCollapsed ? item.label : undefined}
                       className={`tour-step-${item.id} w-full flex items-center ${
                         isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
-                      } rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer group ${
+                      } rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer group btn-press ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm scale-[1.01]'
+                          ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-400/40'
                           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
                       }`}
                     >
@@ -360,9 +360,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <button
                           key={item.id}
                           onClick={() => handleSelectTab(item.id)}
-                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer btn-press ${
                             isActive
-                              ? 'bg-blue-600 text-white shadow-sm scale-[1.01]'
+                              ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-400/40'
                               : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                           }`}
                         >
@@ -394,7 +394,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     onClick={onToggleTheme}
-                    className="flex-1 py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer btn-press"
                   >
                     {theme === 'dark' ? (
                       <>
@@ -418,7 +418,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     if (onCloseMobile) onCloseMobile();
                     onLogout();
                   }}
-                  className="w-full py-2.5 px-3 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl border border-rose-500/30 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-2.5 px-3 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl border border-rose-500/30 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer btn-press"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Keluar / Ganti Akun</span>

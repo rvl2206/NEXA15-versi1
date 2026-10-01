@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from '../types';
 import { SchoolLogo } from './SchoolLogo';
 import { store } from '../lib/store';
-import { signInWithGoogle, sendPasswordResetLink } from '../lib/firebase';
+import { signInWithGoogle, sendPasswordResetLink } from '../lib/supabase';
 import {
   Lock,
   User as UserIcon,
@@ -70,7 +70,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
     setIsGoogleLoading(true);
 
     try {
-      const gUser = await signInWithGoogle();
+      const gUser = await signInWithGoogle(store.getSupabaseConfig());
       const result = await store.loginWithGoogleUser(gUser);
       if (result.success && result.user) {
         onLogin(result.user);
@@ -92,8 +92,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
     setForgotResult(null);
 
     try {
-      // 1. Try Firebase Auth password reset
-      const res = await sendPasswordResetLink(forgotEmail.trim());
+      // 1. Try Supabase Auth password reset
+      const res = await sendPasswordResetLink(forgotEmail.trim(), store.getSupabaseConfig());
       if (res.success) {
         setForgotResult({ success: true, message: res.message });
       } else {

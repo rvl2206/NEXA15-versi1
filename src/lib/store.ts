@@ -35,38 +35,28 @@ import {
   deleteLogFromSupabase,
   getSupabaseClient,
   purgeSaturdayAlpaFromSupabase,
+  fetchUsersFromSupabase,
+  saveUserToSupabase,
+  deleteUserFromSupabase,
+  syncUsersToSupabase,
+  fetchSettingsFromSupabase,
+  saveSettingsToSupabase,
+  fetchDispatchesFromSupabase,
+  saveDispatchToSupabase,
+  deleteDispatchFromSupabase,
+  syncDispatchesToSupabase,
+  saveStudentToSupabase,
+  saveMultipleStudentsToSupabase,
+  saveTeacherToSupabase,
+  saveMultipleTeachersToSupabase,
+  saveAttendanceToSupabase,
+  saveMultipleAttendanceToSupabase,
+  saveTeacherAttendanceToSupabase,
+  saveMultipleTeacherAttendanceToSupabase,
+  saveLogToSupabase,
 } from './supabase';
 
 import { formatPetugasRole } from './exportUtils';
-import { 
-  fetchUsersFromFirestore, 
-  saveUserToFirestore, 
-  deleteUserFromFirestore,
-  fetchSettingsFromFirestore,
-  saveSettingsToFirestore,
-  fetchDispatchesFromFirestore,
-  saveDispatchToFirestore,
-  deleteDispatchFromFirestore,
-  fetchStudentsFromFirestore,
-  saveStudentToFirestore,
-  saveMultipleStudentsToFirestore,
-  deleteStudentFromFirestore,
-  fetchTeachersFromFirestore,
-  saveTeacherToFirestore,
-  saveMultipleTeachersToFirestore,
-  deleteTeacherFromFirestore,
-  fetchAttendanceFromFirestore,
-  saveAttendanceToFirestore,
-  saveMultipleAttendanceToFirestore,
-  deleteAttendanceFromFirestore,
-  fetchTeacherAttendanceFromFirestore,
-  saveTeacherAttendanceToFirestore,
-  saveMultipleTeacherAttendanceToFirestore,
-  deleteTeacherAttendanceFromFirestore,
-  fetchLogsFromFirestore,
-  saveLogToFirestore,
-  purgeSaturdayAlpaFromFirestore,
-} from './firebase';
 import {
   hashPassword,
   hashPasswordSync,
@@ -317,11 +307,11 @@ class AppStore {
       await this.processPendingSyncQueue();
     }
 
-    // Synchronize all database records, settings, and users with Firestore cloud in background
-    await this.syncAllWithFirestore();
+    // Synchronize all database records, settings, and users with Supabase cloud in background
+    await this.syncAllWithSupabase();
     await this.fetchFromServer();
     this.sanitizeData();
-    // Auto purge lingering Saturday Alpa records across Firestore, Supabase, and local store
+    // Auto purge lingering Saturday Alpa records across Supabase and local store
     await this.purgeSaturdayAlpaAttendance(true);
     if (this.syncQueue.length > 0) {
       this.processPendingSyncQueue();
@@ -525,143 +515,88 @@ class AppStore {
       const successfulKeys = new Set<string>();
       const hasSupabase = isSupabaseConfigured(config);
 
-      // 1. Process attendance items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      // 1. Process attendance items
       const attendanceQueueItems = queueSnapshot
         .filter((q) => q.type === 'attendance' && q.action === 'upsert' && q.data)
         .slice(0, 400);
       const attendanceUpserts = attendanceQueueItems.map((q) => q.data as AttendanceRecord);
 
       if (attendanceUpserts.length > 0) {
-        let firestoreOk = false;
-        try {
-          firestoreOk = await saveMultipleAttendanceToFirestore(attendanceUpserts);
-        } catch {
-          firestoreOk = false;
-        }
-
         if (hasSupabase) {
           const res = await syncAttendanceToSupabase(attendanceUpserts, config);
-          if (res.success || firestoreOk) {
+          if (res.success) {
             attendanceQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += attendanceUpserts.length;
           }
-        } else if (firestoreOk) {
-          attendanceQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-          processedCount += attendanceUpserts.length;
         }
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 2. Process teacher attendance items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      // 2. Process teacher attendance items
       const teacherAttQueueItems = queueSnapshot
         .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data)
         .slice(0, 400);
       const teacherAttUpserts = teacherAttQueueItems.map((q) => q.data as TeacherAttendanceRecord);
 
       if (teacherAttUpserts.length > 0) {
-        let firestoreOk = false;
-        try {
-          firestoreOk = await saveMultipleTeacherAttendanceToFirestore(teacherAttUpserts);
-        } catch {
-          firestoreOk = false;
-        }
-
         if (hasSupabase) {
           const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
-          if (res.success || firestoreOk) {
+          if (res.success) {
             teacherAttQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += teacherAttUpserts.length;
           }
-        } else if (firestoreOk) {
-          teacherAttQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-          processedCount += teacherAttUpserts.length;
         }
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 3. Process student items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      // 3. Process student items
       const studentQueueItems = queueSnapshot
         .filter((q) => q.type === 'student' && q.action === 'upsert' && q.data)
         .slice(0, 400);
       const studentUpserts = studentQueueItems.map((q) => q.data as Student);
 
       if (studentUpserts.length > 0) {
-        let firestoreOk = false;
-        try {
-          firestoreOk = await saveMultipleStudentsToFirestore(studentUpserts);
-        } catch {
-          firestoreOk = false;
-        }
-
         if (hasSupabase) {
           const res = await syncStudentsToSupabase(studentUpserts, config);
-          if (res.success || firestoreOk) {
+          if (res.success) {
             studentQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += studentUpserts.length;
           }
-        } else if (firestoreOk) {
-          studentQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-          processedCount += studentUpserts.length;
         }
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 4. Process teacher items (maksimum 400 item per siklus agar aman di bawah limit 450 Firestore batch)
+      // 4. Process teacher items
       const teacherQueueItems = queueSnapshot
         .filter((q) => q.type === 'teacher' && q.action === 'upsert' && q.data)
         .slice(0, 400);
       const teacherUpserts = teacherQueueItems.map((q) => q.data as Teacher);
 
       if (teacherUpserts.length > 0) {
-        let firestoreOk = false;
-        try {
-          firestoreOk = await saveMultipleTeachersToFirestore(teacherUpserts);
-        } catch {
-          firestoreOk = false;
-        }
-
         if (hasSupabase) {
           const res = await syncTeachersToSupabase(teacherUpserts, config);
-          if (res.success || firestoreOk) {
+          if (res.success) {
             teacherQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += teacherUpserts.length;
           }
-        } else if (firestoreOk) {
-          teacherQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-          processedCount += teacherUpserts.length;
         }
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 5. Process log items (evaluasi granular per-item agar log gagal tetap di-retain)
+      // 5. Process log items
       const logQueueItems = queueSnapshot
         .filter((q) => q.type === 'log' && q.action === 'upsert' && q.data);
       const logUpserts = logQueueItems.map((q) => q.data as ActivityLog);
 
       if (logUpserts.length > 0) {
-        let firestoreResults: boolean[] = [];
-        try {
-          firestoreResults = await Promise.all(logUpserts.map((l) => saveLogToFirestore(l)));
-        } catch {
-          firestoreResults = new Array(logUpserts.length).fill(false);
-        }
-
         if (hasSupabase) {
           const res = await syncLogsToSupabase(logUpserts, config);
-          logQueueItems.forEach((q, idx) => {
-            const isItemOk = res.success || firestoreResults[idx] === true;
-            if (isItemOk) {
+          if (res.success) {
+            logQueueItems.forEach((q) => {
               successfulKeys.add(getQueueItemKey(q));
               processedCount++;
-            }
-          });
-        } else {
-          logQueueItems.forEach((q, idx) => {
-            if (firestoreResults[idx] === true) {
-              successfulKeys.add(getQueueItemKey(q));
-              processedCount++;
-            }
-          });
+            });
+          }
         }
       }
       this.lastSyncQueueTimestamp = Date.now();
@@ -673,38 +608,24 @@ class AppStore {
         try {
           let ok = false;
           if (item.type === 'student') {
-            const fOk = await deleteStudentFromFirestore(item.id);
-            let sOk = false;
             if (hasSupabase) {
-              sOk = await deleteStudentFromSupabase(item.id, config);
+              ok = await deleteStudentFromSupabase(item.id, config);
             }
-            ok = fOk || sOk;
           } else if (item.type === 'attendance') {
-            const fOk = await deleteAttendanceFromFirestore(item.id);
-            let sOk = false;
             if (hasSupabase) {
-              sOk = await deleteAttendanceFromSupabase(item.id, config);
+              ok = await deleteAttendanceFromSupabase(item.id, config);
             }
-            ok = fOk || sOk;
           } else if (item.type === 'teacher') {
-            const fOk = await deleteTeacherFromFirestore(item.id);
-            let sOk = false;
             if (hasSupabase) {
-              sOk = await deleteTeacherFromSupabase(item.id, config);
+              ok = await deleteTeacherFromSupabase(item.id, config);
             }
-            ok = fOk || sOk;
           } else if (item.type === 'teacher_attendance') {
-            const fOk = await deleteTeacherAttendanceFromFirestore(item.id);
-            let sOk = false;
             if (hasSupabase) {
-              sOk = await deleteTeacherAttendanceFromSupabase(item.id, config);
+              ok = await deleteTeacherAttendanceFromSupabase(item.id, config);
             }
-            ok = fOk || sOk;
           } else if (item.type === 'log') {
             if (hasSupabase) {
               ok = await deleteLogFromSupabase(item.id, config);
-            } else {
-              ok = true;
             }
           }
           if (ok) {
@@ -737,7 +658,7 @@ class AppStore {
   }
 
   /**
-   * Mengirim seluruh data antrian tertunda ke Database Cloud (Firestore & Supabase)
+   * Mengirim seluruh data antrian tertunda ke Database Cloud Supabase
    */
   public async syncAllPendingToDatabase(force = true): Promise<{
     success: boolean;
@@ -759,14 +680,14 @@ class AppStore {
       // 1. Process items in the queue
       const queueRes = await this.processPendingSyncQueue(true);
 
-      // 2. Also ensure cloud database has all fresh records synced
+      // 2. Ensure cloud database has all fresh records synced with Supabase
       try {
-        await this.syncAllWithFirestore();
+        await this.syncAllWithSupabase();
       } catch (err) {
-        console.warn('Sync with Firestore error during flush:', err);
+        console.warn('Sync with Supabase error during flush:', err);
       }
 
-      // 3. Sync to Supabase if configured
+      // 3. Sync full snapshot to Supabase if configured
       const config = this.getSupabaseConfig();
       if (isSupabaseConfigured(config)) {
         try {
@@ -869,8 +790,8 @@ class AppStore {
     this.settings = { ...this.settings, ...newSettings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
     this.notify();
-    saveSettingsToFirestore(this.settings).catch((err) => {
-      console.warn('Firestore settings update error:', err);
+    saveSettingsToSupabase(this.settings, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Supabase settings update error:', err);
     });
   }
 
@@ -1052,9 +973,12 @@ class AppStore {
     );
   }
 
-  public async syncUsersWithFirestore(): Promise<void> {
+  public async syncUsersWithSupabase(): Promise<void> {
     try {
-      const remoteUsers = await fetchUsersFromFirestore();
+      const config = this.getSupabaseConfig();
+      if (!isSupabaseConfigured(config)) return;
+
+      const remoteUsers = await fetchUsersFromSupabase(config);
       if (remoteUsers && remoteUsers.length > 0) {
         // Merge remote users with local users, prioritizing remote updates and ensuring bcrypt hashes
         const userMap = new Map<string, User>();
@@ -1082,31 +1006,38 @@ class AppStore {
         this.saveLocalData(true);
         this.notify();
       } else {
-        // Firestore app_users collection is empty -> bootstrap seed initial users to Firestore with bcrypt hashes
+        // Cloud app_users table is empty -> bootstrap seed initial users to Supabase with bcrypt hashes
         for (const u of this.users) {
           if (u.password && !isHashedPassword(u.password)) {
             u.password = ensureHashedPassword(u.password);
           }
-          saveUserToFirestore(u).catch(() => {});
+          saveUserToSupabase(u, config).catch(() => {});
         }
       }
     } catch (err) {
-      console.warn('Sync users with Firestore error:', err);
+      console.warn('Sync users with Supabase error:', err);
     }
+  }
+
+  public async syncUsersWithFirestore(): Promise<void> {
+    return this.syncUsersWithSupabase();
   }
 
   /**
    * Synchronize all persistent collections (Users, Settings/Homeroom, Dispatches, Students, Teachers, Attendance, Logs)
-   * with Firestore Cloud Database.
+   * with Supabase Cloud PostgreSQL Database.
    */
-  public async syncAllWithFirestore(): Promise<void> {
+  public async syncAllWithSupabase(): Promise<void> {
     try {
+      const config = this.getSupabaseConfig();
+      if (!isSupabaseConfigured(config)) return;
+
       // 1. Sync Users
-      await this.syncUsersWithFirestore();
+      await this.syncUsersWithSupabase();
 
       // 2. Sync Settings & Homeroom Assignments (Pemetaan Wali Kelas)
       try {
-        const remoteSettings = await fetchSettingsFromFirestore();
+        const remoteSettings = await fetchSettingsFromSupabase(config);
         if (remoteSettings && Object.keys(remoteSettings).length > 0) {
           this.settings = {
             ...this.settings,
@@ -1122,16 +1053,16 @@ class AppStore {
           localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
           this.notify();
         } else {
-          // Cloud settings document is empty -> persist current school settings & homeroom map
-          saveSettingsToFirestore(this.settings).catch(() => {});
+          // Cloud settings table is empty -> persist current school settings & homeroom map
+          saveSettingsToSupabase(this.settings, config).catch(() => {});
         }
       } catch (e) {
-        console.warn('Sync settings with Firestore notice:', e);
+        console.warn('Sync settings with Supabase notice:', e);
       }
 
       // 3. Sync Problematic Student Dispatches (Disposisi Wali Kelas & BK)
       try {
-        const remoteDispatches = await fetchDispatchesFromFirestore();
+        const remoteDispatches = await fetchDispatchesFromSupabase(config);
         if (remoteDispatches && remoteDispatches.length > 0) {
           const dspMap = new Map<string, ProblematicStudentDispatch>();
           this.dispatches.forEach((d) => dspMap.set(d.id, d));
@@ -1142,16 +1073,16 @@ class AppStore {
           this.saveLocalData(true);
           this.notify();
         } else if (this.dispatches.length > 0) {
-          // Seed local dispatches to Firestore
-          this.dispatches.forEach((d) => saveDispatchToFirestore(d).catch(() => {}));
+          // Seed local dispatches to Supabase
+          this.dispatches.forEach((d) => saveDispatchToSupabase(d, config).catch(() => {}));
         }
       } catch (e) {
-        console.warn('Sync dispatches with Firestore notice:', e);
+        console.warn('Sync dispatches with Supabase notice:', e);
       }
 
-      // 4. Sync Students & Teachers with Firestore if cloud has records or local needs backup
+      // 4. Sync Students & Teachers with Supabase if cloud has records or local needs backup
       try {
-        const remoteStudents = await fetchStudentsFromFirestore();
+        const remoteStudents = await fetchStudentsFromSupabase(config);
         if (remoteStudents && remoteStudents.length > 0) {
           const sMap = new Map<string, Student>();
           this.students.forEach((s) => sMap.set(s.id || s.nisn, s));
@@ -1159,10 +1090,10 @@ class AppStore {
           this.students = Array.from(sMap.values());
           this.saveLocalData(true);
         } else if (this.students.length > 0) {
-          saveMultipleStudentsToFirestore(this.students).catch(() => {});
+          saveMultipleStudentsToSupabase(this.students, config).catch(() => {});
         }
 
-        const remoteTeachers = await fetchTeachersFromFirestore();
+        const remoteTeachers = await fetchTeachersFromSupabase(config);
         if (remoteTeachers && remoteTeachers.length > 0) {
           const tMap = new Map<string, Teacher>();
           this.teachers.forEach((t) => tMap.set(t.id || t.nip, t));
@@ -1170,10 +1101,10 @@ class AppStore {
           this.teachers = Array.from(tMap.values());
           this.saveLocalData(true);
         } else if (this.teachers.length > 0) {
-          saveMultipleTeachersToFirestore(this.teachers).catch(() => {});
+          saveMultipleTeachersToSupabase(this.teachers, config).catch(() => {});
         }
 
-        const remoteAttendance = await fetchAttendanceFromFirestore();
+        const remoteAttendance = await fetchAttendanceFromSupabase(config);
         if (remoteAttendance && remoteAttendance.length > 0) {
           const aMap = new Map<string, AttendanceRecord>();
           this.attendance.forEach((a) => aMap.set(a.id, a));
@@ -1181,10 +1112,10 @@ class AppStore {
           this.attendance = Array.from(aMap.values());
           this.saveLocalData(true);
         } else if (this.attendance.length > 0) {
-          saveMultipleAttendanceToFirestore(this.attendance.slice(0, 300)).catch(() => {});
+          saveMultipleAttendanceToSupabase(this.attendance.slice(0, 300), config).catch(() => {});
         }
 
-        const remoteTeacherAtt = await fetchTeacherAttendanceFromFirestore();
+        const remoteTeacherAtt = await fetchTeacherAttendanceFromSupabase(config);
         if (remoteTeacherAtt && remoteTeacherAtt.length > 0) {
           const taMap = new Map<string, TeacherAttendanceRecord>();
           this.teacherAttendance.forEach((ta) => taMap.set(ta.id, ta));
@@ -1192,16 +1123,20 @@ class AppStore {
           this.teacherAttendance = Array.from(taMap.values());
           this.saveLocalData(true);
         } else if (this.teacherAttendance.length > 0) {
-          saveMultipleTeacherAttendanceToFirestore(this.teacherAttendance.slice(0, 300)).catch(() => {});
+          saveMultipleTeacherAttendanceToSupabase(this.teacherAttendance.slice(0, 300), config).catch(() => {});
         }
 
         this.notify();
       } catch (e) {
-        console.warn('Sync entity tables with Firestore notice:', e);
+        console.warn('Sync entity tables with Supabase notice:', e);
       }
     } catch (err) {
-      console.warn('Firestore full database synchronization error:', err);
+      console.warn('Supabase full database synchronization error:', err);
     }
+  }
+
+  public async syncAllWithFirestore(): Promise<void> {
+    return this.syncAllWithSupabase();
   }
 
   public async addUser(userData: Omit<User, 'uid' | 'createdAt'>): Promise<{ success: boolean; user?: User; message: string }> {
@@ -1251,9 +1186,9 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    // Persist to Firestore in background (stores secure bcrypt hash)
-    saveUserToFirestore(newUser).catch((err) => {
-      console.warn('Background save user to Firestore failed:', err);
+    // Persist to Supabase in background (stores secure bcrypt hash)
+    saveUserToSupabase(newUser, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Background save user to Supabase failed:', err);
     });
 
     this.addLog(
@@ -1304,9 +1239,9 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    // Persist update to Firestore
-    saveUserToFirestore(updatedUser).catch((err) => {
-      console.warn('Background update user in Firestore failed:', err);
+    // Persist update to Supabase
+    saveUserToSupabase(updatedUser, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Background update user in Supabase failed:', err);
     });
 
     this.addLog('EDIT_PENGGUNA', `Memperbarui akun pengguna: ${updatedUser.name} (@${updatedUser.username})`);
@@ -1332,9 +1267,9 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    // Delete from Firestore
-    deleteUserFromFirestore(uid).catch((err) => {
-      console.warn('Background delete user in Firestore failed:', err);
+    // Delete from Supabase
+    deleteUserFromSupabase(uid, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Background delete user in Supabase failed:', err);
     });
 
     this.addLog('HAPUS_PENGGUNA', `Menghapus akun pengguna: ${target.name} (@${target.username}) dari database.`);
@@ -1366,7 +1301,7 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    saveUserToFirestore(user).catch(() => {});
+    saveUserToSupabase(user, this.getSupabaseConfig()).catch(() => {});
 
     this.addLog('RESET_PASSWORD_PENGGUNA', `Administrator mereset kata sandi untuk akun: ${user.name} (@${user.username}) dengan enkripsi bcrypt.`);
 
@@ -1435,8 +1370,8 @@ class AppStore {
     this.setCurrentUser(user);
     this.saveLocalData(true);
 
-    // Update lastLoginAt in Firestore
-    saveUserToFirestore(user).catch(() => {});
+    // Update lastLoginAt in Supabase
+    saveUserToSupabase(user, this.getSupabaseConfig()).catch(() => {});
 
     this.addLog('LOGIN_DATABASE', `Pengguna ${user.name} (@${user.username}) berhasil masuk sebagai ${user.role}.`);
 
@@ -1470,7 +1405,7 @@ class AppStore {
       }
       this.setCurrentUser(existing);
       this.saveLocalData(true);
-      saveUserToFirestore(existing).catch(() => {});
+      saveUserToSupabase(existing, this.getSupabaseConfig()).catch(() => {});
       this.addLog('LOGIN_GOOGLE', `Pengguna ${existing.name} masuk melalui akun Google (${email}).`);
       return { success: true, user: existing, message: `Selamat datang, ${existing.name}!` };
     }
@@ -1495,7 +1430,7 @@ class AppStore {
     this.users.push(newUser);
     this.setCurrentUser(newUser);
     this.saveLocalData(true);
-    saveUserToFirestore(newUser).catch(() => {});
+    saveUserToSupabase(newUser, this.getSupabaseConfig()).catch(() => {});
 
     this.addLog('REGISTER_GOOGLE', `Akun baru terdaftar via Google: ${newUser.name} (${email}) sebagai ${newUser.role}`);
 
@@ -1522,7 +1457,7 @@ class AppStore {
     const adminUser = this.users.find((u) => u.uid === 'usr-admin');
     if (adminUser) {
       adminUser.password = hashedNewPass;
-      saveUserToFirestore(adminUser).catch(() => {});
+      saveUserToSupabase(adminUser, this.getSupabaseConfig()).catch(() => {});
     }
     localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
     this.saveLocalData(true);
@@ -1733,8 +1668,9 @@ class AppStore {
       const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
       if (!isOnline) throw new Error('Koneksi internet terputus.');
 
-      const records = await fetchAttendanceFromFirestore(startDate, endDate);
-      const teacherRecords = await fetchTeacherAttendanceFromFirestore(startDate, endDate);
+      const config = this.getSupabaseConfig();
+      const records = (await fetchAttendanceFromSupabase(startDate, endDate, config)) || [];
+      const teacherRecords = (await fetchTeacherAttendanceFromSupabase(startDate, endDate, config)) || [];
 
       if (records.length > 0) {
         const aMap = new Map<string, AttendanceRecord>();
@@ -3806,8 +3742,7 @@ class AppStore {
    * Menghapus secara komprehensif dari:
    * 1. State memori aplikasi (this.attendance & this.teacherAttendance)
    * 2. Browser LocalStorage
-   * 3. Google Cloud Firestore Database (Batch Delete)
-   * 4. Supabase Database (jika terhubung)
+   * 3. Supabase Cloud Database (jika terhubung)
    */
   public async purgeSaturdayAlpaAttendance(silent = false): Promise<{
     deletedStudents: number;
@@ -3847,20 +3782,7 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
-    // 3. Purge directly from Firestore Cloud Database
-    try {
-      const firestoreResult = await purgeSaturdayAlpaFromFirestore();
-      if (firestoreResult.deletedStudents > deletedStudents) {
-        deletedStudents = firestoreResult.deletedStudents;
-      }
-      if (firestoreResult.deletedTeachers > deletedTeachers) {
-        deletedTeachers = firestoreResult.deletedTeachers;
-      }
-    } catch (err) {
-      console.warn('Error purging Saturday Alpa from Firestore:', err);
-    }
-
-    // 4. Purge from Supabase if connected
+    // 3. Purge from Supabase if connected
     try {
       const config = this.getSupabaseConfig();
       if (isSupabaseConfigured(config)) {
@@ -4304,9 +4226,9 @@ class AppStore {
     this.saveLocalData();
     this.notify();
 
-    // Persist to Firestore in background
-    saveDispatchToFirestore(newDispatch).catch((err) => {
-      console.warn('Firestore dispatch save error:', err);
+    // Persist to Supabase in background
+    saveDispatchToSupabase(newDispatch, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Supabase dispatch save error:', err);
     });
 
     this.addLog(
@@ -4334,9 +4256,9 @@ class AppStore {
     this.saveLocalData();
     this.notify();
 
-    // Persist status update to Firestore
-    saveDispatchToFirestore(this.dispatches[idx]).catch((err) => {
-      console.warn('Firestore dispatch update error:', err);
+    // Persist status update to Supabase
+    saveDispatchToSupabase(this.dispatches[idx], this.getSupabaseConfig()).catch((err) => {
+      console.warn('Supabase dispatch update error:', err);
     });
 
     this.addLog(
@@ -4353,8 +4275,8 @@ class AppStore {
     this.saveLocalData();
     this.notify();
 
-    deleteDispatchFromFirestore(id).catch((err) => {
-      console.warn('Firestore dispatch delete error:', err);
+    deleteDispatchFromSupabase(id, this.getSupabaseConfig()).catch((err) => {
+      console.warn('Supabase dispatch delete error:', err);
     });
 
     this.addLog('HAPUS_DISPOSISI', `Riwayat disposisi siswa ${target.studentName} dihapus.`);
@@ -4367,8 +4289,9 @@ class AppStore {
     this.saveLocalData(true);
     this.notify();
 
+    const config = this.getSupabaseConfig();
     ids.forEach((id) => {
-      deleteDispatchFromFirestore(id).catch(() => {});
+      deleteDispatchFromSupabase(id, config).catch(() => {});
     });
 
     this.addLog('CLEAR_DISPOSISI', 'Seluruh riwayat disposisi ke wali kelas telah dibersihkan.');

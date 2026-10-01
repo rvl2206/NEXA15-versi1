@@ -1,5 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Student, AttendanceRecord, ActivityLog, Teacher, TeacherAttendanceRecord } from '../types';
+import { 
+  Student, 
+  AttendanceRecord, 
+  ActivityLog, 
+  Teacher, 
+  TeacherAttendanceRecord,
+  User,
+  SchoolSettings,
+  ProblematicStudentDispatch
+} from '../types';
 
 let cachedClient: SupabaseClient | null = null;
 let cachedConfigKey = '';
@@ -186,7 +195,16 @@ export async function testSupabaseConnection(customConfig?: SupabaseConfig): Pro
   }
 
   try {
-    const requiredTables = ['students', 'attendance', 'activity_logs', 'teachers', 'teacher_attendance'];
+    const requiredTables = [
+      'students',
+      'attendance',
+      'activity_logs',
+      'teachers',
+      'teacher_attendance',
+      'app_users',
+      'school_settings',
+      'problematic_student_dispatches'
+    ];
     const tablesFound: string[] = [];
     const missingTables: string[] = [];
 
@@ -375,11 +393,20 @@ export async function syncAttendanceToSupabase(
   }
 }
 
-export async function fetchAttendanceFromSupabase(customConfig?: SupabaseConfig): Promise<AttendanceRecord[] | null> {
-  const client = getSupabaseClient(customConfig);
+export async function fetchAttendanceFromSupabase(
+  startDateOrConfig?: string | SupabaseConfig,
+  endDate?: string,
+  customConfig?: SupabaseConfig
+): Promise<AttendanceRecord[] | null> {
+  const config = typeof startDateOrConfig === 'object' ? startDateOrConfig : customConfig;
+  const client = getSupabaseClient(config);
   if (!client) return null;
   try {
-    const { data, error } = await client.from('attendance').select('*').order('timestamp', { ascending: false });
+    let q = client.from('attendance').select('*').order('timestamp', { ascending: false });
+    if (typeof startDateOrConfig === 'string' && startDateOrConfig && endDate) {
+      q = q.gte('tanggal', startDateOrConfig).lte('tanggal', endDate);
+    }
+    const { data, error } = await q;
     if (error) {
       console.warn('Supabase attendance fetch notice:', error.message);
       return null;
@@ -561,11 +588,20 @@ export async function syncTeacherAttendanceToSupabase(
   }
 }
 
-export async function fetchTeacherAttendanceFromSupabase(customConfig?: SupabaseConfig): Promise<TeacherAttendanceRecord[] | null> {
-  const client = getSupabaseClient(customConfig);
+export async function fetchTeacherAttendanceFromSupabase(
+  startDateOrConfig?: string | SupabaseConfig,
+  endDate?: string,
+  customConfig?: SupabaseConfig
+): Promise<TeacherAttendanceRecord[] | null> {
+  const config = typeof startDateOrConfig === 'object' ? startDateOrConfig : customConfig;
+  const client = getSupabaseClient(config);
   if (!client) return null;
   try {
-    const { data, error } = await client.from('teacher_attendance').select('*').order('timestamp', { ascending: false });
+    let q = client.from('teacher_attendance').select('*').order('timestamp', { ascending: false });
+    if (typeof startDateOrConfig === 'string' && startDateOrConfig && endDate) {
+      q = q.gte('tanggal', startDateOrConfig).lte('tanggal', endDate);
+    }
+    const { data, error } = await q;
     if (error) {
       console.warn('Supabase teacher attendance fetch notice:', error.message);
       return null;
@@ -668,6 +704,422 @@ export async function deleteLogFromSupabase(id: string, customConfig?: SupabaseC
     return !error;
   } catch {
     return false;
+  }
+}
+
+// ============================================================================
+// 1. APP USERS SYNC & CRUD
+// ============================================================================
+
+export async function syncUsersToSupabase(
+  users: User[],
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; count: number; error?: string }> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
+  if (users.length === 0) return { success: true, count: 0 };
+
+  try {
+    const records = users.map((u) => ({
+      uid: u.uid,
+      username: (u.username || u.uid).trim().toLowerCase(),
+      email: u.email ? u.email.trim() : '',
+      name: u.name ? u.name.trim() : 'User',
+      role: u.role || 'Guru',
+      sub_role: u.subRole || '',
+      assigned_class: u.assignedClass || '',
+      nip: u.nip || '',
+      phone: u.phone || '',
+      password: u.password || '',
+      status: u.status || 'aktif',
+      avatar: u.avatar || '',
+      created_at: toValidIsoTimestamp(u.createdAt),
+      updated_at: toValidIsoTimestamp(u.updatedAt),
+      last_login_at: u.lastLoginAt ? toValidIsoTimestamp(u.lastLoginAt) : null,
+      notes: u.notes || '',
+    }));
+
+    const chunks = chunkArray(records, 100);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('app_users').upsert(chunk, { onConflict: 'uid' });
+        if (error) throw error;
+      },
+      3
+    );
+
+    return { success: true, count: records.length };
+  } catch (err: any) {
+    console.warn('Supabase syncUsers notice:', err?.message || err);
+    return { success: false, count: 0, error: err?.message || 'Gagal menyimpan app_users ke Supabase' };
+  }
+}
+
+export async function fetchUsersFromSupabase(customConfig?: SupabaseConfig): Promise<User[] | null> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return null;
+  try {
+    const { data, error } = await client.from('app_users').select('*').order('created_at', { ascending: true });
+    if (error) {
+      console.warn('Supabase users fetch notice:', error.message);
+      return null;
+    }
+    if (!data) return [];
+    return data.map((row: any) => ({
+      uid: row.uid || row.id,
+      username: row.username || row.uid,
+      email: row.email || '',
+      name: row.name || row.username || 'User',
+      role: row.role || 'Guru',
+      subRole: row.sub_role || row.subRole,
+      assignedClass: row.assigned_class || row.assignedClass || '',
+      nip: row.nip || '',
+      phone: row.phone || '',
+      password: row.password || '',
+      status: row.status || 'aktif',
+      avatar: row.avatar || '',
+      createdAt: row.created_at || row.createdAt || '',
+      updatedAt: row.updated_at || row.updatedAt || '',
+      lastLoginAt: row.last_login_at || row.lastLoginAt || '',
+      notes: row.notes || '',
+    }));
+  } catch (err: any) {
+    console.warn('Supabase fetchUsers error:', err?.message || err);
+    return null;
+  }
+}
+
+export async function saveUserToSupabase(user: User, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncUsersToSupabase([user], customConfig);
+  return res.success;
+}
+
+export async function deleteUserFromSupabase(uid: string, customConfig?: SupabaseConfig): Promise<boolean> {
+  const client = getSupabaseClient(customConfig);
+  if (!client || !uid) return false;
+  try {
+    const { error } = await client.from('app_users').delete().eq('uid', uid);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// 2. SCHOOL SETTINGS SYNC & CRUD
+// ============================================================================
+
+export async function saveSettingsToSupabase(
+  settings: SchoolSettings,
+  customConfig?: SupabaseConfig
+): Promise<boolean> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return false;
+  try {
+    const payload = {
+      id: 'school_config',
+      school_name: settings.schoolName || 'SMAN 15 KEPULAUAN SULA',
+      school_npsn: settings.schoolNPSN || '69933068',
+      school_logo: settings.schoolLogo || '',
+      school_address: settings.schoolAddress || '',
+      school_city: settings.schoolCity || '',
+      cutoff_time: settings.cutoffTime || '07:15',
+      auto_alpa_cutoff_time: settings.autoAlpaCutoffTime || '14:30',
+      enable_auto_alpa: settings.enableAutoAlpa ?? true,
+      school_days: settings.schoolDays || 6,
+      academic_year: settings.academicYear || '2024/2025',
+      enable_wa_notif: settings.enableWaNotif ?? false,
+      wa_template_hadir: settings.waTemplateHadir || '',
+      wa_template_terlambat: settings.waTemplateTerlambat || '',
+      wa_template_izin_sakit: settings.waTemplateIzinSakit || '',
+      wa_template_alpa: settings.waTemplateAlpa || '',
+      wa_template_wali_kelas: settings.waTemplateWaliKelas || '',
+      holidays: settings.holidays || [],
+      homeroom_assignments: settings.homeroomAssignments || {},
+      problem_threshold_alpa: settings.problemThresholdAlpa ?? 2,
+      problem_threshold_terlambat: settings.problemThresholdTerlambat ?? 3,
+      problem_threshold_min_rate: settings.problemThresholdMinRate ?? 75,
+      enable_rfid_reader: settings.enableRfidReader ?? true,
+      rfid_reader_mode: settings.rfidReaderMode || 'auto',
+      rfid_card_type: settings.rfidCardType || 'Dual',
+      rfid_beep_feedback: settings.rfidBeepFeedback ?? true,
+      rfid_auto_record: settings.rfidAutoRecord ?? true,
+      rfid_allow_unregistered_card_prompt: settings.rfidAllowUnregisteredCardPrompt ?? true,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await client.from('school_settings').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      console.warn('Supabase saveSettings notice:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.warn('Supabase saveSettings error:', err?.message || err);
+    return false;
+  }
+}
+
+export async function fetchSettingsFromSupabase(
+  customConfig?: SupabaseConfig
+): Promise<Partial<SchoolSettings> | null> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return null;
+  try {
+    const { data, error } = await client.from('school_settings').select('*').eq('id', 'school_config').single();
+    if (error) {
+      return null;
+    }
+    if (!data) return null;
+
+    const res: Partial<SchoolSettings> = {
+      schoolName: data.school_name || data.schoolName,
+      schoolNPSN: data.school_npsn || data.schoolNPSN,
+      schoolLogo: data.school_logo || data.schoolLogo,
+      schoolAddress: data.school_address || data.schoolAddress,
+      schoolCity: data.school_city || data.schoolCity,
+      cutoffTime: data.cutoff_time || data.cutoffTime,
+      autoAlpaCutoffTime: data.auto_alpa_cutoff_time || data.autoAlpaCutoffTime,
+      enableAutoAlpa: data.enable_auto_alpa ?? data.enableAutoAlpa,
+      schoolDays: data.school_days || data.schoolDays,
+      academicYear: data.academic_year || data.academicYear,
+      enableWaNotif: data.enable_wa_notif ?? data.enableWaNotif,
+      waTemplateHadir: data.wa_template_hadir || data.waTemplateHadir,
+      waTemplateTerlambat: data.wa_template_terlambat || data.waTemplateTerlambat,
+      waTemplateIzinSakit: data.wa_template_izin_sakit || data.waTemplateIzinSakit,
+      waTemplateAlpa: data.wa_template_alpa || data.waTemplateAlpa,
+      waTemplateWaliKelas: data.wa_template_wali_kelas || data.waTemplateWaliKelas,
+      holidays: Array.isArray(data.holidays) ? data.holidays : (Array.isArray(data.holidays_json) ? data.holidays_json : []),
+      homeroomAssignments: data.homeroom_assignments && typeof data.homeroom_assignments === 'object' ? data.homeroom_assignments : {},
+      problemThresholdAlpa: data.problem_threshold_alpa ?? data.problemThresholdAlpa,
+      problemThresholdTerlambat: data.problem_threshold_terlambat ?? data.problemThresholdTerlambat,
+      problemThresholdMinRate: data.problem_threshold_min_rate ?? data.problemThresholdMinRate,
+      enableRfidReader: data.enable_rfid_reader ?? data.enableRfidReader,
+      rfidReaderMode: data.rfid_reader_mode || data.rfidReaderMode,
+      rfidCardType: data.rfid_card_type || data.rfidCardType,
+      rfidBeepFeedback: data.rfid_beep_feedback ?? data.rfidBeepFeedback,
+      rfidAutoRecord: data.rfid_auto_record ?? data.rfidAutoRecord,
+      rfidAllowUnregisteredCardPrompt: data.rfid_allow_unregistered_card_prompt ?? data.rfidAllowUnregisteredCardPrompt,
+    };
+    return res;
+  } catch (err: any) {
+    console.warn('Supabase fetchSettings error:', err?.message || err);
+    return null;
+  }
+}
+
+// ============================================================================
+// 3. PROBLEMATIC STUDENT DISPATCHES SYNC & CRUD
+// ============================================================================
+
+export async function syncDispatchesToSupabase(
+  dispatches: ProblematicStudentDispatch[],
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; count: number; error?: string }> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
+  if (dispatches.length === 0) return { success: true, count: 0 };
+
+  try {
+    const records = dispatches.map((d) => ({
+      id: d.id,
+      student_id: d.studentId || '',
+      student_name: d.studentName || 'Siswa',
+      nisn: d.nisn || '',
+      kelas: d.kelas || '-',
+      wali_kelas_name: d.waliKelasName || '',
+      wali_kelas_phone: d.waliKelasPhone || '',
+      wali_kelas_nip: d.waliKelasNip || '',
+      risk_level: d.riskLevel || 'Perhatian',
+      alpa_count: d.alpaCount || 0,
+      terlambat_count: d.terlambatCount || 0,
+      sakit_count: d.sakitCount || 0,
+      izin_count: d.izinCount || 0,
+      attendance_rate: d.attendanceRate || 0,
+      reasons: Array.isArray(d.reasons) ? d.reasons : [],
+      notes: d.notes || '',
+      ai_recommendation: d.aiRecommendation || '',
+      dispatched_at: toValidIsoTimestamp(d.dispatchedAt),
+      dispatched_by: d.dispatchedBy || '',
+      channel: d.channel || 'Sistem Internal',
+      status: d.status || 'Terkirim',
+      tindak_lanjut_notes: d.tindakLanjutNotes || '',
+      resolved_at: d.resolvedAt ? toValidIsoTimestamp(d.resolvedAt) : null,
+    }));
+
+    const chunks = chunkArray(records, 100);
+    await parallelBatchExecution(
+      chunks,
+      async (chunk) => {
+        const { error } = await client.from('problematic_student_dispatches').upsert(chunk, { onConflict: 'id' });
+        if (error) throw error;
+      },
+      3
+    );
+
+    return { success: true, count: records.length };
+  } catch (err: any) {
+    console.warn('Supabase syncDispatches notice:', err?.message || err);
+    return { success: false, count: 0, error: err?.message || 'Gagal menyimpan dispatches ke Supabase' };
+  }
+}
+
+export async function fetchDispatchesFromSupabase(
+  customConfig?: SupabaseConfig
+): Promise<ProblematicStudentDispatch[] | null> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return null;
+  try {
+    const { data, error } = await client.from('problematic_student_dispatches').select('*').order('dispatched_at', { ascending: false });
+    if (error) {
+      console.warn('Supabase fetchDispatches notice:', error.message);
+      return null;
+    }
+    if (!data) return [];
+    return data.map((r: any) => ({
+      id: r.id,
+      studentId: r.student_id || r.studentId,
+      studentName: r.student_name || r.studentName || '',
+      nisn: r.nisn || '',
+      kelas: r.kelas || '',
+      waliKelasName: r.wali_kelas_name || r.waliKelasName || '',
+      waliKelasPhone: r.wali_kelas_phone || r.waliKelasPhone,
+      waliKelasNip: r.wali_kelas_nip || r.waliKelasNip,
+      riskLevel: (r.risk_level || r.riskLevel || 'Perhatian') as any,
+      alpaCount: r.alpa_count ?? r.alpaCount ?? 0,
+      terlambatCount: r.terlambat_count ?? r.terlambatCount ?? 0,
+      sakitCount: r.sakit_count ?? r.sakitCount ?? 0,
+      izinCount: r.izin_count ?? r.izinCount ?? 0,
+      attendanceRate: r.attendance_rate ?? r.attendanceRate ?? 0,
+      reasons: Array.isArray(r.reasons) ? r.reasons : [],
+      notes: r.notes || '',
+      aiRecommendation: r.ai_recommendation || r.aiRecommendation,
+      dispatchedAt: r.dispatched_at || r.dispatchedAt || new Date().toISOString(),
+      dispatchedBy: r.dispatched_by || r.dispatchedBy || '',
+      channel: (r.channel || 'Sistem Internal') as any,
+      status: (r.status || 'Terkirim') as any,
+      tindakLanjutNotes: r.tindak_lanjut_notes || r.tindakLanjutNotes,
+      resolvedAt: r.resolved_at || r.resolvedAt,
+    }));
+  } catch (err: any) {
+    console.warn('Supabase fetchDispatches error:', err?.message || err);
+    return null;
+  }
+}
+
+export async function saveDispatchToSupabase(
+  dispatch: ProblematicStudentDispatch,
+  customConfig?: SupabaseConfig
+): Promise<boolean> {
+  const res = await syncDispatchesToSupabase([dispatch], customConfig);
+  return res.success;
+}
+
+export async function deleteDispatchFromSupabase(
+  id: string,
+  customConfig?: SupabaseConfig
+): Promise<boolean> {
+  const client = getSupabaseClient(customConfig);
+  if (!client || !id) return false;
+  try {
+    const { error } = await client.from('problematic_student_dispatches').delete().eq('id', id);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// 4. ENTITY SINGLE & MULTIPLE HELPERS
+// ============================================================================
+
+export async function saveStudentToSupabase(student: Student, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncStudentsToSupabase([student], customConfig);
+  return res.success;
+}
+
+export async function saveMultipleStudentsToSupabase(students: Student[], customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncStudentsToSupabase(students, customConfig);
+  return res.success;
+}
+
+export async function saveTeacherToSupabase(teacher: Teacher, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncTeachersToSupabase([teacher], customConfig);
+  return res.success;
+}
+
+export async function saveMultipleTeachersToSupabase(teachers: Teacher[], customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncTeachersToSupabase(teachers, customConfig);
+  return res.success;
+}
+
+export async function saveAttendanceToSupabase(record: AttendanceRecord, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncAttendanceToSupabase([record], customConfig);
+  return res.success;
+}
+
+export async function saveMultipleAttendanceToSupabase(records: AttendanceRecord[], customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncAttendanceToSupabase(records, customConfig);
+  return res.success;
+}
+
+export async function saveTeacherAttendanceToSupabase(record: TeacherAttendanceRecord, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncTeacherAttendanceToSupabase([record], customConfig);
+  return res.success;
+}
+
+export async function saveMultipleTeacherAttendanceToSupabase(records: TeacherAttendanceRecord[], customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncTeacherAttendanceToSupabase(records, customConfig);
+  return res.success;
+}
+
+export async function saveLogToSupabase(log: ActivityLog, customConfig?: SupabaseConfig): Promise<boolean> {
+  const res = await syncLogsToSupabase([log], customConfig);
+  return res.success;
+}
+
+// ============================================================================
+// 5. SUPABASE AUTHENTICATION (OAUTH & RESET PASSWORD)
+// ============================================================================
+
+export async function signInWithGoogle(customConfig?: SupabaseConfig): Promise<any> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) {
+    throw new Error('Koneksi Supabase belum dikonfigurasi.');
+  }
+  const { data, error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+    },
+  });
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+export async function sendPasswordResetLink(
+  email: string,
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; message: string }> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) {
+    return { success: false, message: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}` : undefined,
+    });
+    if (error) {
+      return { success: false, message: error.message };
+    }
+    return {
+      success: true,
+      message: `Tautan reset kata sandi telah dikirim ke alamat email ${email}. Silakan periksa kotak masuk email Anda.`,
+    };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Gagal memproses permintaan reset kata sandi.' };
   }
 }
 
@@ -863,12 +1315,102 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
 
 CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON public.activity_logs(timestamp);
 
--- 6. KEBIJAKAN ROW LEVEL SECURITY (RLS) & HAK AKSES API
+-- 6. TABEL AKUN PENGGUNA SISTEM (app_users)
+CREATE TABLE IF NOT EXISTS public.app_users (
+    uid TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    sub_role TEXT,
+    assigned_class TEXT,
+    nip TEXT,
+    phone TEXT,
+    password TEXT,
+    status TEXT DEFAULT 'aktif',
+    avatar TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_login_at TIMESTAMPTZ,
+    notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_username ON public.app_users(username);
+CREATE INDEX IF NOT EXISTS idx_app_users_role ON public.app_users(role);
+
+-- 7. TABEL PENGATURAN SEKOLAH (school_settings)
+CREATE TABLE IF NOT EXISTS public.school_settings (
+    id TEXT PRIMARY KEY DEFAULT 'school_config',
+    school_name TEXT NOT NULL,
+    school_npsn TEXT,
+    school_logo TEXT,
+    school_address TEXT,
+    school_city TEXT,
+    cutoff_time TEXT NOT NULL DEFAULT '07:15',
+    auto_alpa_cutoff_time TEXT DEFAULT '14:30',
+    enable_auto_alpa BOOLEAN DEFAULT true,
+    school_days INT DEFAULT 6,
+    academic_year TEXT DEFAULT '2024/2025',
+    enable_wa_notif BOOLEAN DEFAULT false,
+    wa_template_hadir TEXT,
+    wa_template_terlambat TEXT,
+    wa_template_izin_sakit TEXT,
+    wa_template_alpa TEXT,
+    wa_template_wali_kelas TEXT,
+    holidays JSONB DEFAULT '[]'::jsonb,
+    homeroom_assignments JSONB DEFAULT '{}'::jsonb,
+    problem_threshold_alpa INT DEFAULT 2,
+    problem_threshold_terlambat INT DEFAULT 3,
+    problem_threshold_min_rate INT DEFAULT 75,
+    enable_rfid_reader BOOLEAN DEFAULT true,
+    rfid_reader_mode TEXT DEFAULT 'auto',
+    rfid_card_type TEXT DEFAULT 'Dual',
+    rfid_beep_feedback BOOLEAN DEFAULT true,
+    rfid_auto_record BOOLEAN DEFAULT true,
+    rfid_allow_unregistered_card_prompt BOOLEAN DEFAULT true,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. TABEL DISPOSISI SISWA BERMASALAH (problematic_student_dispatches)
+CREATE TABLE IF NOT EXISTS public.problematic_student_dispatches (
+    id TEXT PRIMARY KEY,
+    student_id TEXT,
+    student_name TEXT NOT NULL,
+    nisn TEXT NOT NULL,
+    kelas TEXT NOT NULL,
+    wali_kelas_name TEXT,
+    wali_kelas_phone TEXT,
+    wali_kelas_nip TEXT,
+    risk_level TEXT,
+    alpa_count INT DEFAULT 0,
+    terlambat_count INT DEFAULT 0,
+    sakit_count INT DEFAULT 0,
+    izin_count INT DEFAULT 0,
+    attendance_rate NUMERIC DEFAULT 0,
+    reasons JSONB DEFAULT '[]'::jsonb,
+    notes TEXT,
+    ai_recommendation TEXT,
+    dispatched_at TIMESTAMPTZ DEFAULT NOW(),
+    dispatched_by TEXT,
+    channel TEXT,
+    status TEXT DEFAULT 'Terkirim',
+    tindak_lanjut_notes TEXT,
+    resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispatches_nisn ON public.problematic_student_dispatches(nisn);
+CREATE INDEX IF NOT EXISTS idx_dispatches_kelas ON public.problematic_student_dispatches(kelas);
+CREATE INDEX IF NOT EXISTS idx_dispatches_status ON public.problematic_student_dispatches(status);
+
+-- 9. KEBIJAKAN ROW LEVEL SECURITY (RLS) & HAK AKSES API
 ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.teacher_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.problematic_student_dispatches ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
@@ -886,6 +1428,15 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activity_logs' AND policyname = 'Allow all logs') THEN
         CREATE POLICY "Allow all logs" ON public.activity_logs FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'app_users' AND policyname = 'Allow all app_users') THEN
+        CREATE POLICY "Allow all app_users" ON public.app_users FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'school_settings' AND policyname = 'Allow all school_settings') THEN
+        CREATE POLICY "Allow all school_settings" ON public.school_settings FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'problematic_student_dispatches' AND policyname = 'Allow all dispatches') THEN
+        CREATE POLICY "Allow all dispatches" ON public.problematic_student_dispatches FOR ALL USING (true) WITH CHECK (true);
     END IF;
 END $$;
 `;
@@ -989,20 +1540,91 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 
 CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON activity_logs(timestamp DESC);
 
--- 6. Table: School Settings (Pengaturan & Konfigurasi Sekolah)
+-- 6. Table: App Users (Pengguna Sistem NEXA15)
+CREATE TABLE IF NOT EXISTS app_users (
+    uid VARCHAR(100) PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    sub_role VARCHAR(50),
+    assigned_class VARCHAR(50),
+    nip VARCHAR(50),
+    phone VARCHAR(50),
+    password VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'aktif',
+    avatar TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_username ON app_users(username);
+CREATE INDEX IF NOT EXISTS idx_app_users_role ON app_users(role);
+
+-- 7. Table: School Settings (Pengaturan & Konfigurasi Sekolah)
 CREATE TABLE IF NOT EXISTS school_settings (
-    id VARCHAR(50) PRIMARY KEY DEFAULT 'default',
+    id VARCHAR(50) PRIMARY KEY DEFAULT 'school_config',
     school_name VARCHAR(255) NOT NULL,
     school_npsn VARCHAR(50),
     school_logo TEXT,
+    school_address TEXT,
+    school_city VARCHAR(100),
     cutoff_time VARCHAR(10) DEFAULT '07:15',
     auto_alpa_cutoff_time VARCHAR(10) DEFAULT '14:30',
     enable_auto_alpa BOOLEAN DEFAULT true,
-    academic_year VARCHAR(50) DEFAULT '2026/2027',
-    enable_wa_notif BOOLEAN DEFAULT true,
-    holidays_json JSONB DEFAULT '[]'::jsonb,
+    school_days INTEGER DEFAULT 6,
+    academic_year VARCHAR(50) DEFAULT '2024/2025',
+    enable_wa_notif BOOLEAN DEFAULT false,
+    wa_template_hadir TEXT,
+    wa_template_terlambat TEXT,
+    wa_template_izin_sakit TEXT,
+    wa_template_alpa TEXT,
+    wa_template_wali_kelas TEXT,
+    holidays JSONB DEFAULT '[]'::jsonb,
+    homeroom_assignments JSONB DEFAULT '{}'::jsonb,
+    problem_threshold_alpa INTEGER DEFAULT 2,
+    problem_threshold_terlambat INTEGER DEFAULT 3,
+    problem_threshold_min_rate INTEGER DEFAULT 75,
+    enable_rfid_reader BOOLEAN DEFAULT true,
+    rfid_reader_mode VARCHAR(50) DEFAULT 'auto',
+    rfid_card_type VARCHAR(50) DEFAULT 'Dual',
+    rfid_beep_feedback BOOLEAN DEFAULT true,
+    rfid_auto_record BOOLEAN DEFAULT true,
+    rfid_allow_unregistered_card_prompt BOOLEAN DEFAULT true,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 8. Table: Problematic Student Dispatches (Disposisi Siswa Bermasalah)
+CREATE TABLE IF NOT EXISTS problematic_student_dispatches (
+    id VARCHAR(100) PRIMARY KEY,
+    student_id VARCHAR(100),
+    student_name VARCHAR(255) NOT NULL,
+    nisn VARCHAR(50) NOT NULL,
+    kelas VARCHAR(50) NOT NULL,
+    wali_kelas_name VARCHAR(255),
+    wali_kelas_phone VARCHAR(50),
+    wali_kelas_nip VARCHAR(50),
+    risk_level VARCHAR(50),
+    alpa_count INTEGER DEFAULT 0,
+    terlambat_count INTEGER DEFAULT 0,
+    sakit_count INTEGER DEFAULT 0,
+    izin_count INTEGER DEFAULT 0,
+    attendance_rate NUMERIC DEFAULT 0,
+    reasons JSONB DEFAULT '[]'::jsonb,
+    notes TEXT,
+    ai_recommendation TEXT,
+    dispatched_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    dispatched_by VARCHAR(100),
+    channel VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Terkirim',
+    tindak_lanjut_notes TEXT,
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispatches_nisn ON problematic_student_dispatches(nisn);
+CREATE INDEX IF NOT EXISTS idx_dispatches_status ON problematic_student_dispatches(status);
 `;
 }
 
