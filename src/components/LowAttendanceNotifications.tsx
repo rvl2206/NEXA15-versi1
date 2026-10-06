@@ -4,13 +4,7 @@ import { store } from '../lib/store';
 import { formatWhatsAppNumber, getWhatsAppLink } from '../lib/exportUtils';
 import {
   AlertTriangle,
-  Sparkles,
-  Search,
-  MessageSquare,
-  Copy,
-  Check,
   CheckCircle2,
-  RefreshCw,
   ChevronDown,
   ChevronUp,
   User,
@@ -22,6 +16,9 @@ import {
   ShieldAlert,
   Info,
   ExternalLink,
+  Search,
+  Check,
+  Copy,
 } from 'lucide-react';
 
 interface LowAttendanceNotificationsProps {
@@ -40,7 +37,7 @@ export interface FlaggedStudent {
   attendanceRate: number; // percentage 0 - 100
   riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian';
   reasons: string[];
-  aiRecommendation?: string;
+  recommendation?: string;
   handled?: boolean;
 }
 
@@ -52,9 +49,6 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
   const [filterRisk, setFilterRisk] = useState<'semua' | 'Tinggi' | 'Sedang' | 'Perhatian'>('semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [handledIds, setHandledIds] = useState<Set<string>>(new Set());
-  const [aiSummary, setAiSummary] = useState<string>('');
-  const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
-  const [aiError, setAiError] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<FlaggedStudent | null>(null);
@@ -68,12 +62,17 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
 
     const activeStudents = students.filter((s) => s.status === 'aktif');
     const allUniqueDates = Array.from(new Set(attendance.map((a) => a.tanggal)));
-    const totalRecordedDays = Math.max(allUniqueDates.length, 1);
+    if (allUniqueDates.length === 0) {
+      setFlaggedStudents([]);
+      return;
+    }
+    const totalRecordedDays = allUniqueDates.length;
 
     const list: FlaggedStudent[] = [];
 
     activeStudents.forEach((student) => {
       const studentRecords = attendance.filter((a) => a.nisn === student.nisn && a.jenis === 'Masuk');
+      if (studentRecords.length === 0) return;
 
       // Unique dates this student had recorded attendance
       const studentUniqueDates = new Set(studentRecords.map((r) => r.tanggal));
@@ -95,45 +94,49 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
       });
 
       const totalPresent = hadirCount + terlambatCount;
-      const attendanceRate = Math.round((totalPresent / studentTotalDays) * 100);
+      const attendanceRate = studentTotalDays > 0 ? Math.round((totalPresent / studentTotalDays) * 100) : 100;
 
       const reasons: string[] = [];
 
-      if (alpaCount >= 2) {
+      const hasAlpaProblem = alpaCount >= 2;
+      if (hasAlpaProblem) {
         reasons.push(`Memiliki ${alpaCount} kali Alpa (tanpa keterangan).`);
-      } else if (alpaCount === 1) {
-        reasons.push(`Tercatat 1 kali Alpa.`);
       }
 
+      const hasTerlambatProblem = terlambatCount >= 3;
       if (terlambatCount >= 5) {
         reasons.push(`Sangat sering terlambat (${terlambatCount} kali).`);
-      } else if (terlambatCount >= 3) {
+      } else if (hasTerlambatProblem) {
         reasons.push(`Sering terlambat masuk sekolah (${terlambatCount} kali).`);
       }
 
-      if (attendanceRate < 70) {
-        reasons.push(`Tingkat kehadiran sangat rendah (${attendanceRate}%).`);
-      } else if (attendanceRate < 80) {
-        reasons.push(`Tingkat kehadiran di bawah target minimum (${attendanceRate}%).`);
+      const hasRateProblem = totalRecordedDays >= 3 && attendanceRate < 80;
+      if (hasRateProblem) {
+        if (attendanceRate < 70) {
+          reasons.push(`Tingkat kehadiran sangat rendah (${attendanceRate}%).`);
+        } else {
+          reasons.push(`Tingkat kehadiran di bawah target minimum (${attendanceRate}%).`);
+        }
       }
 
-      if (sakitCount + izinCount >= 4) {
+      const hasExcessivePermit = (sakitCount + izinCount) >= 4;
+      if (hasExcessivePermit) {
         reasons.push(`Akumulasi Izin/Sakit tinggi (${sakitCount} Sakit, ${izinCount} Izin).`);
       }
 
       // Check if flagged
-      if (reasons.length > 0 || attendanceRate < 80 || alpaCount > 0 || terlambatCount >= 3) {
+      if (hasAlpaProblem || hasTerlambatProblem || hasRateProblem || hasExcessivePermit) {
         let riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian' = 'Sedang';
 
-        if (attendanceRate < 70 || alpaCount >= 2 || terlambatCount >= 5) {
+        if ((hasRateProblem && attendanceRate < 70) || alpaCount >= 3 || terlambatCount >= 5) {
           riskLevel = 'Tinggi';
-        } else if (attendanceRate < 80 || alpaCount === 1 || terlambatCount >= 3) {
+        } else if (hasAlpaProblem || hasTerlambatProblem || hasRateProblem) {
           riskLevel = 'Sedang';
         } else {
           riskLevel = 'Perhatian';
         }
 
-        // Generate preliminary AI recommendation
+        // Generate preliminary recommendation
         let rec = '';
         if (riskLevel === 'Tinggi') {
           rec = 'Sangat Disarankan: Kirim Surat Panggilan Orang Tua ke Sekolah & Bimbingan Khusus BK.';
@@ -154,7 +157,7 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
           attendanceRate,
           riskLevel,
           reasons,
-          aiRecommendation: rec,
+          recommendation: rec,
           handled: handledIds.has(student.nisn),
         });
       }
@@ -172,58 +175,6 @@ export const LowAttendanceNotifications: React.FC<LowAttendanceNotificationsProp
     setFlaggedStudents(list);
   }, [students, attendance, handledIds]);
 
-  // Request Gemini AI analysis for low attendance
-  const runGeminiLowAttendanceAnalysis = async () => {
-    if (flaggedStudents.length === 0) return;
-
-    setIsAiLoading(true);
-    setAiError('');
-
-    try {
-      const sampleData = flaggedStudents.slice(0, 15).map((f) => ({
-        nama: f.student.nama,
-        nisn: f.student.nisn,
-        kelas: f.student.kelas,
-        attendanceRate: `${f.attendanceRate}%`,
-        alpa: f.alpaCount,
-        terlambat: f.terlambatCount,
-        sakitIzin: f.sakitCount + f.izinCount,
-        riskLevel: f.riskLevel,
-        reasons: f.reasons.join(' '),
-      }));
-
-      const prompt = `Anda adalah Sistem Kehadiran Pintar Gemini AI di SMA Negeri 15 Ambon.
-Tugas Anda: Analisis notifikasi otomatis untuk daftar siswa dengan tingkat kehadiran rendah berikut:
-
-Daftar Siswa Berisiko:
-${JSON.stringify(sampleData, null, 2)}
-
-Mohon berikan output ringkas dalam Bahasa Indonesia berkualitas tinggi:
-1. **RINGKASAN TINGKAT RISIKO KEHADIRAN**: Ringkasan singkat pola ketidakhadiran (berapa siswa risiko tinggi, masalah utama: Alpa vs Terlambat vs Sakit).
-2. **REKOMENDASI KONKRET PENANGANAN**:
-   - Langkah untuk Wali Kelas & Guru BK
-   - Draf teks imbauan resmi singkat untuk WhatsApp Orang Tua / Wali
-3. **SARAN TINDAK LANJUT MINGGUAN**: Cara mempertahankan kedisiplinan di SMA Negeri 15 Ambon.`;
-
-      const response = await fetch('/api/gemini/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, type: 'low_attendance_alert' }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Gagal memperoleh analisis Gemini AI.');
-      }
-
-      setAiSummary(data.result || data.analysis || 'Analisis Gemini AI selesai.');
-    } catch (err: any) {
-      console.error('Gemini Low Attendance Error:', err);
-      setAiError(err.message || 'Gagal memproses analisis Gemini AI.');
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   const toggleHandled = (nisn: string) => {
     setHandledIds((prev) => {
@@ -250,8 +201,8 @@ Melalui notifikasi sistem presensi sekolah, kami menginformasikan catatan kedisi
 ⏰ *Jumlah Terlambat:* ${item.terlambatCount} kali
 🩺 *Sakit/Izin:* ${item.sakitCount + item.izinCount} hari
 
-*Rekomendasi Penanganan (Gemini AI & Sekolah):*
-${item.aiRecommendation || 'Mohon perhatian dan koordinasi Bapak/Ibu wali murid dengan Wali Kelas / Guru BK sekolah.'}
+*Rekomendasi Penanganan (Guru BK & Wali Kelas):*
+${item.recommendation || 'Mohon perhatian dan koordinasi Bapak/Ibu wali murid dengan Wali Kelas / Guru BK sekolah.'}
 
 Demikian pemberitahuan ini disampaikan demi kelancaran proses belajar mengajar ananda di SMA Negeri 15 Ambon.
 Terima kasih atas perhatian dan kerja sama Bapak/Ibu.
@@ -305,10 +256,6 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
               <span className="px-1.5 py-0.5 bg-rose-500/30 border border-rose-400/40 text-rose-200 rounded text-[9px] font-black uppercase tracking-wider">
                 Perhatian BK & Wali Kelas
               </span>
-              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 border border-amber-400/30 text-amber-300 rounded text-[9px] font-bold">
-                <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                Gemini AI
-              </span>
             </div>
             <h3 className="text-sm sm:text-base font-black tracking-tight text-white mt-0.5 flex items-center gap-2">
               <span>Peringatan Presensi Siswa</span>
@@ -320,27 +267,6 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-center">
-          <button
-            onClick={() => {
-              if (!isExpanded) setIsExpanded(true);
-              runGeminiLowAttendanceAnalysis();
-            }}
-            disabled={isAiLoading || flaggedStudents.length === 0}
-            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Jalankan analisis mendalam Gemini AI untuk daftar ketidakhadiran"
-          >
-            {isAiLoading ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Menganalisis...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-                <span>Analisis AI</span>
-              </>
-            )}
-          </button>
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -406,33 +332,6 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
             </div>
           </div>
 
-          {/* Gemini AI Executive Summary Box (if generated) */}
-          {aiSummary && (
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-slate-100 p-4 rounded-xl border border-indigo-700/60 shadow-inner relative overflow-hidden">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-indigo-800/60">
-                <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase tracking-wider">
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>Hasil Analisis Gemini AI Kedisiplinan</span>
-                </div>
-                <button
-                  onClick={() => setAiSummary('')}
-                  className="text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
-                >
-                  Tutup
-                </button>
-              </div>
-              <div className="text-xs leading-relaxed text-slate-200 whitespace-pre-line font-mono max-h-60 overflow-y-auto pr-2">
-                {aiSummary}
-              </div>
-            </div>
-          )}
-
-          {aiError && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>{aiError}</span>
-            </div>
-          )}
 
           {/* Search Bar */}
           <div className="relative">
@@ -457,7 +356,7 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
               </h4>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 max-w-md mx-auto">
                 {flaggedStudents.length === 0
-                  ? 'Seluruh siswa aktif memiliki tingkat presensi sangat baik (>= 80%). Gemini AI tidak menemukan indikasi ketidakhadiran kritis.'
+                  ? 'Seluruh siswa aktif memiliki tingkat presensi sangat baik (>= 80%). Tidak ditemukan indikasi ketidakhadiran kritis.'
                   : 'Coba ubah kata kunci pencarian atau kategori filter risiko di atas.'}
               </p>
             </div>
@@ -559,12 +458,12 @@ _Tim Kedisiplinan & Guru BK SMAN 15 Ambon_
                             )}
                           </div>
 
-                          {/* AI Guidance snippet */}
+                          {/* Guidance snippet */}
                           <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/80 p-2 rounded-lg border border-slate-200/60 dark:border-slate-800 flex items-start gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
                             <span>
-                              <strong className="text-slate-800 dark:text-slate-200">Saran Gemini AI:</strong>{' '}
-                              {item.aiRecommendation}
+                              <strong className="text-slate-800 dark:text-slate-200">Rekomendasi Penanganan:</strong>{' '}
+                              {item.recommendation}
                             </span>
                           </div>
                         </div>

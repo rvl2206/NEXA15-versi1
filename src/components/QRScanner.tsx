@@ -17,6 +17,7 @@ import {
 } from '../lib/exportUtils';
 import {
   QrCode,
+  Calendar,
   Camera,
   CameraOff,
   CheckCircle2,
@@ -61,6 +62,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { LupaKartuModal } from './LupaKartuModal';
+import { QRScannerModal } from './QRScannerModal';
 
 interface QRScannerProps {
   currentOfficer: string;
@@ -68,7 +70,7 @@ interface QRScannerProps {
 
 export type ScanTargetMode = 'siswa' | 'guru' | 'auto';
 
-interface ScanOutcome {
+export interface ScanOutcome {
   success: boolean;
   isDuplicate?: boolean;
   isOffline?: boolean;
@@ -131,7 +133,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [scanResolution, setScanResolution] = useState<'fast' | 'hd' | 'fullhd' | 'auto'>('fast');
   const [showQrTips, setShowQrTips] = useState<boolean>(false);
 
-  const [countdown, setCountdown] = useState<number>(3);
   const [lastScannedQR, setLastScannedQR] = useState<string>('');
   const [studentsList, setStudentsList] = useState<Student[]>([]);
   const [teachersList, setTeachersList] = useState<Teacher[]>([]);
@@ -140,6 +141,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [manualInput, setManualInput] = useState('');
   const [showLupaKartuModal, setShowLupaKartuModal] = useState<boolean>(false);
   const [todayLupaKartuCount, setTodayLupaKartuCount] = useState<number>(() => store.getTodayLupaKartuList().total);
+  const [scheduleStatus, setScheduleStatus] = useState(() => store.getTodayScheduleStatus());
+
+  useEffect(() => {
+    const updateSchedule = () => setScheduleStatus(store.getTodayScheduleStatus());
+    updateSchedule();
+    const interval = setInterval(updateSchedule, 30000);
+    const unsub = store.subscribe(updateSchedule);
+    return () => {
+      clearInterval(interval);
+      unsub();
+    };
+  }, []);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isProcessingRef = useRef<boolean>(false);
@@ -193,55 +206,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
     if (modalDuration > 0 && !rapidQueueMode) {
       setShowModal(true);
-      setCountdown(modalDuration);
     }
   };
 
-  const handleTriggerBulkPulang1430 = () => {
-    const todayTarget = store.getTodayYyyyMmDd();
-    const dayRecords = store.getAttendance().filter((a) => store.isRecordForDate(a, todayTarget));
-    const activeStudents = store.getStudents().filter((s) => s.status === 'aktif');
-
-    const unreturnedStudents = activeStudents.filter((student) => {
-      const studentDayRecords = dayRecords.filter(
-        (a) => a.nisn === student.nisn || a.nama === student.nama
-      );
-      const hasPulang = studentDayRecords.some((a) => a.jenis === 'Pulang');
-      return !hasPulang;
-    });
-
-    if (unreturnedStudents.length === 0) {
-      toast.info('Semua Lengkap', 'Semua siswa yang aktif sudah memiliki rekaman scan Pulang hari ini.');
-      return;
-    }
-
-    const res = store.recordBulkStudentsPulang1430(todayTarget, 'Semua', currentOfficer);
-    if (res.success) {
-      toast.success('Batas Akhir Pulang Dicatat', `${res.count} siswa tercatat pulang pada batas akhir pukul 14:30 WIT.`);
-    }
-  };
-
-  // Countdown timer for modal when modal is active (3-second display)
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    let interval: NodeJS.Timeout;
-
-    if (showModal && !rapidQueueMode) {
-      setCountdown(modalDuration);
-      interval = setInterval(() => {
-        setCountdown((prev) => Math.max(0, prev - 1));
-      }, 1000);
-
-      timer = setTimeout(() => {
-        setShowModal(false);
-      }, modalDuration * 1000);
-    }
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, [showModal, modalDuration, rapidQueueMode]);
 
   // Load student & teacher list & fetch cameras & setup network listeners
   useEffect(() => {
@@ -1173,6 +1140,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }
   };
 
+  const handleSendWhatsApp = (student: Student, record?: AttendanceRecord, status?: string) => {
+    let phone = student.no_hp_ortu;
+    if (!phone) {
+      phone = prompt(`Masukkan No WhatsApp OrtU/Siswa ${student.nama}:`, '08123456789') || undefined;
+      if (phone && phone.trim()) {
+        store.updateStudent(student.id, { no_hp_ortu: phone.trim() });
+        student.no_hp_ortu = phone.trim();
+      }
+    }
+    if (phone) {
+      const schoolSettings = store.getSettings();
+      let template: string | undefined;
+      if (status === 'Hadir') template = schoolSettings.waTemplateHadir;
+      else if (status === 'Terlambat') template = schoolSettings.waTemplateTerlambat;
+
+      const schoolName = schoolSettings.schoolName || 'SMA NEGERI 15 AMBON';
+      const waMsg = generateWhatsAppMessage(student, record, schoolName, template);
+      const waUrl = getWhatsAppLink(phone, waMsg);
+      window.open(waUrl, '_blank');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Mode Switcher & Scan Configuration Banner */}
@@ -1368,6 +1357,62 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
         )}
 
+        {/* Banner Status Hari & Aturan Jam Presensi (Senin-Kamis vs Jumat) */}
+        <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all shadow-xs ${
+          scheduleStatus.isFriday
+            ? 'bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border-emerald-500/30 dark:border-emerald-500/20'
+            : scheduleStatus.isWeekend
+            ? 'bg-slate-100/80 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+            : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-slate-500/5 border-blue-500/25 dark:border-blue-500/20'
+        }`}>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-xl shrink-0 ${
+                scheduleStatus.isFriday
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : scheduleStatus.isWeekend
+                  ? 'bg-slate-500 text-white'
+                  : 'bg-blue-600 text-white shadow-sm'
+              }`}>
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                    {scheduleStatus.statusTitle}
+                  </h4>
+                  <span className={`px-2 py-0.5 text-[10px] font-black rounded-full border ${
+                    scheduleStatus.isFriday
+                      ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                      : scheduleStatus.isWeekend
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300'
+                      : 'bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                  }`}>
+                    {scheduleStatus.statusBadge}
+                  </span>
+                  <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
+                    scheduleStatus.currentSession === 'Pulang'
+                      ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
+                      : scheduleStatus.currentSession === 'Masuk'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                  }`}>
+                    Sesi Aktif: {scheduleStatus.currentSession === 'Pulang' ? '🔔 Absen Pulang' : scheduleStatus.currentSession === 'Masuk' ? '⏰ Absen Masuk' : '🌴 Hari Libur'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                  {scheduleStatus.statusDescription}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                  <span>⏰ <b>Batas Masuk:</b> {store.getSettings().cutoffTime || '07:15'} WIT</span>
+                  <span>•</span>
+                  <span>🚪 <b>Mulai Pulang:</b> Jam {scheduleStatus.pulangStartTime} WIT ke atas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Scan Type & Queue Mode Control Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
           {/* Scan Type Selector (Otomatis / Masuk / Pulang) */}
@@ -1385,9 +1430,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-700'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
-                title="Otomatis tentukan Masuk/Pulang berdasarkan jam (sebelum 10:00 WIT = Masuk, mulai 10:00 WIT ke atas = Pulang)"
+                title={`Otomatis tentukan Masuk/Pulang: Hari Jumat mulai jam ${scheduleStatus.pulangStartTime} WIT, hari biasa mulai ${store.getSettings().pulangStartTimeNormal || '13:30'} WIT`}
               >
-                Otomatis (Jam)
+                Otomatis ({scheduleStatus.currentSession})
               </button>
               <button
                 type="button"
@@ -1418,18 +1463,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </div>
           </div>
 
-          {/* Mode Scan Massal / Popup Mode Toggle & Auto Pulang 14:30 */}
+          {/* Mode Scan Massal / Popup Mode Toggle */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button
-              type="button"
-              onClick={handleTriggerBulkPulang1430}
-              className="px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xs cursor-pointer active:scale-95"
-              title="Set otomatis scan Pulang 14:30 WIT untuk semua siswa yang belum/lupa scan pulang hari ini"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>⚡ Auto Pulang 14:30</span>
-            </button>
-
             <button
               type="button"
               onClick={() => setRapidQueueMode(!rapidQueueMode)}
@@ -2293,39 +2328,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 {/* Send WhatsApp Notification Option for Students */}
                 {scanResult.student && scanResult.success && (
                   <button
-                    onClick={() => {
-                      const s = scanResult.student!;
-                      let phone = s.no_hp_ortu;
-                      if (!phone) {
-                        phone =
-                          prompt(
-                            `Masukkan No WhatsApp OrtU/Siswa ${s.nama}:`,
-                            '08123456789'
-                          ) || undefined;
-                        if (phone && phone.trim()) {
-                          store.updateStudent(s.id, { no_hp_ortu: phone.trim() });
-                          s.no_hp_ortu = phone.trim();
-                        }
-                      }
-                      if (phone) {
-                        const schoolSettings = store.getSettings();
-                        let template: string | undefined;
-                        if (scanResult.status === 'Hadir')
-                          template = schoolSettings.waTemplateHadir;
-                        else if (scanResult.status === 'Terlambat')
-                          template = schoolSettings.waTemplateTerlambat;
-
-                        const schoolName = schoolSettings.schoolName || 'SMA NEGERI 15 AMBON';
-                        const waMsg = generateWhatsAppMessage(
-                          s,
-                          scanResult.record,
-                          schoolName,
-                          template
-                        );
-                        const waUrl = getWhatsAppLink(phone, waMsg);
-                        window.open(waUrl, '_blank');
-                      }
-                    }}
+                    onClick={() => handleSendWhatsApp(scanResult.student!, scanResult.record, scanResult.status)}
                     className="mt-3 w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
@@ -2445,271 +2448,24 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         </div>
       </div>
 
-      {/* Pop-Up Modal Notifikasi (Aktif durasi 3 detik saat mode standar) */}
-      {showModal && scanResult && !rapidQueueMode && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
-            {/* Header Banner */}
-            <div
-              className={`p-6 text-white relative overflow-hidden text-center ${
-                scanResult.success
-                  ? 'bg-gradient-to-br from-emerald-600 via-teal-600 to-green-700'
-                  : scanResult.isDuplicate
-                  ? 'bg-gradient-to-br from-rose-600 via-red-600 to-amber-700'
-                  : 'bg-gradient-to-br from-amber-600 via-orange-600 to-red-700'
-              }`}
-            >
-              <button
-                onClick={() => setShowModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition-colors cursor-pointer"
-                title="Tutup Modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex justify-center mb-2">
-                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
-                  {scanResult.success ? (
-                    <CheckCircle2 className="w-10 h-10 text-white" />
-                  ) : scanResult.isDuplicate ? (
-                    <ShieldAlert className="w-10 h-10 text-white animate-bounce" />
-                  ) : (
-                    <AlertTriangle className="w-10 h-10 text-amber-200" />
-                  )}
-                </div>
-              </div>
-
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-extrabold uppercase tracking-wider mb-1">
-                {scanResult.success ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>PRESENSI BERHASIL</span>
-                  </>
-                ) : scanResult.isDuplicate ? (
-                  <>
-                    <ShieldAlert className="w-3.5 h-3.5 text-white" />
-                    <span>SCAN GANDA DITOLAK</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>PERINGATAN ABSENSI</span>
-                  </>
-                )}
-              </div>
-
-              <h3 className="text-xl font-black uppercase tracking-tight">
-                {scanResult.success
-                  ? 'SCAN QR BERHASIL'
-                  : scanResult.isDuplicate
-                  ? 'PRESENSI SUDAH ADA'
-                  : 'NOTIFIKASI SISTEM'}
-              </h3>
-              <p className="text-xs text-white/95 font-medium mt-1 px-2">{scanResult.message}</p>
-            </div>
-
-            {/* Body Details */}
-            <div className="p-6 space-y-4">
-              {scanResult.teacher ? (
-                <>
-                  <div className="text-center pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                      Nama Guru / Pegawai
-                    </span>
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                      {scanResult.teacher.nama}
-                    </h2>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-sky-50/80 dark:bg-sky-950/50 p-3 rounded-2xl border border-sky-200/80 dark:border-sky-800/60 text-center">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 block mb-0.5">
-                        NIP
-                      </span>
-                      <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
-                        {scanResult.teacher.nip}
-                      </span>
-                    </div>
-
-                    <div className="bg-emerald-50/80 dark:bg-emerald-950/50 p-3 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 text-center">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                        Jabatan
-                      </span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white truncate block">
-                        {scanResult.teacher.jabatan}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : scanResult.student ? (
-                <>
-                  <div className="text-center pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                      Nama Siswa
-                    </span>
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                      {scanResult.student.nama}
-                    </h2>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-blue-50/80 dark:bg-blue-950/50 p-3 rounded-2xl border border-blue-200/80 dark:border-blue-800/60 text-center">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
-                        NISN
-                      </span>
-                      <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
-                        {scanResult.student.nisn}
-                      </span>
-                    </div>
-
-                    <div className="bg-emerald-50/80 dark:bg-emerald-950/50 p-3 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 text-center">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                        Kelas
-                      </span>
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
-                        {scanResult.student.kelas}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-3 text-left">
-                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                        {scanResult.scanMethod === 'RFID' ? (
-                          <>
-                            <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                            <span>Daftarkan Kartu RFID</span>
-                          </>
-                        ) : (
-                          <>
-                            <QrCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span>Hubungkan Kode QR</span>
-                          </>
-                        )}
-                      </span>
-                      <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
-                        {scanResult.scannedCode || lastScannedQR}
-                      </span>
-                    </div>
-
-                    {/* Choose Target Type if in Auto or specific mode */}
-                    {(scanTargetMode === 'auto' || scanTargetMode === 'siswa') && (
-                      <div className="space-y-1.5 pt-1">
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                          1. Hubungkan ke Siswa
-                        </label>
-                        <div className="flex gap-2">
-                          <select
-                            value={selectedStudentForQR}
-                            onChange={(e) => setSelectedStudentForQR(e.target.value)}
-                            className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
-                          >
-                            <option value="">-- Pilih Nama Siswa --</option>
-                            {studentsList.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.nama} ({s.kelas} - NISN: {s.nisn})
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            disabled={!selectedStudentForQR}
-                            onClick={() => {
-                              const code = scanResult.scannedCode || lastScannedQR;
-                              if (scanResult.scanMethod === 'RFID') {
-                                handleAssignRfidToStudent(code, selectedStudentForQR);
-                              } else {
-                                handleConnectQRToStudent(code, selectedStudentForQR);
-                              }
-                            }}
-                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
-                          >
-                            Hubungkan Siswa
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {(scanTargetMode === 'auto' || scanTargetMode === 'guru') && (
-                      <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                          2. Hubungkan ke Guru / Tenaga Pendidik
-                        </label>
-                        <div className="flex gap-2">
-                          <select
-                            value={selectedTeacherForQR}
-                            onChange={(e) => setSelectedTeacherForQR(e.target.value)}
-                            className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
-                          >
-                            <option value="">-- Pilih Nama Guru / NIP --</option>
-                            {teachersList.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.nama} (NIP: {t.nip}) - {t.jabatan}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            disabled={!selectedTeacherForQR}
-                            onClick={() => {
-                              const code = scanResult.scannedCode || lastScannedQR;
-                              if (scanResult.scanMethod === 'RFID') {
-                                handleAssignRfidToTeacher(code, selectedTeacherForQR);
-                              } else {
-                                handleConnectQRToTeacher(code, selectedTeacherForQR);
-                              }
-                            }}
-                            className="px-3.5 py-2 bg-sky-700 hover:bg-sky-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
-                          >
-                            Hubungkan Guru
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Offline Storage Notice in Modal */}
-              {scanResult.isOffline && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-2xl border border-amber-300 dark:border-amber-700 text-[11px] text-amber-900 dark:text-amber-200 space-y-1">
-                  <div className="flex items-center gap-1.5 font-extrabold">
-                    <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                    <span>Tersimpan di Cache Lokal (Mode Offline)</span>
-                  </div>
-                  <p className="leading-relaxed text-[10.5px]">
-                    Koneksi internet terputus saat pemindaian. Data presensi disimpan di memori browser dan akan otomatis disinkronkan ke Supabase Cloud saat jaringan pulih.
-                  </p>
-                </div>
-              )}
-
-              {/* Duplicate Information Explainer */}
-              {scanResult.isDuplicate && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-950/50 rounded-2xl border border-rose-200 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 space-y-1">
-                  <div className="flex items-center gap-1.5 font-extrabold">
-                    <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                    <span>Pencegahan Scan Ganda Otomatis</span>
-                  </div>
-                  <p className="leading-relaxed">
-                    Sistem mendeteksi dan menolak pemindaian berulang untuk menjaga integritas dan kevalidan data presensi harian.
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={() => setShowModal(false)}
-                className={`w-full py-3 text-white font-extrabold text-xs rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                  scanResult.isDuplicate
-                    ? 'bg-rose-600 hover:bg-rose-500'
-                    : 'bg-blue-600 hover:bg-blue-500'
-                }`}
-              >
-                <span>Tutup & Lanjutkan Scan ({countdown}s)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QRScannerModal
+        scanResult={scanResult}
+        isOpen={showModal && !rapidQueueMode}
+        onClose={() => setShowModal(false)}
+        modalDuration={modalDuration}
+        scanTargetMode={scanTargetMode}
+        selectedStudentForQR={selectedStudentForQR}
+        setSelectedStudentForQR={setSelectedStudentForQR}
+        studentsList={studentsList}
+        selectedTeacherForQR={selectedTeacherForQR}
+        setSelectedTeacherForQR={setSelectedTeacherForQR}
+        teachersList={teachersList}
+        handleAssignRfidToStudent={handleAssignRfidToStudent}
+        handleConnectQRToStudent={handleConnectQRToStudent}
+        handleAssignRfidToTeacher={handleAssignRfidToTeacher}
+        handleConnectQRToTeacher={handleConnectQRToTeacher}
+        lastScannedQR={lastScannedQR}
+      />
 
       {/* Modal Presensi Lupa Kartu untuk Piket & Admin */}
       <LupaKartuModal

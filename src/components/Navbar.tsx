@@ -4,7 +4,6 @@ import {
   Menu,
   QrCode,
   LogOut,
-  Sparkles,
   BookOpen,
   Clock,
   ShieldCheck,
@@ -288,18 +287,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-indigo-300" />
                   <span className="text-[11px]">Panduan</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('ai-analysis')}
-                  className={`hidden lg:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl border transition-all font-semibold cursor-pointer shrink-0 btn-press ${
-                    activeTab === 'ai-analysis'
-                      ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm'
-                      : 'bg-slate-800/80 text-amber-200 border-amber-400/30 hover:bg-slate-700/80 hover:border-amber-400/50'
-                  }`}
-                  title="Analisis AI Gemini"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span className="text-[11px]">Analisis AI</span>
                 </button>
               </>
             )}

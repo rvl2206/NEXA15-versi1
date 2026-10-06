@@ -2,7 +2,6 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 const PORT = 3000;
@@ -390,57 +389,6 @@ app.post("/api/settings", (req, res) => {
   res.json({ success: true });
 });
 
-// Gemini AI Integration
-app.post("/api/gemini/analyze", async (req, res) => {
-  const { prompt, type, attendanceData, studentData, month, kelas } = req.body;
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ success: false, error: "GEMINI_API_KEY is not configured on the server." });
-    return;
-  }
-
-  let finalPrompt = prompt;
-  if (!finalPrompt) {
-    if (type === 'risk_detection' || type === 'low_attendance_alert') {
-      finalPrompt = `Anda adalah Asisten Pakar Kedisiplinan Sekolah di SMA Negeri 15 Ambon.
-Tugas Anda adalah menganalisis data siswa berisiko kehadiran rendah / sering alpa / sering terlambat.
-Data Siswa & Kehadiran:
-${JSON.stringify({ month, kelas, studentCount: studentData?.length, recordsCount: attendanceData?.length, sampleStudents: studentData?.slice(0, 30) }, null, 2)}
-
-Mohon berikan:
-1. Ringkasan Eksekutif Pola Risiko Kehadiran.
-2. Identifikasi tingkat risiko utama (Tinggi / Sedang / Perhatian Khusus).
-3. Langkah penanganan konkret untuk Guru BK, Wali Kelas, dan Piket (termasuk rekomendasi pemanggilan orang tua).`;
-    } else {
-      finalPrompt = `Anda adalah Konsultan Kehadiran AI di SMA Negeri 15 Ambon.
-Mohon analisis ringkasan data kehadiran berikut:
-${JSON.stringify({ type, month, kelas, sampleAttendance: attendanceData?.slice(0, 50) }, null, 2)}
-Berikan ulasan evaluasi tingkat presensi siswa secara menyeluruh dan saran perbaikan.`;
-    }
-  }
-
-  try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: finalPrompt,
-    });
-
-    const text = response.text || '';
-    res.json({ success: true, result: text, analysis: text });
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    res.status(500).json({ success: false, error: error.message || "Failed to generate AI response" });
-  }
-});
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

@@ -73,6 +73,7 @@ import {
   isRecordForDate,
   isRecordForToday,
   isRecordOnSaturday,
+  getDayOfWeekWIT,
 } from './dateUtils';
 import {
   formatScanLogDetails,
@@ -84,6 +85,8 @@ import {
   generateDeterministicAutoAlpaId,
   isSaturdayAlpaRecord,
   evaluateScanEligibility,
+  getDayScheduleStatus,
+  DayScheduleStatus,
   LateCalculationResult,
   ScanEligibilityResult,
   ScanDuplicateReason,
@@ -112,10 +115,18 @@ export {
   isMatchingNip,
   isMatchingRfidUid,
   evaluateScanEligibility,
+  getDayScheduleStatus,
+  getDayOfWeekWIT,
   findDoubleMasukRecords,
   getMissingAttendanceItemsFromLogs,
 };
-export type { LateCalculationResult, ScanEligibilityResult, ScanDuplicateReason, DoubleMasukAnomaly };
+export type {
+  LateCalculationResult,
+  ScanEligibilityResult,
+  ScanDuplicateReason,
+  DoubleMasukAnomaly,
+  DayScheduleStatus,
+};
 
 export interface SyncQueueItem {
   id: string;
@@ -2440,7 +2451,19 @@ class AppStore {
       return a.nama.trim().toLowerCase() === matchedTeacher.nama.trim().toLowerCase();
     });
 
-    const eligibility = evaluateScanEligibility(teacherTodayRecords, forcedType, currentHourWIT);
+    const dayOfWeekWIT = getDayOfWeekWIT(now);
+    const pulangConfig = {
+      normalTime: this.settings.pulangStartTimeNormal || '13:30',
+      fridayTime: this.settings.pulangStartTimeFriday || '10:00',
+    };
+    const eligibility = evaluateScanEligibility(
+      teacherTodayRecords,
+      forcedType,
+      currentHourWIT,
+      currentMinuteWIT,
+      dayOfWeekWIT,
+      pulangConfig
+    );
 
     if (!eligibility.allowed) {
       const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
@@ -2848,7 +2871,19 @@ class AppStore {
       (a) => a.id?.startsWith('att-autoalpa-') || a.catatan?.includes('Alpa Otomatis')
     );
 
-    const eligibility = evaluateScanEligibility(studentTodayRecords, forcedType, currentHourWIT);
+    const dayOfWeekWIT = getDayOfWeekWIT(now);
+    const pulangConfig = {
+      normalTime: this.settings.pulangStartTimeNormal || '13:30',
+      fridayTime: this.settings.pulangStartTimeFriday || '10:00',
+    };
+    const eligibility = evaluateScanEligibility(
+      studentTodayRecords,
+      forcedType,
+      currentHourWIT,
+      currentMinuteWIT,
+      dayOfWeekWIT,
+      pulangConfig
+    );
 
     if (!eligibility.allowed) {
       const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
@@ -2973,6 +3008,40 @@ class AppStore {
       lateMinutes,
     };
   }
+
+  /**
+   * Menghasilkan status jadwal presensi untuk hari ini (Jumat 1 shift pendek vs Senin-Kamis reguler)
+   */
+  public getTodayScheduleStatus(): DayScheduleStatus {
+    const now = new Date();
+    const dayOfWeek = getDayOfWeekWIT(now);
+    let currentHourWIT = now.getHours();
+    let currentMinuteWIT = now.getMinutes();
+    try {
+      const witTimeParts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jayapura',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(now);
+      const hPart = witTimeParts.find((p) => p.type === 'hour');
+      const mPart = witTimeParts.find((p) => p.type === 'minute');
+      if (hPart) currentHourWIT = parseInt(hPart.value, 10);
+      if (mPart) currentMinuteWIT = parseInt(mPart.value, 10);
+    } catch {
+      // Fallback
+    }
+
+    return getDayScheduleStatus(
+      dayOfWeek,
+      currentHourWIT,
+      currentMinuteWIT,
+      this.settings.schoolDays || 5,
+      this.settings.pulangStartTimeNormal || '13:30',
+      this.settings.pulangStartTimeFriday || '10:00'
+    );
+  }
+
 
   /**
    * Fitur Presensi Lupa Kartu untuk Siswa atau Guru & Tenaga Kependidikan.
@@ -3322,167 +3391,86 @@ class AppStore {
     return buildIsoTimestamp(tanggalYyyyMmDd, jamHhMm);
   }
 
-  /**
-   * Rekam Scan Pulang Otomatis 14:30 WIT untuk 1 Siswa yang belum/lupa scan pulang.
-   */
-  public recordStudentPulang1430(
-    student: Student,
-    targetDate?: string,
-    officerEmail = 'Admin'
-  ): { success: boolean; message: string; record?: AttendanceRecord } {
-    if (!student) {
-      return { success: false, message: 'Data siswa tidak valid.' };
-    }
-
-    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
-    const timestamp1430 = `${normTarget}T14:30:00+09:00`;
-
-    const studentDayRecords = this.attendance.filter(
-      (a) =>
-        ((student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
-          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
-          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())) &&
-        this.isRecordForDate(a, normTarget)
-    );
-
-    const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
-    const existingPulang = studentDayRecords.find((a) => a.jenis === 'Pulang');
-
-    if (existingPulang) {
-      existingPulang.timestamp = timestamp1430;
-      existingPulang.catatan = 'Batas Pulang Otomatis (14:30 WIT) / Lupa Scan Pulang';
-      this.attendance = [...this.attendance];
-      this.notify();
-      this.enqueueSync({ id: existingPulang.id, type: 'attendance', action: 'upsert', data: existingPulang });
-      this.addLog(
-        'PULANG_OTOMATIS_1430',
-        `Menyetel waktu scan pulang 14:30 WIT untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
-      );
-      return {
-        success: true,
-        message: `Waktu scan pulang ${student.nama} berhasil disetel ke pukul 14:30 WIT.`,
-        record: existingPulang,
-      };
-    }
-
-    const newRecord: AttendanceRecord = {
-      id: `att-autopulang-${Date.now()}-${student.nisn}`,
-      tanggal: normTarget,
-      timestamp: timestamp1430,
-      nisn: student.nisn,
-      nama: student.nama,
-      kelas: student.kelas,
-      id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
-      jenis: 'Pulang',
-      status: masukRecord?.status || 'Hadir',
-      petugas: formatPetugasRole(officerEmail),
-      catatan: 'Batas Pulang Otomatis (14:30 WIT) / Lupa Scan Pulang',
-      terlambatMenit: 0,
-    };
-
-    this.attendance.unshift(newRecord);
-    this.attendance = [...this.attendance];
-    this.notify();
-
-    this.enqueueSync({ id: newRecord.id, type: 'attendance', action: 'upsert', data: newRecord });
-    this.addLog(
-      'PULANG_OTOMATIS_1430',
-      `Mencatat presensi pulang batas akhir (14:30 WIT) untuk ${student.nama} (${student.kelas}) oleh ${formatPetugasRole(officerEmail)}`
-    );
-
-    return {
-      success: true,
-      message: `Presensi Pulang pukul 14:30 WIT berhasil dicatat untuk ${student.nama}.`,
-      record: newRecord,
-    };
-  }
-
-  /**
-   * Rekam Scan Pulang Otomatis 14:30 WIT secara massal untuk semua siswa yang belum scan pulang pada tanggal tertentu.
-   */
-  public recordBulkStudentsPulang1430(
-    targetDate?: string,
-    filterKelas = 'Semua',
-    officerEmail = 'Admin'
-  ): { success: boolean; count: number; updatedStudents: Student[]; message: string } {
-    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
-    const timestamp1430 = `${normTarget}T14:30:00+09:00`;
-
-    const dayRecords = this.attendance.filter((a) => this.isRecordForDate(a, normTarget));
-
-    const targetStudents = this.students.filter((s) => {
-      if (s.status === 'nonaktif') return false;
-      if (filterKelas !== 'Semua' && s.kelas !== filterKelas) return false;
-      return true;
-    });
-
-    const newRecords: AttendanceRecord[] = [];
-    const updatedStudents: Student[] = [];
-
-    targetStudents.forEach((student) => {
-      const studentDayRecords = dayRecords.filter(
-        (a) =>
-          (student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
-          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
-          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())
-      );
-      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
-      const pulangRecord = studentDayRecords.find((a) => a.jenis === 'Pulang');
-
-      // Only process students who haven't scanned Pulang
-      if (!pulangRecord) {
-        // If student checked in (or active), record Pulang at 14:30
-        const statusToUse: AttendanceStatus = masukRecord?.status || 'Hadir';
-        const rec: AttendanceRecord = {
-          id: `att-autopulang-${Date.now()}-${student.nisn}-${Math.random().toString(36).substr(2, 4)}`,
-          tanggal: normTarget,
-          timestamp: timestamp1430,
-          nisn: student.nisn,
-          nama: student.nama,
-          kelas: student.kelas,
-          id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
-          jenis: 'Pulang',
-          status: statusToUse,
-          petugas: formatPetugasRole(officerEmail),
-          catatan: 'Batas Pulang Otomatis (14:30 WIT) / Selesai KBM',
-          terlambatMenit: 0,
-        };
-        newRecords.push(rec);
-        updatedStudents.push(student);
-      }
-    });
-
-    if (newRecords.length === 0) {
-      return {
-        success: true,
-        count: 0,
-        updatedStudents: [],
-        message: 'Semua siswa sudah memiliki rekaman scan Pulang pada tanggal ini.',
-      };
-    }
-
-    this.attendance = [...newRecords, ...this.attendance];
-    this.notify();
-
-    newRecords.forEach((rec) => {
-      this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
-    });
-    this.addLog(
-      'PULANG_OTOMATIS_1430_MASSAL',
-      `Sistem otomatis mencatat presensi pulang batas akhir (14:30 WIT) untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
-    );
-
-    return {
-      success: true,
-      count: newRecords.length,
-      updatedStudents,
-      message: `Berhasil mencatat presensi Pulang (14:30 WIT) untuk ${newRecords.length} siswa.`,
-    };
-  }
 
   /**
    * Rekam Scan Alpa Massal untuk siswa yang belum scan Masuk pada tanggal tertentu.
    */
+  
+  public recordStudentPulang1430(
+    student: Student,
+    targetDate: string,
+    officerEmail: string
+  ): { success: boolean; message: string } {
+    const normTarget = this.normalizeToYyyyMmDd(targetDate);
+    const timestampPulang = `${normTarget}T14:30:00+09:00`;
+    const record: AttendanceRecord = {
+      id: crypto.randomUUID(),
+      tanggal: normTarget,
+      timestamp: timestampPulang,
+      nisn: student.nisn,
+      nama: student.nama,
+      kelas: student.kelas,
+      id_qr: student.id_qr || '',
+      jenis: 'Pulang',
+      status: 'Hadir',
+      petugas: officerEmail,
+      scan_method: 'Manual',
+      catatan: 'Set otomatis 14:30 WIT'
+    };
+    this.attendance.push(record);
+    this.addLog('PRESENSI_MANUAL', `Set otomatis pulang 14:30 WIT untuk ${student.nama}`);
+    this.notify();
+    this.saveLocalData();
+    return { success: true, message: 'OK' };
+  }
+
+  public recordBulkStudentsPulang1430(
+    targetDate: string,
+    filterKelas = 'Semua',
+    officerEmail = 'Admin'
+  ): { success: boolean; count: number; message: string } {
+    const normTarget = this.normalizeToYyyyMmDd(targetDate);
+    const timestampPulang = `${normTarget}T14:30:00+09:00`;
+    const dayRecords = this.attendance.filter(a => this.isRecordForDate(a, normTarget));
+    
+    let count = 0;
+    this.students.forEach(student => {
+      if (student.status === 'nonaktif') return;
+      if (filterKelas !== 'Semua' && student.kelas !== filterKelas) return;
+      
+      const studentDayRecords = dayRecords.filter(a => a.nisn === student.nisn);
+      const hasMasuk = studentDayRecords.some(a => a.jenis === 'Masuk' && a.status === 'Hadir');
+      const hasPulang = studentDayRecords.some(a => a.jenis === 'Pulang');
+      
+      if (hasMasuk && !hasPulang) {
+        const record: AttendanceRecord = {
+          id: crypto.randomUUID(),
+          tanggal: normTarget,
+          timestamp: timestampPulang,
+          nisn: student.nisn,
+          nama: student.nama,
+          kelas: student.kelas,
+          id_qr: student.id_qr || '',
+          jenis: 'Pulang',
+          status: 'Hadir',
+          petugas: officerEmail,
+          scan_method: 'Manual',
+          catatan: 'Set otomatis 14:30 WIT'
+        };
+        this.attendance.push(record);
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      this.addLog('PRESENSI_MANUAL', `Set otomatis pulang 14:30 WIT untuk ${count} siswa`);
+      this.notify();
+      this.saveLocalData();
+    }
+    
+    return { success: true, count, message: 'OK' };
+  }
+
   public recordBulkStudentsAlpa(
     targetDate?: string,
     filterKelas = 'Semua',
@@ -4419,8 +4407,14 @@ class AppStore {
       ? this.attendance.filter((a) => a.tanggal.startsWith(options!.bulan!))
       : this.attendance;
 
-    const allUniqueDates = Array.from(new Set(scopedAttendance.map((a) => a.tanggal)));
-    const totalRecordedDays = Math.max(allUniqueDates.length, 1);
+    // Only count 'Masuk' dates as valid school days to prevent false implicit absences from just 'Pulang'
+    const allUniqueDates = Array.from(new Set(scopedAttendance.filter(a => a.jenis === 'Masuk').map((a) => a.tanggal)));
+    
+    if (allUniqueDates.length === 0) {
+      return [];
+    }
+
+    const totalRecordedDays = allUniqueDates.length;
 
     const minAlpa = options?.minAlpa ?? this.settings.problemThresholdAlpa ?? 2;
     const minTerlambat = options?.minTerlambat ?? this.settings.problemThresholdTerlambat ?? 3;
@@ -4435,14 +4429,25 @@ class AppStore {
 
       const studentRecords = scopedAttendance.filter((a) => a.nisn === student.nisn && a.jenis === 'Masuk');
       const studentUniqueDates = new Set(studentRecords.map((r) => r.tanggal));
-      const studentTotalDays = Math.max(studentUniqueDates.size, totalRecordedDays);
+      
+      // Calculate missing records as implicit 'Alpa'
+      const implicitAlpaCount = Math.max(0, totalRecordedDays - studentUniqueDates.size);
 
       let hadirCount = 0;
       let terlambatCount = 0;
       let sakitCount = 0;
       let izinCount = 0;
-      let alpaCount = 0;
+      let alpaCount = implicitAlpaCount;
       const datesWithIssues: Array<{ tanggal: string; status: AttendanceStatus; catatan?: string; terlambatMenit?: number }> = [];
+
+      // Add implicit alpa dates to datesWithIssues
+      if (implicitAlpaCount > 0) {
+        allUniqueDates.forEach(date => {
+          if (!studentUniqueDates.has(date)) {
+            datesWithIssues.push({ tanggal: date, status: 'Alpa', catatan: 'Tanpa Keterangan (Tidak Tercatat)' });
+          }
+        });
+      }
 
       studentRecords.forEach((r) => {
         if (r.status === 'Hadir') {
@@ -4463,44 +4468,44 @@ class AppStore {
       });
 
       const totalPresent = hadirCount + terlambatCount;
-      const attendanceRate = Math.round((totalPresent / studentTotalDays) * 100);
+      const attendanceRate = totalRecordedDays > 0 ? Math.round((totalPresent / totalRecordedDays) * 100) : 100;
 
       const reasons: string[] = [];
 
-      if (alpaCount >= minAlpa) {
-        reasons.push(`Memiliki ${alpaCount} kali Alpa (tanpa keterangan sah).`);
-      } else if (alpaCount === 1) {
-        reasons.push(`Tercatat 1 kali Alpa.`);
+      const hasAlpaProblem = alpaCount >= minAlpa;
+      if (hasAlpaProblem) {
+        reasons.push(`Memiliki ${alpaCount} kali Alpa (termasuk yang tidak tercatat).`);
       }
 
+      const hasTerlambatProblem = terlambatCount >= minTerlambat;
       if (terlambatCount >= minTerlambat + 2) {
         reasons.push(`Sangat sering terlambat (${terlambatCount} kali).`);
-      } else if (terlambatCount >= minTerlambat) {
+      } else if (hasTerlambatProblem) {
         reasons.push(`Sering terlambat masuk sekolah (${terlambatCount} kali).`);
       }
 
-      if (attendanceRate < maxAttendanceRate - 10) {
-        reasons.push(`Persentase kehadiran sangat kritis (${attendanceRate}%).`);
-      } else if (attendanceRate < maxAttendanceRate) {
-        reasons.push(`Persentase kehadiran di bawah standar minimal (${attendanceRate}% < ${maxAttendanceRate}%).`);
+      const hasRateProblem = totalRecordedDays >= 3 && attendanceRate < maxAttendanceRate;
+      if (hasRateProblem) {
+        if (attendanceRate < maxAttendanceRate - 10) {
+          reasons.push(`Persentase kehadiran sangat kritis (${attendanceRate}%).`);
+        } else {
+          reasons.push(`Persentase kehadiran di bawah standar minimal (${attendanceRate}% < ${maxAttendanceRate}%).`);
+        }
       }
 
-      if (sakitCount + izinCount >= 5) {
+      const hasExcessivePermit = (sakitCount + izinCount) >= 5;
+      if (hasExcessivePermit) {
         reasons.push(`Akumulasi izin/sakit sangat tinggi (${sakitCount} Sakit, ${izinCount} Izin).`);
       }
 
-      const isProblematic =
-        reasons.length > 0 ||
-        alpaCount >= minAlpa ||
-        terlambatCount >= minTerlambat ||
-        attendanceRate < maxAttendanceRate;
+      const isProblematic = hasAlpaProblem || hasTerlambatProblem || hasRateProblem || hasExcessivePermit;
 
       if (isProblematic) {
         let riskLevel: 'Tinggi' | 'Sedang' | 'Perhatian' = 'Sedang';
 
-        if (attendanceRate < 65 || alpaCount >= 3 || terlambatCount >= 6) {
+        if (alpaCount >= Math.max(minAlpa + 1, 3) || terlambatCount >= Math.max(minTerlambat + 2, 6) || (hasRateProblem && attendanceRate < 65)) {
           riskLevel = 'Tinggi';
-        } else if (attendanceRate < 75 || alpaCount >= 2 || terlambatCount >= 3) {
+        } else if (hasAlpaProblem || hasTerlambatProblem || hasRateProblem) {
           riskLevel = 'Sedang';
         } else {
           riskLevel = 'Perhatian';
@@ -4534,7 +4539,7 @@ class AppStore {
         list.push({
           student,
           waliKelas,
-          totalDays: studentTotalDays,
+          totalDays: totalRecordedDays,
           hadirCount,
           terlambatCount,
           sakitCount,

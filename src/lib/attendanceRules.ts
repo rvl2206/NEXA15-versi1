@@ -112,6 +112,100 @@ export interface ScanEligibilityResult<T> {
   pulangRecord?: T;
 }
 
+export interface DayScheduleStatus {
+  dayOfWeek: number; // 0 = Minggu, 1 = Senin, ..., 5 = Jumat, 6 = Sabtu
+  dayName: string;
+  isFriday: boolean;
+  isWeekend: boolean;
+  isSchoolDay: boolean;
+  pulangStartTime: string;
+  pulangHour: number;
+  pulangMinute: number;
+  currentSession: 'Masuk' | 'Pulang' | 'Libur';
+  statusBadge: string;
+  statusTitle: string;
+  statusDescription: string;
+}
+
+/**
+ * Menentukan status hari, shift, dan jadwal jam pulang presensi (Jumat vs Senin-Kamis)
+ */
+export function getDayScheduleStatus(
+  dayOfWeek: number,
+  currentHourWIT: number,
+  currentMinuteWIT: number,
+  schoolDays = 5,
+  pulangStartTimeNormal = '13:30',
+  pulangStartTimeFriday = '10:00'
+): DayScheduleStatus {
+  const isFriday = dayOfWeek === 5;
+  const isWeekend = dayOfWeek === 0 || (schoolDays === 5 && dayOfWeek === 6);
+  const isSchoolDay = !isWeekend;
+
+  const [normalH, normalM] = (pulangStartTimeNormal || '13:30').split(':').map(Number);
+  const [fridayH, fridayM] = (pulangStartTimeFriday || '10:00').split(':').map(Number);
+
+  const pulangH = isFriday ? (isNaN(fridayH) ? 10 : fridayH) : (isNaN(normalH) ? 13 : normalH);
+  const pulangM = isFriday ? (isNaN(fridayM) ? 0 : fridayM) : (isNaN(normalM) ? 30 : normalM);
+  const pulangTimeStr = `${String(pulangH).padStart(2, '0')}:${String(pulangM).padStart(2, '0')}`;
+
+  const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
+  const pulangMinutes = pulangH * 60 + pulangM;
+  const isPulangTime = nowMinutes >= pulangMinutes;
+
+  const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const dayName = dayNames[dayOfWeek] || 'Hari Ini';
+
+  if (isWeekend) {
+    return {
+      dayOfWeek,
+      dayName,
+      isFriday: false,
+      isWeekend: true,
+      isSchoolDay: false,
+      pulangStartTime: pulangTimeStr,
+      pulangHour: pulangH,
+      pulangMinute: pulangM,
+      currentSession: 'Libur',
+      statusBadge: schoolDays === 5 && dayOfWeek === 6 ? 'Sabtu Libur (5 Hari Sekolah)' : 'Hari Libur Akhir Pekan',
+      statusTitle: `${dayName} — Libur Akhir Pekan`,
+      statusDescription: 'Tidak ada jadwal KBM dan presensi wajib hari ini.',
+    };
+  }
+
+  if (isFriday) {
+    return {
+      dayOfWeek,
+      dayName,
+      isFriday: true,
+      isWeekend: false,
+      isSchoolDay: true,
+      pulangStartTime: pulangTimeStr,
+      pulangHour: pulangH,
+      pulangMinute: pulangM,
+      currentSession: isPulangTime ? 'Pulang' : 'Masuk',
+      statusBadge: 'Hari Jumat (1 Shift Pendek)',
+      statusTitle: 'Jumat — 1 Shift Pendek',
+      statusDescription: `Hari Jumat berdurasi pendek. Sesi absen pulang dibuka mulai pukul ${pulangTimeStr} WIT ke atas.`,
+    };
+  }
+
+  return {
+    dayOfWeek,
+    dayName,
+    isFriday: false,
+    isWeekend: false,
+    isSchoolDay: true,
+    pulangStartTime: pulangTimeStr,
+    pulangHour: pulangH,
+    pulangMinute: pulangM,
+    currentSession: isPulangTime ? 'Pulang' : 'Masuk',
+    statusBadge: 'Senin - Kamis (Jadwal Reguler Normal)',
+    statusTitle: `${dayName} — Jadwal Reguler Normal`,
+    statusDescription: `KBM berlangsung penuh. Sesi absen pulang dibuka mulai pukul ${pulangTimeStr} WIT ke atas.`,
+  };
+}
+
 /**
  * Evaluator kelayakan scan presensi kanonikal (Siswa dan Guru).
  * 
@@ -121,26 +215,14 @@ export interface ScanEligibilityResult<T> {
  * 3. Alasan penolakan jika duplikasi ('BOTH_COMPLETED', 'ALREADY_MASUK', 'ALREADY_PULANG')
  * 
  * Aturan Kanonikal NEXA15:
- * - Mengabaikan record placeholder auto-alpa (status === 'Alpa' / ID prefix att-autoalpa- / catatan 'Alpa Otomatis') saat mencari record Masuk riil.
+ * - Mengabaikan record placeholder auto-alpa saat mencari record Masuk riil.
  * - Penentuan Target Scan Type:
  *   a. forcedType === 'Masuk' -> 'Masuk'
  *   b. forcedType === 'Pulang' -> 'Pulang'
  *   c. forcedType === 'Auto' (atau undefined):
- *      - Jika currentHourWIT disediakan:
- *        * currentHourWIT >= 10 -> 'Pulang' (sesi siang/sore)
- *        * currentHourWIT < 10 -> 'Masuk' (sesi pagi)
- *      - Jika currentHourWIT tidak disediakan:
- *        * jika masukRecord ada dan belum pulangRecord -> 'Pulang'
- *        * sebaliknya -> 'Masuk'
- * - Pencegahan Scan Ganda (Strict Duplicate Prevention):
- *   1. Jika sudah lengkap Masuk dan Pulang -> Ditolak ('BOTH_COMPLETED') dengan conflictingRecord = pulangRecord
- *   2. Jika target 'Masuk' dan sudah pernah Masuk -> Ditolak ('ALREADY_MASUK') dengan conflictingRecord = masukRecord
- *   3. Jika target 'Pulang' dan sudah pernah Pulang -> Ditolak ('ALREADY_PULANG') dengan conflictingRecord = pulangRecord
- *   4. Selain itu -> Diizinkan (allowed = true)
- * 
- * @param recordsToday Rekaman presensi entitas yang bersangkutan untuk hari ini
- * @param forcedType Jenis presensi yang dipaksa oleh petugas ('Masuk' | 'Pulang' | 'Auto')
- * @param currentHourWIT Jam saat ini dalam zona waktu WIT (0-23) untuk evaluasi sesi Auto
+ *      - Hari Jumat (dayOfWeek === 5): Siswa mulai absen pulang di atas jam 10:00 WIT (1 shift pendek).
+ *      - Hari Senin - Kamis: Sesi pulang aktif sesuai waktu normal (pukul 13:30 WIT ke atas).
+ *      - Jika waktu jam tidak disediakan: fallback jika ada masukRecord dan belum pulang -> 'Pulang', selain itu 'Masuk'.
  */
 export function evaluateScanEligibility<
   T extends {
@@ -153,7 +235,10 @@ export function evaluateScanEligibility<
 >(
   recordsToday: readonly T[],
   forcedType?: AttendanceType | 'Auto',
-  currentHourWIT?: number
+  currentHourWIT?: number,
+  currentMinuteWIT?: number,
+  dayOfWeek?: number,
+  pulangConfig?: { normalTime?: string; fridayTime?: string }
 ): ScanEligibilityResult<T> {
   const isAutoAlpa = (r: T) =>
     r.status === 'Alpa' ||
@@ -172,8 +257,23 @@ export function evaluateScanEligibility<
   } else {
     // Mode Auto
     if (typeof currentHourWIT === 'number') {
-      // Pagi hari (Sebelum 10:00 WIT) -> Masuk. Siang/Sore hari (Mulai 10:00 WIT ke atas) -> Pulang
-      const isAfternoonSession = currentHourWIT >= 10;
+      const curMinute = typeof currentMinuteWIT === 'number' ? currentMinuteWIT : 0;
+      const nowMinutes = currentHourWIT * 60 + curMinute;
+
+      // Evaluasi apakah hari Jumat (dayOfWeek === 5) vs Senin-Kamis
+      const isFriday = dayOfWeek === 5;
+      
+      const [fridayH, fridayM] = (pulangConfig?.fridayTime || '10:00').split(':').map(Number);
+      const fridayTargetMinutes = (isNaN(fridayH) ? 10 : fridayH) * 60 + (isNaN(fridayM) ? 0 : fridayM);
+
+      const [normalH, normalM] = (pulangConfig?.normalTime || '13:30').split(':').map(Number);
+      const normalTargetMinutes = (isNaN(normalH) ? 13 : normalH) * 60 + (isNaN(normalM) ? 30 : normalM);
+
+      // Hari Jumat: mulai bisa absen pulang di atas jam 10:00 WIT
+      // Hari Senin - Kamis: waktu pulang normal (13:30 WIT)
+      const targetThresholdMinutes = isFriday ? fridayTargetMinutes : normalTargetMinutes;
+      const isAfternoonSession = nowMinutes >= targetThresholdMinutes;
+
       targetJenis = isAfternoonSession ? 'Pulang' : 'Masuk';
     } else {
       targetJenis = masukRecord && !pulangRecord ? 'Pulang' : 'Masuk';

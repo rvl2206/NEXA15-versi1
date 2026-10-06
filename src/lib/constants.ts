@@ -83,6 +83,8 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   autoAlpaCutoffTime: '14:30',
   enableAutoAlpa: true,
   schoolDays: 6, // 6 = 6 Hari Sekolah (Senin - Sabtu), 5 = 5 Hari Sekolah (Senin - Jumat)
+  pulangStartTimeNormal: '13:30',
+  pulangStartTimeFriday: '10:00',
   academicYear: '2026/2027',
   enableWaNotif: true,
   waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n⏰ Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',

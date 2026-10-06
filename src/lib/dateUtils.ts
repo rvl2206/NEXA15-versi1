@@ -5,17 +5,10 @@
  */
 
 /**
- * Mengembalikan tanggal hari ini dalam format DD-MM-YYYY sesuai timezone Asia/Jayapura (WIT)
+ * Mengembalikan tanggal hari ini dalam format YYYY-MM-DD sesuai timezone Asia/Jayapura (WIT)
  */
 export function getTodayFormatted(): string {
-  const today = new Date();
-  const formatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Jayapura',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-  return formatter.format(today).replace(/\//g, '-');
+  return getTodayYyyyMmDd();
 }
 
 /**
@@ -169,4 +162,18 @@ export function isRecordOnSaturday(record: { tanggal?: string; timestamp?: strin
     if (!isNaN(d.getTime())) return d.getDay() === 6;
   }
   return false;
+}
+
+/**
+ * Mengembalikan hari dalam seminggu (0 = Minggu, 1 = Senin, ..., 5 = Jumat, 6 = Sabtu)
+ * sesuai zona waktu WIT (Asia/Jayapura, UTC+09:00).
+ */
+export function getDayOfWeekWIT(date = new Date()): number {
+  try {
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    const wit = new Date(utc + 9 * 3600000);
+    return wit.getDay();
+  } catch {
+    return date.getDay();
+  }
 }

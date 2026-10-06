@@ -14,7 +14,6 @@ import { AttendanceRecap } from './components/AttendanceRecap';
 import { TeacherManagement } from './components/TeacherManagement';
 import { TeacherAttendanceRecap } from './components/TeacherAttendanceRecap';
 import { WaliKelasDispatch } from './components/WaliKelasDispatch';
-import { AIAnalysis } from './components/AIAnalysis';
 import { ActivityLogs } from './components/ActivityLogs';
 import { SettingsPage } from './components/SettingsPage';
 import { UserManagement } from './components/UserManagement';
@@ -106,9 +105,9 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return;
     const rolePermissions: Record<UserRole, string[]> = {
-      Admin: ['dashboard', 'users', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'ai-analysis', 'logs', 'settings'],
+      Admin: ['dashboard', 'users', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'logs', 'settings'],
       Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template'],
-      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'ai-analysis', 'logs', 'settings'],
+      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'logs', 'settings'],
     };
 
     const allowed = rolePermissions[currentUser.role] || rolePermissions.Admin;
@@ -259,8 +258,6 @@ export function App() {
             currentUserRole={currentUser?.role}
           />
         );
-      case 'ai-analysis':
-        return <AIAnalysis />;
       case 'logs':
         return <ActivityLogs />;
       case 'settings':

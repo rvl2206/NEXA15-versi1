@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { store } from '../lib/store';
 import { toast } from '../lib/toast';
 import { AttendanceRecord, Student, AttendanceStatus, AttendanceType } from '../types';
+import { PrintReportModal } from './PrintReportModal';
 import { AttendanceRecoveryModal } from './AttendanceRecoveryModal';
 import { AttendanceCorrectionModal } from './AttendanceCorrectionModal';
 import { ExportProblematicModal } from './ExportProblematicModal';
+import { ImportAttendanceModal } from './ImportAttendanceModal';
+import { ManualInputModal } from './ManualInputModal';
 import {
   exportAttendanceToExcel,
   exportAttendanceToPDF,
@@ -143,51 +146,12 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
   // Manual Log Modal
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [manualForm, setManualForm] = useState({
-    studentNisn: '',
-    jenis: 'Masuk' as AttendanceType,
-    status: 'Izin' as AttendanceStatus,
-    catatan: 'Surat izin diserahkan',
-  });
+
 
   // Import Attendance Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importPreview, setImportPreview] = useState<Omit<AttendanceRecord, 'id'>[]>([]);
-  const [importErrors, setImportErrors] = useState<string[]>([]);
-  const [importTotalRows, setImportTotalRows] = useState(0);
-  const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-  const [isParsing, setIsParsing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files[0]) {
-      const selected = files[0];
-      setImportFile(selected);
-      setIsParsing(true);
-      const res = await parseAttendanceImportFile(selected, students, currentOfficer);
-      setIsParsing(false);
-      setImportPreview(res.data);
-      setImportErrors(res.errors);
-      setImportTotalRows(res.totalRows);
-    }
-  };
-
-  const handleExecuteImport = () => {
-    if (importPreview.length === 0) return;
-    store.importAttendanceRecords(importPreview, importMode);
-    setIsImportModalOpen(false);
-    setImportFile(null);
-    setImportPreview([]);
-    setImportErrors([]);
-  };
-
-  const resetImportModal = () => {
-    setImportFile(null);
-    setImportPreview([]);
-    setImportErrors([]);
-    setImportTotalRows(0);
+  const handleExecuteImport = (records: Omit<AttendanceRecord, 'id'>[], mode: 'append' | 'replace') => {
+    store.importAttendanceRecords(records, mode);
     setIsImportModalOpen(false);
   };
 
@@ -1042,9 +1006,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     }
   }, [recapMode, rawPairedDailyRecords, filteredAttendance]);
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const student = students.find((s) => s.nisn === manualForm.studentNisn);
+  const handleManualSubmit = (studentNisn: string, jenis: AttendanceType, status: AttendanceStatus, catatan: string) => {
+    const student = students.find((s) => s.nisn === studentNisn);
     if (!student) {
       toast.error('Siswa Tidak Ditemukan', 'Silakan pilih siswa yang valid dari daftar.');
       return;
@@ -1056,13 +1019,13 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       nama: student.nama,
       kelas: student.kelas,
       id_qr: student.id_qr,
-      jenis: manualForm.jenis,
-      status: manualForm.status,
+      jenis: jenis,
+      status: status,
       petugas: currentOfficer,
-      catatan: manualForm.catatan,
+      catatan: catatan,
     });
 
-    toast.success('Presensi Dicatat', `Presensi ${manualForm.status} untuk ${student.nama} (${manualForm.jenis}) berhasil dicatat.`);
+    toast.success('Presensi Dicatat', `Presensi ${status} untuk ${student.nama} (${jenis}) berhasil dicatat.`);
     setIsManualModalOpen(false);
   };
 
@@ -2536,679 +2499,37 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         </div>
       )}
 
-      {/* Manual Input Modal */}
-      {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden">
-            <div className="bg-emerald-900 p-4 text-white flex items-center justify-between">
-              <h3 className="font-bold text-xs uppercase tracking-wider">Pencatatan Absensi Manual (Izin/Sakit/Alpa)</h3>
-              <button onClick={() => setIsManualModalOpen(false)} className="text-emerald-200 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ManualInputModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        students={students}
+        onSubmit={handleManualSubmit}
+      />
 
-            <form onSubmit={handleManualSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pilih Siswa</label>
-                <select
-                  value={manualForm.studentNisn}
-                  onChange={(e) => setManualForm({ ...manualForm, studentNisn: e.target.value })}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
-                  required
-                >
-                  <option value="">-- Pilih Siswa --</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.nisn}>
-                      {s.nama} ({s.kelas}) - NISN: {s.nisn}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <ImportAttendanceModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        students={students}
+        currentOfficer={currentOfficer}
+        onExecuteImport={handleExecuteImport}
+      />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jenis Absensi</label>
-                  <select
-                    value={manualForm.jenis}
-                    onChange={(e) => setManualForm({ ...manualForm, jenis: e.target.value as AttendanceType })}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value="Masuk">Masuk</option>
-                    <option value="Pulang">Pulang</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status Kehadiran</label>
-                  <select
-                    value={manualForm.status}
-                    onChange={(e) => setManualForm({ ...manualForm, status: e.target.value as AttendanceStatus })}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value="Izin">Izin</option>
-                    <option value="Sakit">Sakit</option>
-                    <option value="Alpa">Alpa</option>
-                    <option value="Hadir">Hadir</option>
-                    <option value="Terlambat">Terlambat</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan / Alasan</label>
-                <input
-                  type="text"
-                  value={manualForm.catatan}
-                  onChange={(e) => setManualForm({ ...manualForm, catatan: e.target.value })}
-                  placeholder="Contoh: Sakit demam dengan surat dokter"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsManualModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md"
-                >
-                  Simpan Absensi
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Import Data Kehadiran dari Excel */}
-      {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full overflow-hidden transition-colors flex flex-col max-h-[90vh]">
-            <div className="bg-blue-600 p-4 text-white flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Import Manual Data Kehadiran dari Template Excel / CSV
-                </h3>
-                <p className="text-[11px] text-blue-100 mt-0.5">
-                  Unggah berkas Excel berisi riwayat atau data presensi harian siswa.
-                </p>
-              </div>
-              <button onClick={resetImportModal} className="text-blue-200 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700 dark:text-slate-300">
-              {/* Step 1: Unduh Template */}
-              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                    <Download className="w-3.5 h-3.5 text-blue-600" />
-                    Langkah 1: Unduh Format Template Excel Kehadiran (.xlsx)
-                  </h4>
-                  <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
-                    Kolom template: <code>Tanggal</code>, <code>NISN</code>, <code>Nama</code>, <code>Kelas</code>, <code>Jenis</code> (Masuk/Pulang), <code>Status</code> (Hadir/Terlambat/Izin/Sakit/Alpa), <code>Jam Scan</code>, <code>Catatan</code>.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={downloadAttendanceImportTemplate}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Unduh Template .xlsx</span>
-                </button>
-              </div>
-
-              {/* Step 2: Upload File */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Upload className="w-3.5 h-3.5 text-blue-600" />
-                  Langkah 2: Pilih File Excel / CSV Hasil Pengisian
-                </h4>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition-colors bg-slate-50 dark:bg-slate-800/40"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx, .xls, .csv"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <FileSpreadsheet className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                  {importFile ? (
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-white text-xs">{importFile.name}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{(importFile.size / 1024).toFixed(1)} KB • Klik untuk ganti file</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="font-bold text-slate-800 dark:text-slate-200">Klik di sini untuk memilih file Excel Kehadiran</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Mendukung format .xlsx, .xls, dan .csv</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Parsing State */}
-              {isParsing && (
-                <div className="p-4 text-center text-slate-500 font-medium animate-pulse">
-                  Membaca dan memvalidasi file Excel Kehadiran...
-                </div>
-              )}
-
-              {/* Import Options & Preview */}
-              {importPreview.length > 0 && !isParsing && (
-                <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Check className="w-4 h-4 text-emerald-600" />
-                      Pratinjau Kehadiran ({importPreview.length} Baris Valid Dari {importTotalRows} Baris)
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Mode Import:</label>
-                      <select
-                        value={importMode}
-                        onChange={(e) => setImportMode(e.target.value as 'append' | 'replace')}
-                        className="px-2 py-1 text-[11px] border border-slate-300 dark:border-slate-700 dark:bg-slate-800 rounded-lg font-bold"
-                      >
-                        <option value="append">Tambah / Gabung ke Data Saat Ini ({attendance.length} Record)</option>
-                        <option value="replace">Ganti Total DB Absensi (Hapus Data Lama & Ganti Baru)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Errors warning */}
-                  {importErrors.length > 0 && (
-                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900 text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
-                      <p className="font-bold flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                        Catatan Baris Dilewati ({importErrors.length}):
-                      </p>
-                      <ul className="list-disc pl-4 space-y-0.5 max-h-20 overflow-y-auto">
-                        {importErrors.map((err, idx) => (
-                          <li key={idx}>{err}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Preview Table */}
-                  <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-                    <table className="w-full text-left text-[11px]">
-                      <thead className="bg-slate-100 dark:bg-slate-800 font-bold sticky top-0">
-                        <tr>
-                          <th className="p-2">No</th>
-                          <th className="p-2">Tanggal</th>
-                          <th className="p-2">Nama</th>
-                          <th className="p-2">Kelas</th>
-                          <th className="p-2">Jenis</th>
-                          <th className="p-2">Status</th>
-                          <th className="p-2">Petugas / Catatan</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {importPreview.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                            <td className="p-2 text-slate-400">{idx + 1}</td>
-                            <td className="p-2 font-mono font-bold text-blue-700 dark:text-blue-400">{item.tanggal}</td>
-                            <td className="p-2 font-bold">{item.nama}</td>
-                            <td className="p-2 font-semibold">{item.kelas}</td>
-                            <td className="p-2 font-semibold">{item.jenis}</td>
-                            <td className="p-2">{getStatusBadge(item.status)}</td>
-                            <td className="p-2 text-[10px] text-slate-500">{item.catatan || item.petugas}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={resetImportModal}
-                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                disabled={importPreview.length === 0}
-                onClick={handleExecuteImport}
-                className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md transition-all flex items-center gap-1.5"
-              >
-                <Check className="w-4 h-4" />
-                <span>Simpan & Import {importPreview.length} Record Kehadiran</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Print Monthly Report & Student Slip Modal */}
-      {isPrintModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          {/* Print CSS stylesheet rule */}
-          <style>{`
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #printable-monthly-report, #printable-monthly-report * {
-                visibility: visible !important;
-              }
-              #printable-monthly-report {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 12mm !important;
-                background: white !important;
-                color: black !important;
-                box-shadow: none !important;
-                border: none !important;
-                font-family: Arial, sans-serif !important;
-              }
-              .no-print {
-                display: none !important;
-              }
-              @page {
-                size: A4 landscape;
-                margin: 8mm;
-              }
-            }
-          `}</style>
-
-          <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-auto flex flex-col max-h-[92vh] overflow-hidden transition-colors">
-            {/* Modal Header & Controls (Non-Printable) */}
-            <div className="no-print p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-600/30 rounded-xl border border-indigo-500/40 text-indigo-300">
-                  <Printer className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
-                    <span>Pratinjau & Cetak Laporan Absensi</span>
-                    <span className="text-[10px] bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-md font-mono border border-indigo-400/30">
-                      Dioptimalkan A4 Print
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-300">
-                    Cetak langsung atau simpan sebagai PDF resmi untuk dibagikan kepada Wali Kelas / Orang Tua.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Cetak Sekarang (Print)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsPrintModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-                  title="Tutup Modal Pratinjau"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Filter & Customization Toolbar (Non-Printable) */}
-            <div className="no-print p-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Jenis Laporan Dokumen:
-                </label>
-                <select
-                  value={printStudentSlip ? 'slip' : 'kelas'}
-                  onChange={(e) => {
-                    if (e.target.value === 'kelas') {
-                      setPrintStudentSlip(null);
-                    } else if (students.length > 0) {
-                      setPrintStudentSlip(students[0]);
-                    }
-                  }}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
-                >
-                  <option value="kelas">Laporan Rekapitulasi Seluruh Siswa Kelas ({monthlyStudentSummaries.length} Siswa)</option>
-                  <option value="slip">Slip Rekapitulasi Kehadiran Individu (Untuk Orang Tua)</option>
-                </select>
-              </div>
-
-              {printStudentSlip ? (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Pilih Siswa (Penerima Slip):
-                  </label>
-                  <select
-                    value={printStudentSlip.id}
-                    onChange={(e) => {
-                      const found = students.find((s) => s.id === e.target.value);
-                      if (found) setPrintStudentSlip(found);
-                    }}
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
-                  >
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nama} ({s.kelas})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Nama Wali Kelas (Untuk Lembar Pengesahan):
-                  </label>
-                  <input
-                    type="text"
-                    value={printWaliKelasName}
-                    onChange={(e) => setPrintWaliKelasName(e.target.value)}
-                    placeholder="Contoh: Drs. Ahmad Dahlan, M.Pd"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-              )}
-
-              <div className="flex items-end">
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-3 py-1.5 rounded-lg w-full flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Petunjuk: Gunakan pengaturan browser "Save as PDF" jika ingin menyimpan file PDF resmi.</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Scrollable Document Area */}
-            <div className="p-6 overflow-y-auto bg-slate-200 dark:bg-slate-950 flex-1">
-              {/* Actual Printable Page Sheet */}
-              <div
-                id="printable-monthly-report"
-                className="bg-white text-slate-900 p-8 rounded-xl shadow-lg border border-slate-300 max-w-4xl mx-auto space-y-5 text-xs font-sans"
-              >
-                {/* Kop Surat Resmi Sekolah */}
-                <div className="border-b-4 border-double border-slate-900 pb-3 text-center space-y-0.5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-700">
-                    PEMERINTAH PROVINSI MALUKU
-                  </h4>
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
-                    DINAS PENDIDIKAN DAN KEBUDAYAAN
-                  </h3>
-                  <h2 className="text-lg font-black uppercase text-blue-900 tracking-tight">
-                    SMA NEGERI 15 AMBON
-                  </h2>
-                  <p className="text-[10px] text-slate-600 font-medium">
-                    Jl. Wolter Monginsidi, Lateri, Kec. Baguala, Kota Ambon, Maluku - Kodepos 97231
-                  </p>
-                  <p className="text-[9px] text-slate-500 font-mono">
-                    NPSN: 60101980 | Email: info@sman15ambon.sch.id | Website: sman15ambon.sch.id
-                  </p>
-                </div>
-
-                {!printStudentSlip ? (
-                  /* FULL CLASS MONTHLY ATTENDANCE RECAP REPORT */
-                  <>
-                    <div className="text-center space-y-1">
-                      <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 border-b border-slate-400 pb-1 inline-block px-4">
-                        LAPORAN REKAPITULASI KEHADIRAN SISWA BULANAN
-                      </h3>
-                      <div className="flex items-center justify-center gap-4 text-[11px] text-slate-700 font-semibold pt-1">
-                        <span>Periode: <strong className="text-slate-900">{formatIndoMonth(filterBulan)}</strong></span>
-                        <span>•</span>
-                        <span>Kelas: <strong className="text-slate-900">{filterKelas}</strong></span>
-                        <span>•</span>
-                        <span>Tanggal Cetak: <strong className="text-slate-900">{formatIndoDate(todayISO)} WIT</strong></span>
-                      </div>
-                    </div>
-
-                    {/* Ringkasan Statistik Kelas */}
-                    <div className="grid grid-cols-4 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-300 text-[10px]">
-                      <div>
-                        <span className="text-slate-500 block">Total Siswa Terdaftar:</span>
-                        <span className="font-extrabold text-slate-900 text-xs">{monthlyStudentSummaries.length} Siswa</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Rata-rata Kehadiran:</span>
-                        <span className="font-extrabold text-emerald-700 text-xs">
-                          {monthlyStudentSummaries.length > 0
-                            ? Math.round(
-                                monthlyStudentSummaries.reduce((a, b) => a + b.persentaseHadir, 0) /
-                                  monthlyStudentSummaries.length
-                              )
-                            : 0}%
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Siswa Hadir Tepat Waktu:</span>
-                        <span className="font-extrabold text-emerald-600 text-xs">
-                          {monthlyStudentSummaries.reduce((a, b) => a + b.hadir, 0)} kali
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Frekuensi Terlambat:</span>
-                        <span className="font-extrabold text-amber-600 text-xs">
-                          {monthlyStudentSummaries.reduce((a, b) => a + b.terlambat, 0)} kali
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Tabel Rekapitulasi Seluruh Siswa */}
-                    <table className="w-full text-left border-collapse border border-slate-400 text-[10px]">
-                      <thead>
-                        <tr className="bg-slate-200 text-slate-900 font-extrabold uppercase border-b border-slate-400">
-                          <th className="p-1.5 border-r border-slate-300 text-center">No</th>
-                          <th className="p-1.5 border-r border-slate-300">NISN</th>
-                          <th className="p-1.5 border-r border-slate-300">Nama Siswa</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center">Kelas</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-emerald-800">Hadir</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-amber-800">Terlambat</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-amber-800">Durasi Terlambat</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-blue-800">Izin</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-purple-800">Sakit</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-red-800">Alpa</th>
-                          <th className="p-1.5 border-r border-slate-300 text-center text-slate-800">Total Masuk</th>
-                          <th className="p-1.5 text-center font-black">% Hadir</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-300">
-                        {monthlyStudentSummaries.map((item, idx) => (
-                          <tr key={item.student.id} className={idx % 2 === 1 ? 'bg-slate-50' : 'bg-white'}>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-slate-500">{idx + 1}</td>
-                            <td className="p-1.5 border-r border-slate-300 font-mono">{item.student.nisn}</td>
-                            <td className="p-1.5 border-r border-slate-300 font-extrabold">{item.student.nama}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-semibold">{item.student.kelas}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-emerald-700">{item.hadir}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-amber-700">{item.terlambat}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-mono">
-                              {item.totalTerlambatMenit > 0 ? formatLateDuration(item.totalTerlambatMenit) : '-'}
-                            </td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-blue-700">{item.izin}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-purple-700">{item.sakit}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold text-red-700">{item.alpa}</td>
-                            <td className="p-1.5 border-r border-slate-300 text-center font-bold">{item.totalMasuk}</td>
-                            <td className="p-1.5 text-center font-black">{item.persentaseHadir}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-
-                    {/* Lembar Tanda Tangan Resmi */}
-                    <div className="pt-6 grid grid-cols-3 gap-4 text-center text-[10px]">
-                      <div>
-                        <p className="text-slate-600">Mengetahui,</p>
-                        <p className="font-bold text-slate-900">Wali Kelas {filterKelas !== 'Semua' ? filterKelas : ''}</p>
-                        <div className="h-16"></div>
-                        <p className="font-extrabold text-slate-900 underline">{printWaliKelasName}</p>
-                        <p className="text-slate-500">NIP. .........................................</p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-600">Ambon, {formatIndoDate(todayISO)}</p>
-                        <p className="font-bold text-slate-900">Guru Piket / Tim Kesiswaan</p>
-                        <div className="h-16"></div>
-                        <p className="font-extrabold text-slate-900 underline">{formatPetugasRole(currentOfficer)}</p>
-                        <p className="text-slate-500">Petugas Absensi Digital NEXA15</p>
-                      </div>
-
-                      <div>
-                        <p className="text-slate-600">Mengetahui,</p>
-                        <p className="font-bold text-slate-900">Kepala SMA Negeri 15 Ambon</p>
-                        <div className="h-16"></div>
-                        <p className="font-extrabold text-slate-900 underline">G. Soplanit, S.Pd., M.Pd.</p>
-                        <p className="text-slate-500">NIP. 19700512 199802 1 004</p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  /* INDIVIDUAL STUDENT MONTHLY ATTENDANCE SLIP */
-                  <>
-                    <div className="text-center space-y-1">
-                      <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 border-b border-slate-400 pb-1 inline-block px-4">
-                        SLIP REKAPITULASI KEHADIRAN SISWA BULANAN
-                      </h3>
-                      <p className="text-[10px] text-slate-500 italic">
-                        Laporan Kedisiplinan Kehadiran untuk Disampaikan Kepada Orang Tua / Wali Murid
-                      </p>
-                    </div>
-
-                    {/* Identity Grid */}
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-300 grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Nama Lengkap Siswa:</span>
-                        <span className="font-extrabold text-slate-900 text-sm">{printStudentSlip.nama}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">NISN / ID QR:</span>
-                        <span className="font-mono font-bold text-slate-800">{printStudentSlip.nisn}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Kelas / Tingkat:</span>
-                        <span className="font-bold text-slate-800">{printStudentSlip.kelas}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Periode Laporan Bulanan:</span>
-                        <span className="font-bold text-slate-900">{formatIndoMonth(filterBulan)}</span>
-                      </div>
-                    </div>
-
-                    {/* Student Attendance Stats Grid */}
-                    {(() => {
-                      const summary = monthlyStudentSummaries.find((s) => s.student.id === printStudentSlip.id);
-                      if (!summary) return null;
-
-                      return (
-                        <div className="space-y-4">
-                          <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1">
-                            Rincian Kehadiran Bulan {formatIndoMonth(filterBulan)}
-                          </h4>
-
-                          <div className="grid grid-cols-4 gap-3 text-center">
-                            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-300">
-                              <span className="text-[10px] text-emerald-800 font-bold block">HADIR TEPAT WAKTU</span>
-                              <span className="text-base font-black text-emerald-700">{summary.hadir} Hari</span>
-                            </div>
-                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-300">
-                              <span className="text-[10px] text-amber-800 font-bold block">TERLAMBAT</span>
-                              <span className="text-base font-black text-amber-700">{summary.terlambat} Hari</span>
-                              <span className="text-[9px] text-slate-500 block">
-                                Total: {formatLateDuration(summary.totalTerlambatMenit)}
-                              </span>
-                            </div>
-                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-300">
-                              <span className="text-[10px] text-blue-800 font-bold block">IZIN / SAKIT</span>
-                              <span className="text-base font-black text-blue-700">
-                                {summary.izin + summary.sakit} Hari
-                              </span>
-                              <span className="text-[9px] text-slate-500 block">
-                                (Izin: {summary.izin}, Sakit: {summary.sakit})
-                              </span>
-                            </div>
-                            <div className="p-3 bg-red-50 rounded-lg border border-red-300">
-                              <span className="text-[10px] text-red-800 font-bold block">TANPA KETERANGAN (ALPA)</span>
-                              <span className="text-base font-black text-red-700">{summary.alpa} Hari</span>
-                            </div>
-                          </div>
-
-                          <div className="p-3 bg-slate-100 rounded-lg border border-slate-300 flex items-center justify-between">
-                            <div>
-                              <span className="font-bold text-slate-800">Tingkat Persentase Kehadiran:</span>
-                              <p className="text-[10px] text-slate-500">
-                                Berdasarkan akumulasi scan absensi digital QR Code NEXA15.
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <span
-                                className={`text-xl font-black ${
-                                  summary.persentaseHadir >= 85
-                                    ? 'text-emerald-700'
-                                    : summary.persentaseHadir >= 70
-                                    ? 'text-amber-700'
-                                    : 'text-red-700'
-                                }`}
-                              >
-                                {summary.persentaseHadir}%
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Evaluation & Teacher Note */}
-                          <div className="p-3 bg-white border border-slate-300 rounded-lg space-y-1">
-                            <span className="font-bold text-slate-800 text-[11px] block">
-                              Catatan Wali Kelas / Pembinaan Kedisiplinan:
-                            </span>
-                            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded min-h-[50px] text-[11px] text-slate-700 italic">
-                              {summary.terlambat >= 3 || summary.alpa >= 2
-                                ? `Siswa tercatat terlambat ${summary.terlambat} kali / Alpa ${summary.alpa} kali. Mohon perhatian dan pendampingan lebih lanjut dari orang tua/wali murid di rumah.`
-                                : `Ananda ${printStudentSlip.nama} menunjukkan kedisiplinan yang sangat baik. Pertahankan ketepatan waktu hadir di sekolah.`}
-                            </div>
-                          </div>
-
-                          {/* Signatures for Slip */}
-                          <div className="pt-6 grid grid-cols-2 gap-8 text-center text-[10px]">
-                            <div>
-                              <p className="text-slate-600">Mengetahui / Memeriksa,</p>
-                              <p className="font-bold text-slate-900">Orang Tua / Wali Murid</p>
-                              <div className="h-16"></div>
-                              <p className="font-extrabold text-slate-900 border-b border-slate-400 pb-0.5 inline-block min-w-[150px]">
-                                ( .................................................... )
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-slate-600">Ambon, {formatIndoDate(todayISO)}</p>
-                              <p className="font-bold text-slate-900">Wali Kelas {printStudentSlip.kelas}</p>
-                              <div className="h-16"></div>
-                              <p className="font-extrabold text-slate-900 underline">{printWaliKelasName}</p>
-                              <p className="text-slate-500">NIP. .........................................</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <PrintReportModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        students={students}
+        monthlyStudentSummaries={monthlyStudentSummaries}
+        printStudentSlip={printStudentSlip}
+        setPrintStudentSlip={setPrintStudentSlip}
+        printWaliKelasName={printWaliKelasName}
+        setPrintWaliKelasName={setPrintWaliKelasName}
+        filterBulan={filterBulan}
+        filterKelas={filterKelas}
+        todayISO={todayISO}
+        formatIndoMonth={formatIndoMonth}
+        formatIndoDate={formatIndoDate}
+        currentOfficer={currentOfficer}
+      />
 
       <AttendanceRecoveryModal
         isOpen={isRecoveryModalOpen}

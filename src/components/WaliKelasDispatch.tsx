@@ -757,7 +757,9 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                 Tidak Ditemukan Siswa Bermasalah
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                {selectedClass !== 'Semua Kelas'
+                {selectedMonth !== 'Semua'
+                  ? `Tidak ditemukan siswa bermasalah pada bulan ${formatIndoMonth(selectedMonth)}${selectedClass !== 'Semua Kelas' ? ` (Kelas ${selectedClass})` : ''}. Seluruh kehadiran tertib atau belum ada catatan pelanggaran.`
+                  : selectedClass !== 'Semua Kelas'
                   ? `Tidak ada siswa di kelas ${selectedClass} yang melebihi ambang batas risiko kehadiran saat ini.`
                   : 'Seluruh siswa terpantau memiliki tingkat kehadiran yang baik dan berada di atas ambang batas kedisiplinan.'}
               </p>

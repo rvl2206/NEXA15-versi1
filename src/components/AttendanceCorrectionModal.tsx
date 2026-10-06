@@ -28,7 +28,7 @@ interface AttendanceCorrectionModalProps {
   onSuccess?: () => void;
   initialRecord?: AttendanceRecord | null;
   initialStudent?: Student | null;
-  initialDate?: string; // YYYY-MM-DD or DD-MM-YYYY
+  initialDate?: string; // YYYY-MM-DD
   initialType?: AttendanceType; // 'Masuk' | 'Pulang'
   currentOfficer: string;
 }

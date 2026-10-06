@@ -54,7 +54,7 @@ export interface Teacher {
 
 export interface AttendanceRecord {
   id: string;
-  tanggal: string; // format "DD-MM-YYYY" or "YYYY-MM-DD"
+  tanggal: string; // format "YYYY-MM-DD"
   timestamp: string; // ISO String
   nisn: string;
   nama: string;
@@ -71,7 +71,7 @@ export interface AttendanceRecord {
 
 export interface TeacherAttendanceRecord {
   id: string;
-  tanggal: string; // format "DD-MM-YYYY" or "YYYY-MM-DD"
+  tanggal: string; // format "YYYY-MM-DD"
   timestamp: string; // ISO String
   nip: string;
   nama: string;
@@ -111,6 +111,8 @@ export interface SchoolSettings {
   autoAlpaCutoffTime?: string; // e.g. "14:30"
   enableAutoAlpa?: boolean; // default true
   schoolDays?: 5 | 6; // 5 = 5 Hari Sekolah (Senin - Jumat), 6 = 6 Hari Sekolah (Senin - Sabtu), default: 6
+  pulangStartTimeNormal?: string; // e.g. "14:15"
+  pulangStartTimeFriday?: string; // e.g. "11:45"
   academicYear: string;
   enableWaNotif?: boolean;
   waTemplateHadir?: string;
@@ -209,4 +211,16 @@ export interface MissingAttendanceLogItem {
   details: string;
 }
 
-
+export interface StudentMonthlySummary {
+  student: Student;
+  hadir: number;
+  terlambat: number;
+  totalTerlambatMenit: number;
+  izin: number;
+  sakit: number;
+  alpa: number;
+  totalMasuk: number;
+  persentaseHadir: number;
+  tanpaAbsenPulang: number;
+  tanpaAbsenMasuk: number;
+}

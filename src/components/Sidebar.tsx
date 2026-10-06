@@ -6,7 +6,6 @@ import {
   QrCode,
   Users,
   FileSpreadsheet,
-  Sparkles,
   History,
   Settings,
   ShieldAlert,
@@ -124,16 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'Sistem & Analisis',
+      title: 'Sistem',
       items: [
-        {
-          id: 'ai-analysis',
-          label: 'Analisis AI Gemini',
-          icon: Sparkles,
-          roles: ['Admin', 'Kepala Sekolah'],
-          badge: 'AI',
-          badgeColor: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
-        },
         {
           id: 'users',
           label: 'Manajemen Akun',
