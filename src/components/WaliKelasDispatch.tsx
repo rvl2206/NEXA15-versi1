@@ -572,7 +572,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       </div>
 
       {/* Main Tab Navigation Bar */}
-      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-2 rounded-2xl shadow-sm border border-white/10 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => setActiveTab('alerts')}
@@ -580,13 +580,13 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'alerts'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
             Siswa Bermasalah & Kirim WA
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'alerts' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+              activeTab === 'alerts' ? 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 text-white' : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
             }`}>
               {filteredList.length}
             </span>
@@ -598,7 +598,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'batch'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -611,12 +611,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'history'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
             }`}
           >
             <FileText className="w-4 h-4" />
             Riwayat Disposisi & Tindak Lanjut
-            <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-[10px]">
+            <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-200 dark:text-slate-300 rounded-full text-[10px]">
               {dispatchesHistory.length}
             </span>
           </button>
@@ -627,7 +627,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'mapping'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
             }`}
           >
             <Building2 className="w-4 h-4" />
@@ -640,7 +640,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'settings'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
             }`}
           >
             <Settings className="w-4 h-4" />
@@ -648,7 +648,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
           </button>
         </div>
 
-        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium px-2 py-1 flex items-center gap-1.5">
+        <div className="text-xs text-slate-400 font-medium px-2 py-1 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
           Ambang Batas: Alpa &ge; {tempAlpaThreshold}x | Terlambat &ge; {tempTerlambatThreshold}x | Kehadiran &lt; {tempMinRateThreshold}%
         </div>
@@ -658,7 +658,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {activeTab === 'alerts' && (
         <div className="space-y-5">
           {/* Filtering Controls */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-2xl border border-white/10 shadow-sm space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Search Bar */}
               <div className="relative">
@@ -669,12 +669,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   id="input-search-problematic"
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -687,7 +687,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   id="select-filter-month"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
                   <option value="Semua">Semua Bulan (Akumulasi)</option>
                   {availableMonths.map((m) => (
@@ -704,7 +704,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   id="select-filter-class"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
                   <option value="Semua Kelas">Semua Kelas ({allClasses.length} Kelas)</option>
                   {allClasses.map((cls) => (
@@ -721,7 +721,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   value={selectedRisk}
                   onChange={(e) => setSelectedRisk(e.target.value)}
                   id="select-filter-risk"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
                   <option value="Semua">Semua Tingkat Risiko</option>
                   <option value="Tinggi">🔴 Risiko Tinggi (Kritis)</option>
@@ -736,7 +736,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   value={selectedIssueType}
                   onChange={(e) => setSelectedIssueType(e.target.value as any)}
                   id="select-filter-issue-type"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
                   <option value="all">Semua Jenis Pelanggaran</option>
                   <option value="alpa">❌ Sering Alpa (≥ {tempAlpaThreshold}x)</option>
@@ -749,14 +749,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
 
           {/* List of Problematic Students */}
           {filteredList.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 border border-slate-200 dark:border-slate-800 text-center">
+            <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-12 border border-white/10 text-center">
               <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              <h3 className="text-base font-bold text-white dark:text-slate-100">
                 Tidak Ditemukan Siswa Bermasalah
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+              <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                 {selectedMonth !== 'Semua'
                   ? `Tidak ditemukan siswa bermasalah pada bulan ${formatIndoMonth(selectedMonth)}${selectedClass !== 'Semua Kelas' ? ` (Kelas ${selectedClass})` : ''}. Seluruh kehadiran tertib atau belum ada catatan pelanggaran.`
                   : selectedClass !== 'Semua Kelas'
@@ -776,18 +776,18 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   <div
                     key={item.student.id || item.student.nisn}
                     id={`student-card-${item.student.nisn}`}
-                    className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border transition-all hover:shadow-md ${
+                    className={`bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-5 border transition-all hover:shadow-md ${
                       isHighRisk
                         ? 'border-rose-300 dark:border-rose-900/60 ring-1 ring-rose-500/10'
                         : isMediumRisk
                         ? 'border-amber-300 dark:border-amber-900/60 ring-1 ring-amber-500/10'
-                        : 'border-slate-200 dark:border-slate-800'
+                        : 'border-white/10'
                     }`}
                   >
                     {/* Card Top: Student Profile & Risk Badge */}
-                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/5 dark:border-slate-800">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 overflow-hidden shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 flex items-center justify-center font-bold text-slate-300 overflow-hidden shrink-0">
                           {item.student.foto ? (
                             <img
                               src={item.student.foto}
@@ -800,15 +800,15 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
+                            <h3 className="text-sm font-bold text-white line-clamp-1">
                               {item.student.nama}
                             </h3>
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded text-[10px] font-bold">
                               {item.student.kelas}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                            <span>NISN: <strong className="text-slate-700 dark:text-slate-300">{item.student.nisn}</strong></span>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                            <span>NISN: <strong className="text-slate-200 dark:text-slate-300">{item.student.nisn}</strong></span>
                             <span>•</span>
                             <span>Total Hari: {item.totalDays}</span>
                           </div>
@@ -843,33 +843,33 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     </div>
 
                     {/* Attendance Stats Counters */}
-                    <div className="grid grid-cols-5 gap-2 my-3.5 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                    <div className="grid grid-cols-5 gap-2 my-3.5 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 p-2.5 rounded-xl border border-white/5 dark:border-slate-800 text-center">
                       <div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Kehadiran</div>
-                        <div className={`text-xs font-extrabold ${item.attendanceRate < 75 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                        <div className="text-[10px] text-slate-400">Kehadiran</div>
+                        <div className={`text-xs font-extrabold ${item.attendanceRate < 75 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-200'}`}>
                           {item.attendanceRate}%
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Alpa</div>
-                        <div className={`text-xs font-extrabold ${item.alpaCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                        <div className="text-[10px] text-slate-400">Alpa</div>
+                        <div className={`text-xs font-extrabold ${item.alpaCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-200'}`}>
                           {item.alpaCount}x
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Terlambat</div>
-                        <div className={`text-xs font-extrabold ${item.terlambatCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                        <div className="text-[10px] text-slate-400">Terlambat</div>
+                        <div className={`text-xs font-extrabold ${item.terlambatCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-200'}`}>
                           {item.terlambatCount}x
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Sakit/Izin</div>
+                        <div className="text-[10px] text-slate-400">Sakit/Izin</div>
                         <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
                           {item.sakitCount + item.izinCount}x
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Tepat Waktu</div>
+                        <div className="text-[10px] text-slate-400">Tepat Waktu</div>
                         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                           {item.hadirCount}x
                         </div>
@@ -878,13 +878,13 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
 
                     {/* Reasons & Indications */}
                     <div className="space-y-1.5 mb-3.5">
-                      <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <div className="text-[11px] font-bold text-slate-200 dark:text-slate-300 flex items-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
                         Indikasi Masalah Terdeteksi:
                       </div>
                       <ul className="space-y-1 pl-1">
                         {item.reasons.map((r: string, rIdx: number) => (
-                          <li key={rIdx} className="text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                          <li key={rIdx} className="text-xs text-slate-300 flex items-start gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                             <span>{r}</span>
                           </li>
@@ -902,10 +902,10 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                           <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider">
                             Wali Kelas {item.student.kelas}
                           </div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          <div className="text-xs font-bold text-white dark:text-slate-100">
                             {item.waliKelas.name}
                           </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="text-[11px] text-slate-400">
                             {hasWaliPhone ? (
                               <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                                 WA: {formatWhatsAppNumber(item.waliKelas.phone || '')}
@@ -925,14 +925,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                           setMappingTeacherNip(item.waliKelas.nip || '');
                           setMappingPhone(item.waliKelas.phone || '');
                         }}
-                        className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-blue-50 text-blue-600 dark:text-blue-300 rounded-lg text-[10px] font-semibold border border-blue-200 dark:border-blue-800 transition-all"
+                        className="px-2.5 py-1 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl hover:bg-blue-50 text-blue-600 dark:text-blue-300 rounded-lg text-[10px] font-semibold border border-blue-200 dark:border-blue-800 transition-all"
                       >
                         Ubah Kontak
                       </button>
                     </div>
 
                     {/* Action Buttons Toolbar */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5 dark:border-slate-800">
                       {/* Primary WhatsApp to Homeroom Teacher Button */}
                       <button
                         onClick={() => handleOpenDispatchModal(item)}
@@ -948,9 +948,9 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                         onClick={() => handlePrintDispositionSlip(item)}
                         id={`btn-print-slip-${item.student.nisn}`}
                         title="Cetak Lembar Disposisi Kasus & Surat Panggilan"
-                        className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5"
+                        className="p-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-white/10 transition-all flex items-center gap-1.5"
                       >
-                        <Printer className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                        <Printer className="w-4 h-4 text-slate-300" />
                         <span className="hidden sm:inline">Cetak Disposisi</span>
                       </button>
 
@@ -978,12 +978,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* TAB 2: REKAP PER KELAS & BATCH WA SEND */}
       {activeTab === 'batch' && (
         <div className="space-y-5">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-5 rounded-2xl border border-white/10 shadow-sm">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-600" />
               Kirim Rekapitulasi Siswa Bermasalah Kolektif per Kelas
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-3xl">
+            <p className="text-xs text-slate-400 mt-1 max-w-3xl">
               Kirimkan ringkasan lengkap seluruh siswa bermasalah di suatu kelas sekaligus ke nomor WhatsApp Wali Kelas yang bertugas hanya dengan satu kali klik.
             </p>
           </div>
@@ -998,12 +998,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               return (
                 <div
                   key={cls}
-                  className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border transition-all flex flex-col justify-between ${
+                  className={`bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-5 border transition-all flex flex-col justify-between ${
                     hasStudents
                       ? highRiskCount > 0
                         ? 'border-rose-300 dark:border-rose-900/60 shadow-sm'
                         : 'border-amber-300 dark:border-amber-900/60 shadow-sm'
-                      : 'border-slate-200 dark:border-slate-800 opacity-80'
+                      : 'border-white/10 opacity-80'
                   }`}
                 >
                   <div>
@@ -1025,10 +1025,10 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     </div>
 
                     {/* Wali Kelas Info */}
-                    <div className="bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-100 dark:border-slate-800 mb-3 space-y-1">
+                    <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/70 p-3 rounded-xl border border-white/5 dark:border-slate-800 mb-3 space-y-1">
                       <div className="text-[10px] text-slate-400 font-medium uppercase">Wali Kelas:</div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{wali.name}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="text-xs font-bold text-white dark:text-slate-200">{wali.name}</div>
+                      <div className="text-[11px] text-slate-400">
                         {wali.phone ? `WA: ${formatWhatsAppNumber(wali.phone)}` : <span className="text-rose-500">Belum ada no WA</span>}
                       </div>
                     </div>
@@ -1039,9 +1039,9 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                         {studentsInClass.map((st, sIdx) => (
                           <div
                             key={sIdx}
-                            className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs"
+                            className="p-2 rounded-lg bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/40 border border-white/5 dark:border-slate-800 flex items-center justify-between gap-2 text-xs"
                           >
-                            <div className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-1">
+                            <div className="font-semibold text-white dark:text-slate-200 line-clamp-1">
                               {st.student.nama}
                             </div>
                             <div className="text-[10px] shrink-0 font-bold">
@@ -1061,14 +1061,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="pt-3 border-t border-white/5 dark:border-slate-800">
                     <button
                       disabled={!hasStudents}
                       onClick={() => handleOpenBatchModal(cls)}
                       className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                         hasStudents
                           ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 active:scale-[0.98]'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                          : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-400 cursor-not-allowed'
                       }`}
                     >
                       <Send className="w-3.5 h-3.5" />
@@ -1085,13 +1085,13 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* TAB 3: RIWAYAT DISPOSISI & TRACKING LOG */}
       {activeTab === 'history' && (
         <div className="space-y-5">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-5 rounded-2xl border border-white/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
                 Riwayat Pengiriman Disposisi & Status Tindak Lanjut
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Catatan resmi seluruh data siswa bermasalah yang telah diteruskan ke Wali Kelas beserta perkembangan hasil pembinaannya.
               </p>
             </div>
@@ -1113,22 +1113,22 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
           </div>
 
           {dispatchesHistory.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 border border-slate-200 dark:border-slate-800 text-center">
-              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-12 border border-white/10 text-center">
+              <div className="w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              <h3 className="text-base font-bold text-white dark:text-slate-100">
                 Belum Ada Riwayat Disposisi
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                 Riwayat akan otomatis tercatat setiap kali Anda mengirimkan laporan siswa bermasalah ke Wali Kelas via WhatsApp atau lembar disposisi.
               </p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 text-slate-300 font-bold border-b border-white/10">
                     <tr>
                       <th className="p-3.5">Waktu Disposisi</th>
                       <th className="p-3.5">Nama Siswa / NISN</th>
@@ -1140,7 +1140,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                       <th className="p-3.5 text-right">Aksi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200 dark:text-slate-300">
                     {dispatchesHistory.map((item) => {
                       const dateFormatted = new Date(item.dispatchedAt).toLocaleString('id-ID', {
                         day: '2-digit',
@@ -1151,19 +1151,19 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                       });
 
                       return (
-                        <tr key={item.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="p-3.5 whitespace-nowrap text-slate-500 dark:text-slate-400 font-medium">
+                        <tr key={item.id} className="hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10/70 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="p-3.5 whitespace-nowrap text-slate-400 font-medium">
                             {dateFormatted}
                           </td>
                           <td className="p-3.5">
-                            <div className="font-bold text-slate-900 dark:text-white">{item.studentName}</div>
-                            <div className="text-[11px] text-slate-500">NISN: {item.nisn}</div>
+                            <div className="font-bold text-white">{item.studentName}</div>
+                            <div className="text-[11px] text-slate-400">NISN: {item.nisn}</div>
                           </td>
                           <td className="p-3.5 font-semibold text-blue-600 dark:text-blue-400">
                             {item.kelas}
                           </td>
                           <td className="p-3.5">
-                            <div className="font-semibold text-slate-800 dark:text-slate-200">{item.waliKelasName}</div>
+                            <div className="font-semibold text-white dark:text-slate-200">{item.waliKelasName}</div>
                             {item.waliKelasPhone && (
                               <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
                                 {item.waliKelasPhone}
@@ -1171,7 +1171,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                             )}
                           </td>
                           <td className="p-3.5">
-                            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-[10px] font-semibold border border-slate-200 dark:border-slate-700">
+                            <span className="px-2 py-0.5 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 rounded text-[10px] font-semibold border border-white/10">
                               {item.channel}
                             </span>
                           </td>
@@ -1194,7 +1194,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                               <Edit3 className="w-2.5 h-2.5 ml-0.5" />
                             </button>
                             {item.tindakLanjutNotes && (
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs italic line-clamp-1">
+                              <div className="text-[11px] text-slate-400 mt-1 max-w-xs italic line-clamp-1">
                                 "{item.tindakLanjutNotes}"
                               </div>
                             )}
@@ -1245,18 +1245,18 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* TAB 4: PEMETAAN WALI KELAS (HOMEROOM ASSIGNMENT) */}
       {activeTab === 'mapping' && (
         <div className="space-y-5">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-5 rounded-2xl border border-white/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-blue-600" />
                 Daftar & Pemetaan Wali Kelas per Rombongan Belajar
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Tentukan guru penanggung jawab dan nomor WhatsApp resmi untuk tiap kelas agar notifikasi disposisi terkirim tepat sasaran.
               </p>
             </div>
 
-            <div className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl font-medium">
+            <div className="text-xs text-slate-400 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl px-3 py-1.5 rounded-xl font-medium">
               Total Rombel: {allClasses.length} Kelas
             </div>
           </div>
@@ -1269,7 +1269,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               return (
                 <div
                   key={cls}
-                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
+                  className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-5 border border-white/10 shadow-sm flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
@@ -1284,7 +1284,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     {isEditing ? (
                       <div className="space-y-3 pt-2">
                         <div>
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                             Pilih dari Database Guru:
                           </label>
                           <select
@@ -1298,7 +1298,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                                 if (found.no_hp) setMappingPhone(found.no_hp);
                               }
                             }}
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                            className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs"
                           >
                             <option value="">-- Pilih Guru --</option>
                             {teachers.map((t) => (
@@ -1310,7 +1310,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                             Nama Wali Kelas:
                           </label>
                           <input
@@ -1318,12 +1318,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                             value={mappingTeacherName}
                             onChange={(e) => setMappingTeacherName(e.target.value)}
                             placeholder="Nama Lengkap & Gelar"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                            className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                             Nomor WhatsApp Wali Kelas:
                           </label>
                           <input
@@ -1331,7 +1331,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                             value={mappingPhone}
                             onChange={(e) => setMappingPhone(e.target.value)}
                             placeholder="Contoh: 081234567890"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                            className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs"
                           />
                         </div>
                       </div>
@@ -1342,11 +1342,11 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                             <User className="w-5 h-5" />
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-slate-900 dark:text-white">
+                            <div className="text-xs font-bold text-white">
                               {assigned.name}
                             </div>
                             {assigned.nip && (
-                              <div className="text-[11px] text-slate-500 font-mono">
+                              <div className="text-[11px] text-slate-400 font-mono">
                                 NIP: {assigned.nip}
                               </div>
                             )}
@@ -1367,12 +1367,12 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     )}
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-3 flex items-center justify-end gap-2">
+                  <div className="pt-4 border-t border-white/5 dark:border-slate-800 mt-3 flex items-center justify-end gap-2">
                     {isEditing ? (
                       <>
                         <button
                           onClick={() => setEditingMappingClass(null)}
-                          className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl text-xs font-medium"
+                          className="px-3 py-1.5 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 rounded-xl text-xs font-medium"
                         >
                           Batal
                         </button>
@@ -1391,7 +1391,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                           setMappingTeacherNip(assigned.nip || '');
                           setMappingPhone(assigned.phone || '');
                         }}
-                        className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 text-blue-600 dark:text-blue-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all"
+                        className="px-3.5 py-1.5 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl hover:bg-blue-50 text-blue-600 dark:text-blue-300 rounded-xl text-xs font-semibold border border-white/10 flex items-center gap-1.5 transition-all"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         Edit Wali Kelas
@@ -1408,20 +1408,20 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* TAB 5: PENGATURAN AMBANG BATAS & TEMPLATE WA */}
       {activeTab === 'settings' && (
         <div className="space-y-5">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-6">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Settings className="w-5 h-5 text-blue-600" />
                 Kriteria & Ambang Batas Deteksi Siswa Bermasalah
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Atur batasan otomatis sistem dalam menggolongkan siswa ke dalam kategori bermasalah/berisiko presensi.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
+              <div className="p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 rounded-xl border border-white/10">
+                <label className="text-xs font-bold text-white dark:text-slate-200 block mb-1">
                   Minimal Alpa (Tanpa Keterangan)
                 </label>
                 <div className="flex items-center gap-2">
@@ -1431,17 +1431,17 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     max="10"
                     value={tempAlpaThreshold}
                     onChange={(e) => setTempAlpaThreshold(Math.max(1, Number(e.target.value)))}
-                    className="w-20 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-center"
+                    className="w-20 px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-xl text-xs font-bold text-center"
                   />
-                  <span className="text-xs text-slate-500">kali / semester</span>
+                  <span className="text-xs text-slate-400">kali / semester</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">
                   Siswa yang memiliki alpa &ge; nilai ini akan langsung ditandai berisiko.
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
+              <div className="p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 rounded-xl border border-white/10">
+                <label className="text-xs font-bold text-white dark:text-slate-200 block mb-1">
                   Minimal Sering Terlambat
                 </label>
                 <div className="flex items-center gap-2">
@@ -1451,17 +1451,17 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     max="20"
                     value={tempTerlambatThreshold}
                     onChange={(e) => setTempTerlambatThreshold(Math.max(1, Number(e.target.value)))}
-                    className="w-20 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-center"
+                    className="w-20 px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-xl text-xs font-bold text-center"
                   />
-                  <span className="text-xs text-slate-500">kali keterlambatan</span>
+                  <span className="text-xs text-slate-400">kali keterlambatan</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">
                   Siswa yang terlambat masuk sekolah &ge; nilai ini akan masuk kategori perlu perhatian.
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
+              <div className="p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 rounded-xl border border-white/10">
+                <label className="text-xs font-bold text-white dark:text-slate-200 block mb-1">
                   Batas Minimal Kehadiran (%)
                 </label>
                 <div className="flex items-center gap-2">
@@ -1471,9 +1471,9 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     max="95"
                     value={tempMinRateThreshold}
                     onChange={(e) => setTempMinRateThreshold(Math.min(95, Math.max(50, Number(e.target.value))))}
-                    className="w-20 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-center"
+                    className="w-20 px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-xl text-xs font-bold text-center"
                   />
-                  <span className="text-xs text-slate-500">% kehadiran</span>
+                  <span className="text-xs text-slate-400">% kehadiran</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">
                   Persentase kehadiran di bawah angka ini dianggap kritis (standar kelulusan).
@@ -1481,13 +1481,13 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+            <div className="pt-4 border-t border-white/10 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-sm font-bold text-white">
                     Format Template Pesan WhatsApp ke Wali Kelas
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-400">
                     Gunakan variabel placeholder: <code className="text-blue-600">{'{nama}'}</code>, <code className="text-blue-600">{'{nisn}'}</code>, <code className="text-blue-600">{'{kelas}'}</code>, <code className="text-blue-600">{'{wali_kelas}'}</code>, <code className="text-blue-600">{'{persentase_kehadiran}'}</code>, <code className="text-blue-600">{'{alpa}'}</code>, <code className="text-blue-600">{'{terlambat}'}</code>, <code className="text-blue-600">{'{alasan_masalah}'}</code>, <code className="text-blue-600">{'{rekomendasi}'}</code>, <code className="text-blue-600">{'{catatan_petugas}'}</code>.
                   </p>
                 </div>
@@ -1497,11 +1497,11 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                 rows={10}
                 value={tempTemplate}
                 onChange={(e) => setTempTemplate(e.target.value)}
-                className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"
+                className="w-full p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 border border-white/10 rounded-xl text-xs font-mono text-white dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
               <button
                 onClick={handleSaveSettings}
                 id="btn-save-dispatch-settings"
@@ -1518,11 +1518,11 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* Modal: Individual WhatsApp dispatch preview and edit */}
       {selectedItemForDispatch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-xl">
+                <div className="p-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 rounded-xl">
                   <MessageSquare className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -1536,7 +1536,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               </div>
               <button
                 onClick={() => setSelectedItemForDispatch(null)}
-                className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="p-1.5 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 text-white rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1545,20 +1545,20 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
             {/* Modal Body */}
             <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
               {/* Recipient details */}
-              <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl p-3.5 rounded-xl border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                     Nama Wali Kelas Tujuan:
                   </label>
                   <input
                     type="text"
                     value={customRecipientName}
                     onChange={(e) => setCustomRecipientName(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
+                    className="w-full px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg text-xs font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                     Nomor WhatsApp Wali Kelas:
                   </label>
                   <input
@@ -1566,14 +1566,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     placeholder="Contoh: 081234567890"
                     value={customRecipientPhone}
                     onChange={(e) => setCustomRecipientPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-semibold"
+                    className="w-full px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg text-xs font-mono font-semibold"
                   />
                 </div>
               </div>
 
               {/* Custom Note for Homeroom Teacher */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                   Catatan Tambahan / Arahan Petugas untuk Wali Kelas (Opsional):
                 </label>
                 <input
@@ -1581,14 +1581,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   placeholder="Contoh: Mohon koordinasi panggilan orang tua pada hari Kamis..."
                   value={customNote}
                   onChange={(e) => setCustomNote(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-lg text-xs"
                 />
               </div>
 
               {/* WhatsApp Message Preview */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5 text-blue-500" />
                     Pratinjau Pesan WhatsApp Otomatis:
                   </label>
@@ -1600,17 +1600,17 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     {copied ? 'Tersalin' : 'Salin Pesan'}
                   </button>
                 </div>
-                <div className="bg-emerald-950/10 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-500/20 text-slate-800 dark:text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
+                <div className="bg-emerald-950/10 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-500/20 text-white dark:text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
                   {previewWaMessage}
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+            <div className="p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 border-t border-white/10 flex items-center justify-between gap-3">
               <button
                 onClick={() => setSelectedItemForDispatch(null)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all"
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-200 rounded-xl text-xs font-semibold transition-all"
               >
                 Tutup
               </button>
@@ -1618,7 +1618,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleCopyMessage(previewWaMessage)}
-                  className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   Salin Teks
@@ -1640,10 +1640,10 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* Modal: Batch class recap WhatsApp dispatch preview */}
       {batchModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
             <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-xl">
+                <div className="p-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 rounded-xl">
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -1657,27 +1657,27 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               </div>
               <button
                 onClick={() => setBatchModalOpen(false)}
-                className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="p-1.5 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 text-white rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
-              <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl p-3.5 rounded-xl border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                     Wali Kelas {selectedBatchClass}:
                   </label>
                   <input
                     type="text"
                     value={customRecipientName}
                     onChange={(e) => setCustomRecipientName(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
+                    className="w-full px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg text-xs font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                     Nomor WhatsApp:
                   </label>
                   <input
@@ -1685,14 +1685,14 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     placeholder="Contoh: 081234567890"
                     value={customRecipientPhone}
                     onChange={(e) => setCustomRecipientPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-semibold"
+                    className="w-full px-3 py-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg text-xs font-mono font-semibold"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5 text-blue-500" />
                     Pratinjau Pesan Rekap Kolektif:
                   </label>
@@ -1704,16 +1704,16 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                     {copied ? 'Tersalin' : 'Salin Pesan'}
                   </button>
                 </div>
-                <div className="bg-blue-950/10 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-500/20 text-slate-800 dark:text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
+                <div className="bg-blue-950/10 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-500/20 text-white dark:text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
                   {batchWaMessage}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+            <div className="p-4 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 border-t border-white/10 flex items-center justify-between gap-3">
               <button
                 onClick={() => setBatchModalOpen(false)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold"
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold"
               >
                 Batal
               </button>
@@ -1734,15 +1734,15 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* Modal: Follow-up status update */}
       {selectedDispatchForFollowUp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl w-full max-w-lg p-5 shadow-2xl border border-white/10 space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-blue-600" />
                 Update Status Tindak Lanjut Siswa
               </h3>
               <button
                 onClick={() => setSelectedDispatchForFollowUp(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-300"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1750,18 +1750,18 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-slate-500">Siswa:</span>{' '}
-                <strong className="text-slate-800 dark:text-slate-200">{selectedDispatchForFollowUp.studentName}</strong> ({selectedDispatchForFollowUp.kelas})
+                <span className="text-slate-400">Siswa:</span>{' '}
+                <strong className="text-white dark:text-slate-200">{selectedDispatchForFollowUp.studentName}</strong> ({selectedDispatchForFollowUp.kelas})
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                   Status Penanganan Kasus:
                 </label>
                 <select
                   value={followUpStatus}
                   onChange={(e) => setFollowUpStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold"
+                  className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs font-semibold"
                 >
                   <option value="Terkirim">Terkirim (Menunggu Respon Wali Kelas)</option>
                   <option value="Menunggu Tindak Lanjut">Menunggu Tindak Lanjut (Sedang Diproses)</option>
@@ -1770,7 +1770,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
                   Catatan Tindak Lanjut / Hasil Pembinaan:
                 </label>
                 <textarea
@@ -1778,15 +1778,15 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                   placeholder="Contoh: Orang tua sudah hadir di sekolah tanggal 15 Juli 2026 dan menandatangani surat perjanjian..."
                   value={followUpNotes}
                   onChange={(e) => setFollowUpNotes(e.target.value)}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                  className="w-full p-3 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/5 dark:border-slate-800">
               <button
                 onClick={() => setSelectedDispatchForFollowUp(null)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl text-xs font-semibold"
+                className="px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 rounded-xl text-xs font-semibold"
               >
                 Batal
               </button>
@@ -1808,7 +1808,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       {/* Printable case disposition sheet */}
       <div id="printable-disposition-area" className="hidden">
         {printSlipItem && (
-          <div className="max-w-3xl mx-auto p-4 text-black bg-white">
+          <div className="max-w-3xl mx-auto p-4 text-black bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10">
             {/* Header Kop Surat */}
             <div className="text-center pb-3 mb-4 border-b-2 border-black">
               <div className="text-xs tracking-wider uppercase font-bold text-gray-700">

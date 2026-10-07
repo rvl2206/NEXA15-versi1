@@ -151,7 +151,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
       }}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
+        className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
         id="export-problematic-modal-container"
       >
         {/* Modal Header */}
@@ -222,7 +222,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
         {/* Modal Body: Filters & Settings */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
           {/* Main Filter Strip */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+          <div className="bg-white/5 backdrop-blur-xl/60 p-4 rounded-2xl border border-white/10/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -242,7 +242,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
               {/* Filter Month / Periode */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3 text-amber-500" />
                   <span>Pilih Bulan:</span>
                 </label>
@@ -250,7 +250,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   id="select-export-problematic-month"
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
+                  className="w-full px-3 py-1.5 text-xs bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
                 >
                   <option value="Semua">Semua Bulan (Akumulasi)</option>
                   {availableMonths.map((m) => (
@@ -263,7 +263,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
 
               {/* Filter Class */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
                   <Users className="w-3 h-3 text-blue-500" />
                   <span>Pilih Kelas:</span>
                 </label>
@@ -271,7 +271,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   id="select-export-problematic-class"
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
+                  className="w-full px-3 py-1.5 text-xs bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
                 >
                   <option value="Semua">Semua Kelas ({classList.length} Kelas)</option>
                   {classList.map((cls) => (
@@ -284,14 +284,14 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
 
               {/* Filter Risk Level */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
                   Tingkat Risiko:
                 </label>
                 <select
                   value={selectedRisk}
                   onChange={(e) => setSelectedRisk(e.target.value)}
                   id="select-export-problematic-risk"
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
+                  className="w-full px-3 py-1.5 text-xs bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
                 >
                   <option value="Semua">Semua Tingkat Risiko</option>
                   <option value="Tinggi">🔴 Risiko Tinggi (Kritis)</option>
@@ -302,14 +302,14 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
 
               {/* Filter Category */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
                   Kategori Masalah:
                 </label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value as any)}
                   id="select-export-problematic-category"
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
+                  className="w-full px-3 py-1.5 text-xs bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-medium"
                 >
                   <option value="all">Semua Jenis Pelanggaran</option>
                   <option value="alpa">❌ Sering Alpa (≥ {thresholdAlpa}x)</option>
@@ -320,7 +320,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
 
               {/* Search Bar */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
                   Cari Siswa / NISN:
                 </label>
                 <div className="relative">
@@ -331,7 +331,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nama / NISN..."
                     id="input-export-problematic-search"
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                   {searchQuery && (
                     <button
@@ -347,9 +347,9 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
 
             {/* Collapsible Advanced Threshold Adjustments */}
             {showAdvancedSettings && (
-              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-slate-400">
+                  <label className="block text-[11px] text-slate-400">
                     Batas Alpa (Hari):
                   </label>
                   <input
@@ -358,11 +358,11 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                     max="30"
                     value={thresholdAlpa}
                     onChange={(e) => setThresholdAlpa(Math.max(1, Number(e.target.value) || 1))}
-                    className="w-full px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg dark:text-white"
+                    className="w-full px-2.5 py-1 text-xs bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-slate-400">
+                  <label className="block text-[11px] text-slate-400">
                     Batas Terlambat (Kali):
                   </label>
                   <input
@@ -371,11 +371,11 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                     max="50"
                     value={thresholdTerlambat}
                     onChange={(e) => setThresholdTerlambat(Math.max(1, Number(e.target.value) || 1))}
-                    className="w-full px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg dark:text-white"
+                    className="w-full px-2.5 py-1 text-xs bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-slate-400">
+                  <label className="block text-[11px] text-slate-400">
                     Persentase Minimal Hadir (%):
                   </label>
                   <input
@@ -384,7 +384,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                     max="95"
                     value={thresholdMinRate}
                     onChange={(e) => setThresholdMinRate(Math.max(10, Math.min(95, Number(e.target.value) || 75)))}
-                    className="w-full px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg dark:text-white"
+                    className="w-full px-2.5 py-1 text-xs bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-lg dark:text-white"
                   />
                 </div>
               </div>
@@ -392,13 +392,13 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
           </div>
 
           {/* Student List Preview */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800/90 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div className="border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-white/5 backdrop-blur-xl/90 px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
               <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Pratinjau Hasil Rekap ({filteredStudents.length} Siswa)</span>
               </div>
-              <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2">
+              <div className="text-[11px] text-slate-400 font-medium flex items-center gap-2">
                 <span className="bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">
                   {selectedClass !== 'Semua' ? `Kelas ${selectedClass}` : 'Semua Kelas'}
                 </span>
@@ -409,17 +409,17 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
             </div>
 
             {filteredStudents.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-slate-900">
+              <div className="p-8 text-center bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl">
                 <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
                 <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   Tidak Ada Siswa yang Memenuhi Kriteria Masalah
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                <div className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                   Pada filter <strong>{selectedClass !== 'Semua' ? `Kelas ${selectedClass}` : 'Semua Kelas'}</strong> dan <strong>{formatIndoMonth(selectedMonth)}</strong>, seluruh siswa memiliki catatan kehadiran yang tertib.
                 </div>
               </div>
             ) : (
-              <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+              <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl">
                 {filteredStudents.slice(0, 50).map((item, idx) => {
                   const isHighRisk = item.riskLevel === 'Tinggi';
                   const isMediumRisk = item.riskLevel === 'Sedang';
@@ -427,13 +427,13 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                   return (
                     <div
                       key={item.student.id || item.student.nisn}
-                      className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors"
+                      className="p-3 hover:bg-white/5/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <span className="w-5 text-center font-bold text-slate-400">{idx + 1}</span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 dark:text-white">
+                            <span className="font-bold text-white">
                               {item.student.nama}
                             </span>
                             <span className="px-2 py-0.2 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold rounded text-[10px]">
@@ -451,7 +451,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                               {item.riskLevel}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          <div className="text-[11px] text-slate-400 mt-0.5">
                             NISN: {item.student.nisn} • Wali: {item.waliKelas.name || '-'}
                           </div>
                         </div>
@@ -476,7 +476,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                   );
                 })}
                 {filteredStudents.length > 50 && (
-                  <div className="p-2.5 text-center text-xs text-slate-500 bg-slate-50 dark:bg-slate-800">
+                  <div className="p-2.5 text-center text-xs text-slate-500 bg-white/5 backdrop-blur-xl">
                     Dan {filteredStudents.length - 50} siswa lainnya... (Semua akan dimasukkan ke dalam file ekspor)
                   </div>
                 )}
@@ -486,8 +486,8 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
         </div>
 
         {/* Modal Footer: Action Buttons */}
-        <div className="bg-slate-50 dark:bg-slate-800/90 p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="bg-white/5 backdrop-blur-xl/90 p-4 sm:p-5 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="text-xs text-slate-400">
             {onOpenWaliKelasDispatch ? (
               <button
                 type="button"
@@ -510,7 +510,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              className="px-4 py-2.5 border border-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
             >
               Tutup
             </button>

@@ -36,8 +36,6 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
   currentUser?: User | null;
   onLogout?: () => void;
-  theme?: 'light' | 'dark';
-  onToggleTheme?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -50,8 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
   currentUser,
   onLogout,
-  theme,
-  onToggleTheme,
 }) => {
   const menuSections = [
     {
@@ -187,25 +183,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isCollapsed ? 'w-20' : 'w-64'
         } bg-slate-900/95 dark:bg-slate-950/95 text-slate-300 min-h-[calc(100vh-4rem)] p-3 border-r border-slate-800/80 backdrop-blur-md transition-all duration-300 shrink-0 sticky top-16 z-20`}
       >
-        {/* User Role Card & Collapse Toggle */}
-        <div className="mb-3 px-3 py-2.5 bg-slate-800/70 rounded-xl border border-slate-700/70 shadow-xs flex items-center justify-between">
+        {/* User Role & Collapse Toggle */}
+        <div className="mb-6 flex items-center justify-between px-2">
           {!isCollapsed && (
-            <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Hak Akses Sesi</p>
-              <p className="text-xs font-black text-cyan-400 mt-0.5 truncate">{userRole}</p>
+            <div className="flex items-center gap-2 px-1">
+               <ShieldCheck className="w-4 h-4 text-cyan-400/80" />
+               <span className="text-xs font-bold text-slate-300 tracking-wide uppercase">{userRole}</span>
             </div>
           )}
           {onToggleCollapse && (
             <button
               type="button"
               onClick={onToggleCollapse}
-              className={`p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/80 transition-all cursor-pointer ${
+              className={`p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all cursor-pointer ${
                 isCollapsed ? 'mx-auto' : ''
               }`}
               title={isCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
               aria-label="Toggle Sidebar"
             >
-              {isCollapsed ? <ChevronRight className="w-4 h-4 text-cyan-400" /> : <ChevronLeft className="w-4 h-4" />}
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
           )}
         </div>
@@ -217,9 +213,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             if (sectionItems.length === 0) return null;
 
             return (
-              <div key={sIdx} className="space-y-1">
+              <div key={sIdx} className="space-y-1 mb-4">
                 {!isCollapsed && (
-                  <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400/90 mb-1.5">
+                  <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                     {section.title}
                   </p>
                 )}
@@ -233,10 +229,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       title={isCollapsed ? item.label : undefined}
                       className={`tour-step-${item.id} w-full flex items-center ${
                         isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
-                      } rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer group btn-press ${
+                      } rounded-xl font-medium text-xs transition-all duration-200 cursor-pointer group btn-press ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-400/40'
-                          : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
+                          ? 'bg-white/10 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -249,8 +245,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                       {!isCollapsed && item.badge && (
                         <span
-                          className={`text-[9px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shrink-0 border ${
-                            item.badgeColor || 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30'
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase shrink-0 ${
+                            isActive ? 'bg-white/20 text-white' : item.badgeColor || 'bg-white/5 text-slate-400'
                           }`}
                         >
                           {item.badge}
@@ -279,7 +275,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. Mobile Slide-Over Drawer Sidebar (Overlay) */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] md:hidden flex animate-in fade-in duration-200">
           {/* Backdrop Blur */}
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
@@ -288,9 +284,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Slide-in Drawer Container */}
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-900 dark:bg-slate-950 border-r border-slate-800 shadow-2xl z-50 h-full overflow-hidden animate-in slide-in-from-left duration-300">
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-900/95 dark:bg-slate-950/95 border-r border-white/10 shadow-2xl z-50 h-full overflow-hidden animate-in slide-in-from-left duration-300 backdrop-blur-xl">
             {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 dark:bg-slate-950/90">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => handleSelectTab('dashboard')}>
                 <SchoolLogo className="w-8 h-8 drop-shadow-md" />
                 <div>
@@ -310,7 +306,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer border border-slate-800"
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer border border-transparent hover:border-white/10"
                 aria-label="Tutup Menu Sidebar"
               >
                 <X className="w-5 h-5" />
@@ -319,9 +315,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Current User Info Card */}
             {currentUser && (
-              <div className="m-3 p-3 bg-slate-800/80 rounded-2xl border border-slate-700/70 shadow-xs flex items-center justify-between">
+              <div className="m-4 p-3.5 bg-white/5 rounded-2xl border border-white/5 shadow-sm flex items-center justify-between">
                 <div className="min-w-0 pr-2">
-                  <p className="text-xs font-black text-white truncate">{currentUser.name}</p>
+                  <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
                   <div className="mt-1">{getRoleBadge(currentUser.role)}</div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
@@ -340,8 +336,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (sectionItems.length === 0) return null;
 
                 return (
-                  <div key={sIdx} className="space-y-1">
-                    <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400/90 mb-1">
+                  <div key={sIdx} className="space-y-1 mb-4">
+                    <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                       {section.title}
                     </p>
                     {sectionItems.map((item) => {
@@ -351,20 +347,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <button
                           key={item.id}
                           onClick={() => handleSelectTab(item.id)}
-                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer btn-press ${
+                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-medium text-xs transition-all cursor-pointer btn-press ${
                             isActive
-                              ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-400/40'
-                              : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                              ? 'bg-white/10 text-white shadow-sm'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-cyan-400'}`} />
+                            <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="truncate text-left">{item.label}</span>
                           </div>
                           {item.badge && (
                             <span
-                              className={`text-[9px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shrink-0 border ${
-                                item.badgeColor || 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30'
+                              className={`text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase shrink-0 ${
+                                isActive ? 'bg-white/20 text-white' : item.badgeColor || 'bg-white/5 text-slate-400'
                               }`}
                             >
                               {item.badge}
@@ -379,28 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Mobile Drawer Footer Actions */}
-            <div className="p-3 border-t border-slate-800 bg-slate-900/95 dark:bg-slate-950/95 space-y-2">
-              <div className="flex items-center gap-2">
-                {onToggleTheme && (
-                  <button
-                    type="button"
-                    onClick={onToggleTheme}
-                    className="flex-1 py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer btn-press"
-                  >
-                    {theme === 'dark' ? (
-                      <>
-                        <Sun className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Mode Terang</span>
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="w-3.5 h-3.5 text-cyan-300" />
-                        <span>Mode Gelap</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
+            <div className="p-4 border-t border-white/10 space-y-3">
 
               {onLogout && (
                 <button
@@ -409,7 +384,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     if (onCloseMobile) onCloseMobile();
                     onLogout();
                   }}
-                  className="w-full py-2.5 px-3 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl border border-rose-500/30 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer btn-press"
+                  className="w-full py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl border border-rose-500/20 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer btn-press"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Keluar / Ganti Akun</span>

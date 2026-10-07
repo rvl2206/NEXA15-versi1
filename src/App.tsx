@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { User, SchoolSettings, UserRole } from './types';
 import { store } from './lib/store';
 import { toast } from './lib/toast';
@@ -48,15 +49,10 @@ export function App() {
     }
   });
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      const saved = localStorage.getItem('nexa15_theme') || localStorage.getItem('sapasiswa_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    } catch {
-      return 'dark';
-    }
-  });
+  // Force dark mode on mount
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
   
   const [runTour, setRunTour] = useState<boolean>(false);
 
@@ -79,18 +75,6 @@ export function App() {
     setRunTour(true);
   };
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('nexa15_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
 
   useEffect(() => {
     setSettings(store.getSettings());
@@ -268,7 +252,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans text-slate-100 antialiased selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
       <GuidedTour run={runTour} onFinish={handleTourFinish} activeTab={activeTab} />
       <ToastContainer />
       <ExitUnsyncedDataModal
@@ -283,8 +267,6 @@ export function App() {
         settings={settings}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         isMobileSidebarOpen={isMobileSidebarOpen}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         onStartTour={startTourManually}
@@ -302,13 +284,22 @@ export function App() {
           onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
           currentUser={currentUser}
           onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={toggleTheme}
         />
 
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 md:pb-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-28 md:pb-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
           <UnsyncedDataWarning onNavigateToSettings={() => setActiveTab('settings')} />
-          {renderActiveTabContent()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -15, filter: 'blur(4px)' }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full"
+            >
+              {renderActiveTabContent()}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

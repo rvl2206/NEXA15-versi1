@@ -357,15 +357,15 @@ export const UserManagement: React.FC = () => {
     <div className="p-3 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto space-y-6">
       
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-5 rounded-2xl border border-white/10 shadow-sm">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+          <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
             <div className="p-2 bg-blue-600/10 rounded-xl text-blue-600 dark:text-blue-400">
               <Shield className="w-6 h-6" />
             </div>
             Manajemen Akun & Hak Akses Database
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
             Kelola data akun Guru Piket, Wali Kelas, Kepala Sekolah, dan Administrator yang tersimpan langsung di Database.
           </p>
         </div>
@@ -374,7 +374,7 @@ export const UserManagement: React.FC = () => {
           <button
             onClick={handleSyncFirestore}
             disabled={isSyncing}
-            className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             title="Sinkronkan dengan Cloud Firestore"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-blue-500' : ''}`} />
@@ -393,17 +393,17 @@ export const UserManagement: React.FC = () => {
 
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Akun</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total}</p>
+            <p className="text-2xl font-black text-white mt-1">{stats.total}</p>
           </div>
           <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
             <Users className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Guru Piket</p>
             <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{stats.piket}</p>
@@ -413,7 +413,7 @@ export const UserManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Wali Kelas</p>
             <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{stats.waliKelas}</p>
@@ -423,7 +423,7 @@ export const UserManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin & Kepsek</p>
             <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{stats.admins + stats.kepsek}</p>
@@ -443,7 +443,7 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-2xl border border-white/10 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -451,7 +451,7 @@ export const UserManagement: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nama pengguna, username, email, NIP, atau kelas..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 text-white rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -459,7 +459,7 @@ export const UserManagement: React.FC = () => {
           <select
             value={selectedRoleFilter}
             onChange={(e) => setSelectedRoleFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10 text-white rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Semua Peran</option>
             <option value="Admin">Admin / Super Admin</option>
@@ -471,7 +471,7 @@ export const UserManagement: React.FC = () => {
           <select
             value={selectedStatusFilter}
             onChange={(e) => setSelectedStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10 text-white rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Semua Status</option>
             <option value="aktif">Status Aktif</option>
@@ -481,10 +481,10 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Users Data Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl shadow-xs border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider">
+            <thead className="bg-white/5 backdrop-blur-xl/60 text-slate-400 font-bold border-b border-white/10 uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-3.5">Nama & Profil</th>
                 <th className="px-5 py-3.5">Kredensial Akun</th>
@@ -549,7 +549,7 @@ export const UserManagement: React.FC = () => {
                       <td className="px-5 py-3.5">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px]">
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white/5 backdrop-blur-xl px-2 py-0.5 rounded text-[11px]">
                               @{u.username || 'user'}
                             </span>
                             <span
@@ -572,7 +572,7 @@ export const UserManagement: React.FC = () => {
                       </td>
 
                       {/* Class / NIP */}
-                      <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      <td className="px-5 py-3.5 text-slate-300">
                         {u.subRole === 'Wali Kelas' && u.assignedClass ? (
                           <span className="font-bold text-rose-600 dark:text-rose-400">
                             Kelas {u.assignedClass}
@@ -647,14 +647,14 @@ export const UserManagement: React.FC = () => {
       {/* Modal: Tambah Akun Baru */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl">
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Tambah Akun Pengguna</h3>
+                  <h3 className="font-extrabold text-white text-base">Tambah Akun Pengguna</h3>
                   <p className="text-xs text-slate-500">Buat kredensial login untuk staf atau guru baru</p>
                 </div>
               </div>
@@ -680,7 +680,7 @@ export const UserManagement: React.FC = () => {
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -702,7 +702,7 @@ export const UserManagement: React.FC = () => {
                     autoCapitalize="none"
                     spellCheck={false}
                     data-lpignore="true"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                   />
                 </div>
 
@@ -722,7 +722,7 @@ export const UserManagement: React.FC = () => {
                       autoCapitalize="none"
                       spellCheck={false}
                       data-lpignore="true"
-                      className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-3.5 py-2.5 pr-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                     <button
                       type="button"
@@ -749,7 +749,7 @@ export const UserManagement: React.FC = () => {
                       if (newRole === 'Kepala Sekolah') defaultSub = 'Kepala Sekolah';
                       setAddForm({ ...addForm, role: newRole, subRole: defaultSub });
                     }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Guru">Guru / Petugas Piket</option>
                     <option value="Admin">Administrator (TU / Sistem)</option>
@@ -764,7 +764,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={addForm.subRole}
                     onChange={(e) => setAddForm({ ...addForm, subRole: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     {addForm.role === 'Guru' && (
                       <>
@@ -794,7 +794,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={addForm.assignedClass}
                     onChange={(e) => setAddForm({ ...addForm, assignedClass: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-800 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none font-bold"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-rose-300 dark:border-rose-800 rounded-xl text-sm text-white focus:ring-2 focus:ring-rose-500 outline-none font-bold"
                   >
                     <option value="">-- Pilih Kelas Binaan --</option>
                     {AVAILABLE_CLASSES.map((cls) => (
@@ -819,7 +819,7 @@ export const UserManagement: React.FC = () => {
                     value={addForm.nip}
                     onChange={(e) => setAddForm({ ...addForm, nip: e.target.value })}
                     placeholder="198001012005011001"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                   />
                 </div>
 
@@ -832,7 +832,7 @@ export const UserManagement: React.FC = () => {
                     value={addForm.phone}
                     onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
                     placeholder="081234567890"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
@@ -847,7 +847,7 @@ export const UserManagement: React.FC = () => {
                     value={addForm.email}
                     onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                     placeholder="guru@sman15.sch.id"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
@@ -858,7 +858,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={addForm.status}
                     onChange={(e) => setAddForm({ ...addForm, status: e.target.value as any })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="aktif">Aktif (Dapat Login)</option>
                     <option value="nonaktif">Nonaktif (Akses Diblokir)</option>
@@ -875,7 +875,7 @@ export const UserManagement: React.FC = () => {
                   value={addForm.notes}
                   onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
                   placeholder="Keterangan tambahan untuk akun ini..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -883,7 +883,7 @@ export const UserManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 text-slate-400 font-bold text-xs hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
@@ -903,14 +903,14 @@ export const UserManagement: React.FC = () => {
       {/* Modal: Edit Data Akun */}
       {isEditModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl">
                   <Edit2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Ubah Data Akun</h3>
+                  <h3 className="font-extrabold text-white text-base">Ubah Data Akun</h3>
                   <p className="text-xs text-slate-500">Edit informasi dan perizinan hak akses pengguna</p>
                 </div>
               </div>
@@ -932,7 +932,7 @@ export const UserManagement: React.FC = () => {
                   required
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -947,7 +947,7 @@ export const UserManagement: React.FC = () => {
                   onChange={(e) =>
                     setEditForm({ ...editForm, username: e.target.value.toLowerCase().replace(/\s+/g, '_') })
                   }
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                  className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                 />
               </div>
 
@@ -965,7 +965,7 @@ export const UserManagement: React.FC = () => {
                       if (newRole === 'Kepala Sekolah') defaultSub = 'Kepala Sekolah';
                       setEditForm({ ...editForm, role: newRole, subRole: defaultSub });
                     }}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Guru">Guru / Petugas Piket</option>
                     <option value="Admin">Administrator (TU / Sistem)</option>
@@ -980,7 +980,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={editForm.subRole}
                     onChange={(e) => setEditForm({ ...editForm, subRole: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     {editForm.role === 'Guru' && (
                       <>
@@ -1010,7 +1010,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={editForm.assignedClass}
                     onChange={(e) => setEditForm({ ...editForm, assignedClass: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-800 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none font-bold"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-rose-300 dark:border-rose-800 rounded-xl text-sm text-white focus:ring-2 focus:ring-rose-500 outline-none font-bold"
                   >
                     <option value="">-- Pilih Kelas Binaan --</option>
                     {AVAILABLE_CLASSES.map((cls) => (
@@ -1031,7 +1031,7 @@ export const UserManagement: React.FC = () => {
                     type="text"
                     value={editForm.nip}
                     onChange={(e) => setEditForm({ ...editForm, nip: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                   />
                 </div>
 
@@ -1043,7 +1043,7 @@ export const UserManagement: React.FC = () => {
                     type="text"
                     value={editForm.phone}
                     onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
@@ -1057,7 +1057,7 @@ export const UserManagement: React.FC = () => {
                     type="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
@@ -1068,7 +1068,7 @@ export const UserManagement: React.FC = () => {
                   <select
                     value={editForm.status}
                     onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="aktif">Aktif (Dapat Login)</option>
                     <option value="nonaktif">Nonaktif (Akses Diblokir)</option>
@@ -1084,7 +1084,7 @@ export const UserManagement: React.FC = () => {
                   rows={2}
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -1092,7 +1092,7 @@ export const UserManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2.5 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 text-slate-400 font-bold text-xs hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1112,14 +1112,14 @@ export const UserManagement: React.FC = () => {
       {/* Modal: Reset Kata Sandi */}
       {isResetPassModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Reset Kata Sandi</h3>
+                  <h3 className="font-extrabold text-white text-base">Reset Kata Sandi</h3>
                   <p className="text-xs text-slate-500">Atur kata sandi baru untuk {selectedUser.name}</p>
                 </div>
               </div>
@@ -1132,9 +1132,9 @@ export const UserManagement: React.FC = () => {
             </div>
 
             <form onSubmit={handleResetPassSubmit} autoComplete="off" className="p-5 space-y-4">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="p-3 bg-white/5 backdrop-blur-xl/70 rounded-2xl border border-white/10">
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Target Akun</p>
-                <p className="font-black text-slate-900 dark:text-white text-sm mt-0.5">{selectedUser.name}</p>
+                <p className="font-black text-white text-sm mt-0.5">{selectedUser.name}</p>
                 <p className="text-xs text-slate-400 font-mono">@{selectedUser.username} • {selectedUser.role}</p>
               </div>
 
@@ -1154,7 +1154,7 @@ export const UserManagement: React.FC = () => {
                     autoCapitalize="none"
                     spellCheck={false}
                     data-lpignore="true"
-                    className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                    className="w-full px-3.5 py-2.5 pr-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none font-medium"
                   />
                   <button
                     type="button"
@@ -1173,7 +1173,7 @@ export const UserManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsResetPassModalOpen(false)}
-                  className="px-4 py-2.5 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 text-slate-400 font-bold text-xs hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1193,21 +1193,21 @@ export const UserManagement: React.FC = () => {
       {/* Modal: Hapus Akun */}
       {isDeleteModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden p-6 space-y-4">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden p-6 space-y-4">
             <div className="p-3 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-2xl w-fit">
               <AlertTriangle className="w-8 h-8" />
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+              <h3 className="text-lg font-black text-white">
                 Hapus Akun Pengguna?
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                 Apakah Anda yakin ingin menghapus akun <strong>{selectedUser.name}</strong> (@{selectedUser.username})? Pengguna ini tidak akan dapat login lagi ke sistem.
               </p>
             </div>
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+            <div className="p-3 bg-white/5 backdrop-blur-xl/80 rounded-xl border border-white/10 text-xs text-slate-300">
               <p><strong>Peran:</strong> {selectedUser.role} ({selectedUser.subRole || 'Staf'})</p>
               {selectedUser.assignedClass && <p><strong>Kelas Binaan:</strong> {selectedUser.assignedClass}</p>}
             </div>
@@ -1216,7 +1216,7 @@ export const UserManagement: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2.5 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-slate-400 font-bold text-xs hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
                 Batal
               </button>

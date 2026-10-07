@@ -325,7 +325,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     toast.info('Logo Kustom Dihapus', 'Sistem kembali menggunakan lambang sekolah default.');
   };
 
-
+
+
 
 
 
@@ -412,14 +413,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-10">
       {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden flex items-center justify-between transition-colors">
         <div>
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <Settings className="w-4 h-4" />
             <span>Konfigurasi & Keamanan Role Admin</span>
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">Pengaturan Sekolah & Akun Admin</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">Pengaturan Sekolah & Akun Admin</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
             Atur konfigurasi jam sekolah, ubah kata sandi Role Admin, serta sinkronisasikan seluruh perubahan secara otomatis.
           </p>
         </div>
@@ -428,7 +429,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <button
             onClick={handleManualSync}
             disabled={isSyncing || isClearingCache}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-2xl text-xs font-bold transition-all disabled:opacity-50"
             title="Sinkronkan seluruh data lokal ke server"
           >
             <RefreshCcw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-500' : ''}`} />
@@ -438,7 +439,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <button
             onClick={handleClearCache}
             disabled={isClearingCache || isSyncing}
-            className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs font-bold transition-all disabled:opacity-50"
             title="Bersihkan cache penyimpan lokal (localStorage) dan muat ulang dari server"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isClearingCache ? 'animate-spin text-amber-500' : ''}`} />
@@ -448,16 +449,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       </div>
 
       {savedSuccess && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>Pengaturan sekolah berhasil diperbarui dan disinkronkan!</span>
         </div>
       )}
 
       {/* Settings Form */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-6 transition-colors">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
             <School className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>Identitas Sekolah & Jam Masuk</span>
           </h3>
@@ -465,10 +466,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
         <form onSubmit={handleSave} className="space-y-6">
           {/* Logo Sekolah Upload & Auto-Fit Layout Section */}
-          <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800/60 dark:to-blue-950/20 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-4">
+          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 relative overflow-hidden space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <span>Logo Sekolah & Identitas Visual</span>
                   {settings.schoolLogo ? (
@@ -481,7 +482,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-400 mt-0.5">
                   Unggah logo resmi sekolah (PNG, JPG, SVG, WebP). Sistem akan otomatis menyesuaikan ukuran (auto-fit) di seluruh kartu, navbar, kartu guru, dan laporan.
                 </p>
               </div>
@@ -490,7 +491,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <button
                   type="button"
                   onClick={handleRemoveLogo}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Hapus Logo</span>
@@ -516,35 +517,35 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
               onDragLeave={() => setIsDraggingLogo(false)}
               onDrop={handleLogoDrop}
               onClick={() => logoFileInputRef.current?.click()}
-              className={`p-5 rounded-2xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
+              className={`p-5 rounded-3xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
                 isDraggingLogo
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50 scale-[1.01]'
-                  : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-white/80 dark:hover:bg-slate-800/80 bg-white/50 dark:bg-slate-900/50'
+                  : 'border-white/10 hover:border-blue-400 hover:bg-white/80 dark:hover:bg-slate-800/80 bg-white/50 dark:bg-slate-900/50'
               }`}
             >
-              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center p-2 relative overflow-hidden group">
+              <div className="w-16 h-16 rounded-3xl bg-white/5 backdrop-blur-xl shadow-md border border-white/10 flex items-center justify-center p-2 relative overflow-hidden group">
                 <SchoolLogo className="w-full h-full object-contain drop-shadow-xs" />
-                <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-2xl">
+                <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-3xl">
                   <Upload className="w-5 h-5 animate-bounce" />
                 </div>
               </div>
 
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors mb-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 border border-white/10 shadow-lg shadow-blue-500/20 text-white rounded-2xl text-xs font-bold shadow-xs transition-colors mb-1.5">
                   <Upload className="w-3.5 h-3.5" />
                   <span>{isProcessingLogo ? 'Memproses Logo...' : 'Pilih File Logo Sekolah'}</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <p className="text-[11px] text-slate-400 font-medium">
                   atau tarik dan lepas (drag & drop) file logo ke sini
                 </p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  Format: PNG (transparan disarankan), JPG, SVG, WebP â€¢ Maks. 5MB
+                  Format: PNG (transparan disarankan), JPG, SVG, WebP • Maks. 5MB
                 </p>
               </div>
             </div>
 
             {/* Layout Preview Auto-Sizing Showcase */}
-            <div className="bg-white/80 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div className="bg-white/80 dark:bg-slate-900/80 p-4 rounded-2xl border border-white/10">
               <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-3">
                 <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Simulasi Penyesuaian Ukuran di Seluruh Tata Letak (Live Auto-Fit)</span>
@@ -552,24 +553,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* 1. Header / Navbar Preview */}
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                     1. Navbar & Header
                   </span>
-                  <div className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs w-full justify-center">
+                  <div className="flex items-center gap-2 p-2 bg-black/20 backdrop-blur-md rounded-lg border border-white/10 shadow-2xs w-full justify-center">
                     <div className="w-7 h-7 flex items-center justify-center shrink-0">
                       <SchoolLogo size={28} className="w-full h-full" />
                     </div>
                     <div className="text-left overflow-hidden">
-                      <p className="text-[10px] font-black text-slate-800 dark:text-white truncate">NEXA15</p>
+                      <p className="text-[10px] font-black text-white truncate">NEXA15</p>
                       <p className="text-[8px] text-slate-400 truncate">{settings.schoolName || 'SMA NEGERI 15 AMBON'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Kartu Absensi Pelajar CR80 Preview */}
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                     2. Kartu Siswa & Guru
                   </span>
                   <div className="p-2 bg-[#071a3d] text-white rounded-lg border border-amber-500/40 shadow-2xs w-full flex flex-col items-center justify-center">
@@ -583,8 +584,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 </div>
 
                 {/* 3. Login Modal & Laporan Preview */}
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                     3. Login & Dokumen
                   </span>
                   <div className="p-2 bg-gradient-to-br from-[#071a3d] to-slate-900 text-white rounded-lg border border-white/20 shadow-2xs w-full flex items-center justify-center gap-2">
@@ -608,7 +609,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 type="text"
                 value={settings.schoolName}
                 onChange={(e) => setSettings({ ...settings, schoolName: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
                 required
               />
             </div>
@@ -619,7 +620,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 type="text"
                 value={settings.schoolNPSN}
                 onChange={(e) => setSettings({ ...settings, schoolNPSN: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-mono"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
                 required
               />
             </div>
@@ -634,7 +635,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 type="time"
                 value={settings.cutoffTime}
                 onChange={(e) => setSettings({ ...settings, cutoffTime: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-mono"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
                 required
               />
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
@@ -648,7 +649,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 type="text"
                 value={settings.academicYear}
                 onChange={(e) => setSettings({ ...settings, academicYear: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
                 required
               />
             </div>
@@ -664,7 +665,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 type="time"
                 value={settings.pulangStartTimeNormal || '13:30'}
                 onChange={(e) => setSettings({ ...settings, pulangStartTimeNormal: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-mono"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
               />
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                 Waktu normal KBM. Siswa mulai dapat scan Pulang pada jam <b>{settings.pulangStartTimeNormal || '13:30'} WIT</b> ke atas.
@@ -673,13 +674,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Jam Mulai Absen Pulang (Jumat â€” 1 Shift Pendek)
+                Jam Mulai Absen Pulang (Jumat — 1 Shift Pendek)
               </label>
               <input
                 type="time"
                 value={settings.pulangStartTimeFriday || '10:00'}
                 onChange={(e) => setSettings({ ...settings, pulangStartTimeFriday: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-mono"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
               />
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                 Hari Jumat durasi pendek. Siswa mulai dapat scan Pulang di atas jam <b>{settings.pulangStartTimeFriday || '10:00'} WIT</b>.
@@ -697,31 +698,31 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
               {/* Pilihan 5 Hari */}
               <div
                 onClick={() => setSettings({ ...settings, schoolDays: 5 })}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                className={`p-4 rounded-3xl border-2 transition-all cursor-pointer relative ${
                   (settings.schoolDays || 6) === 5
                     ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/40'
+                    : 'border-white/10 hover:border-slate-300 dark:hover:border-slate-700 bg-white/5 backdrop-blur-xl/40'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`p-2 rounded-xl ${
+                    <div className={`p-2 rounded-2xl ${
                       (settings.schoolDays || 6) === 5
                         ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-300'
                     }`}>
                       <Calendar className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                        <span className="text-xs font-black text-white">
                           Sekolah 5 Hari
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
                           Senin - Jumat
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Hari aktif: <b>Senin s/d Jumat</b>.<br />
                         Hari libur akhir pekan: <b>Sabtu & Minggu</b>.
                       </p>
@@ -730,45 +731,45 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                     (settings.schoolDays || 6) === 5
                       ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-slate-300 dark:border-slate-600'
+                      : 'border-white/20'
                   }`}>
                     {(settings.schoolDays || 6) === 5 && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
                 </div>
                 <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500 dark:text-slate-400">Sabtu Libur:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">âœ… Ya (Bebas Alpa)</span>
+                  <span className="text-slate-400">Sabtu Libur:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">✅ Ya (Bebas Alpa)</span>
                 </div>
               </div>
 
               {/* Pilihan 6 Hari */}
               <div
                 onClick={() => setSettings({ ...settings, schoolDays: 6 })}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                className={`p-4 rounded-3xl border-2 transition-all cursor-pointer relative ${
                   (settings.schoolDays || 6) === 6
                     ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/40'
+                    : 'border-white/10 hover:border-slate-300 dark:hover:border-slate-700 bg-white/5 backdrop-blur-xl/40'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`p-2 rounded-xl ${
+                    <div className={`p-2 rounded-2xl ${
                       (settings.schoolDays || 6) === 6
                         ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-300'
                     }`}>
                       <Calendar className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                        <span className="text-xs font-black text-white">
                           Sekolah 6 Hari
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                           Senin - Sabtu
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Hari aktif: <b>Senin s/d Sabtu</b>.<br />
                         Hari libur akhir pekan: <b>Hanya Minggu</b>.
                       </p>
@@ -777,29 +778,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                     (settings.schoolDays || 6) === 6
                       ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-slate-300 dark:border-slate-600'
+                      : 'border-white/20'
                   }`}>
                     {(settings.schoolDays || 6) === 6 && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
                 </div>
                 <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500 dark:text-slate-400">Sabtu Libur:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">âŒ Tidak (Hari Sekolah)</span>
+                  <span className="text-slate-400">Sabtu Libur:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">❌ Tidak (Hari Sekolah)</span>
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-              <span className="text-blue-600 font-bold">â„¹ï¸ Info:</span>
+            <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
+              <span className="text-blue-600 font-bold">ℹ️ Info:</span>
               <span>
                 Pada sistem <b>Sekolah 5 Hari</b>, hari Sabtu otomatis ditetapkan sebagai hari libur akhir pekan, sehingga otopresensi Alpa jam 14:30 dan pemotongan kedisiplinan tidak akan memproses presensi siswa pada hari Sabtu.
               </span>
             </p>
 
             {/* Revisi & Pembersihan Seluruh Alpa Hari Sabtu */}
-            <div className="mt-3.5 p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
+            <div className="mt-3.5 p-4 rounded-3xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-amber-600 text-white shadow-xs shrink-0 mt-0.5">
+                  <div className="p-2.5 rounded-2xl bg-amber-600 text-white shadow-xs shrink-0 mt-0.5">
                     <Trash2 className="w-4 h-4" />
                   </div>
                   <div>
@@ -818,7 +819,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   type="button"
                   onClick={handlePurgeSaturdayAlpa}
                   disabled={isPurgingSatAlpa}
-                  className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                  className="px-4 py-2.5 rounded-2xl text-xs font-extrabold text-white bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
                 >
                   {isPurgingSatAlpa ? (
                     <>
@@ -838,9 +839,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           {/* Auto-Alpa 14:30 Section */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-2xl border border-rose-200 dark:border-rose-800">
+            <div className="flex items-center justify-between bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-3xl border border-rose-200 dark:border-rose-800">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                <div className="p-2.5 bg-rose-600 text-white rounded-2xl shadow-xs">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
@@ -867,7 +868,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </div>
 
             {settings.enableAutoAlpa !== false && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-white/10">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Batas Jam Otopresensi Alpa
@@ -876,7 +877,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     type="time"
                     value={settings.autoAlpaCutoffTime || '14:30'}
                     onChange={(e) => setSettings({ ...settings, autoAlpaCutoffTime: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-600 font-mono"
+                    className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-rose-600 font-mono"
                   />
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                     Siswa tanpa presensi setelah jam <b>{settings.autoAlpaCutoffTime || '14:30'}</b> dianggap <b>Alpa</b>.
@@ -888,7 +889,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     type="button"
                     onClick={handleRunAutoAlpaManual}
                     disabled={isProcessingAutoAlpa}
-                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
                   >
                     <Zap className={`w-4 h-4 ${isProcessingAutoAlpa ? 'animate-bounce' : ''}`} />
                     <span>{isProcessingAutoAlpa ? 'Memproses...' : 'Jalankan Cek Alpa Otomatis Sekarang'}</span>
@@ -900,9 +901,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           {/* WhatsApp Direct Section */}
           <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
-            <div className="flex items-center justify-between bg-emerald-50/80 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center justify-between bg-emerald-50/80 dark:bg-emerald-950/40 p-4 rounded-3xl border border-emerald-200 dark:border-emerald-800">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm">
+                <div className="p-2.5 bg-emerald-600 text-white rounded-2xl shadow-sm">
                   <MessageCircle className="w-5 h-5" />
                 </div>
                 <div>
@@ -929,8 +930,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </div>
 
             {settings.enableWaNotif !== false && (
-              <div className="space-y-5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <div className="p-3 bg-emerald-100/60 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+              <div className="space-y-5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-white/10">
+                <div className="p-3 bg-emerald-100/60 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Sistem aktif menggunakan <strong>WhatsApp Direct (wa.me)</strong>. Saat petugas menekan tombol WhatsApp pada pemindai QR atau rekap presensi, obrolan WhatsApp orang tua akan otomatis terbuka dengan pesan terformat.</span>
                 </div>
@@ -947,10 +948,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       onClick={() => {
                         setSettings({
                           ...settings,
-                          waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: âœ… *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: ðŸ“„ *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
                         });
                       }}
                       className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
@@ -960,7 +961,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     </button>
                   </div>
 
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 leading-relaxed font-mono">
+                  <div className="text-[10px] text-slate-400 bg-black/20 backdrop-blur-md p-2.5 rounded-lg border border-white/10 leading-relaxed font-mono">
                     Tag yang dapat digunakan: <code>{"{nama}"}</code>, <code>{"{kelas}"}</code>, <code>{"{waktu}"}</code>, <code>{"{status}"}</code>, <code>{"{sekolah}"}</code>, <code>{"{tanggal}"}</code>
                   </div>
 
@@ -971,9 +972,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateHadir || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: âœ… *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateHadir || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateHadir: e.target.value })}
-                        className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-600 font-sans"
+                        className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-600 font-sans"
                       />
                     </div>
 
@@ -983,9 +984,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateTerlambat || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateTerlambat || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateTerlambat: e.target.value })}
-                        className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-amber-600 font-sans"
+                        className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-amber-600 font-sans"
                       />
                     </div>
 
@@ -995,9 +996,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateIzinSakit || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: ðŸ“„ *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateIzinSakit || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateIzinSakit: e.target.value })}
-                        className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-sans"
+                        className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-sans"
                       />
                     </div>
 
@@ -1007,9 +1008,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateAlpa || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateAlpa || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateAlpa: e.target.value })}
-                        className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-rose-600 font-sans"
+                        className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-rose-600 font-sans"
                       />
                     </div>
                   </div>
@@ -1021,9 +1022,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           {/* RFID Card Reader & Contactless NFC Integration Hub */}
           <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
-            <div className="flex items-center justify-between bg-sky-50/80 dark:bg-sky-950/40 p-4 rounded-2xl border border-sky-200 dark:border-sky-800">
+            <div className="flex items-center justify-between bg-sky-50/80 dark:bg-sky-950/40 p-4 rounded-3xl border border-sky-200 dark:border-sky-800">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-sky-600 text-white rounded-xl shadow-sm">
+                <div className="p-2.5 bg-sky-600 text-white rounded-2xl shadow-sm">
                   <Radio className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
@@ -1050,7 +1051,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </div>
 
             {settings.enableRfidReader !== false && (
-              <div className="space-y-5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="space-y-5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-white/10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
@@ -1065,13 +1066,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           rfidReaderMode: e.target.value as 'keyboard' | 'webhid' | 'serial',
                         })
                       }
-                      className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
+                      className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
                     >
                       <option value="keyboard">USB Keyboard Wedge (Rekomendasi - Standar Plug & Play)</option>
                       <option value="webhid">WebHID Browser API (Direct USB Access)</option>
                       <option value="serial">Web Serial / COM Port (Advanced Microcontroller)</option>
                     </select>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-[10px] text-slate-400 mt-1">
                       Mode <strong>Keyboard Wedge</strong> kompatibel dengan 99% pembaca RFID USB murah di pasaran tanpa perlu driver tambahan.
                     </p>
                   </div>
@@ -1089,20 +1090,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           rfidCardType: e.target.value as '13.56MHz_Mifare' | '125kHz_EM' | 'Dual',
                         })
                       }
-                      className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
+                      className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-sky-600 cursor-pointer"
                     >
                       <option value="Dual">Dual Frekuensi (13.56MHz Mifare / NFC + 125kHz EM-ID)</option>
                       <option value="13.56MHz_Mifare">13.56 MHz HF (Mifare Classic / Ultralight / e-KTP / NFC)</option>
                       <option value="125kHz_EM">125 kHz LF (EM4100 / TK4100 Proximity Card)</option>
                     </select>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-[10px] text-slate-400 mt-1">
                       Sistem otomatis menormalisasi format Hexadecimal (8 digit) dan Decimal (10 digit).
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                  <label className="flex items-center gap-2 p-3 bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 cursor-pointer hover:border-sky-300 transition-colors">
                     <input
                       type="checkbox"
                       checked={settings.rfidBeepFeedback !== false}
@@ -1117,7 +1118,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                  <label className="flex items-center gap-2 p-3 bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 cursor-pointer hover:border-sky-300 transition-colors">
                     <input
                       type="checkbox"
                       checked={settings.rfidAutoRecord !== false}
@@ -1132,7 +1133,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-sky-300 transition-colors">
+                  <label className="flex items-center gap-2 p-3 bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 cursor-pointer hover:border-sky-300 transition-colors">
                     <input
                       type="checkbox"
                       checked={settings.rfidAllowUnregisteredCardPrompt !== false}
@@ -1149,9 +1150,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 </div>
 
                 {/* Interactive RFID Tester Tool */}
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-sky-200 dark:border-sky-800/80 space-y-3">
+                <div className="bg-black/20 backdrop-blur-md p-4 rounded-2xl border border-sky-200 dark:border-sky-800/80 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
                       <Radio className="w-4 h-4 text-sky-600" />
                       <span>Uji Coba & Diagnostic Reader RFID USB</span>
                     </div>
@@ -1169,7 +1170,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     )}
                   </div>
 
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[11px] text-slate-400">
                     Tempelkan kartu RFID / NFC pada scanner USB Anda saat kursor berada pada kolom input berikut untuk menguji pembacaan nomor seri:
                   </p>
 
@@ -1189,14 +1190,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           }
                         }}
                         placeholder="Klik di sini lalu tap kartu RFID atau ketik nomor UID..."
-                        className="w-full pl-9 pr-3 py-2 text-xs border border-sky-300 dark:border-sky-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-sky-500 font-mono"
+                        className="w-full pl-9 pr-3 py-2 text-xs border border-sky-300 dark:border-sky-700 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-sky-500 font-mono"
                       />
                       <CreditCard className="w-4 h-4 text-sky-500 absolute left-3 top-2.5" />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleTestRfidCard(rfidTestInput)}
-                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl text-xs font-bold transition-all shrink-0 cursor-pointer"
                     >
                       Cek Kartu
                     </button>
@@ -1204,7 +1205,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
                   {rfidTestResult && (
                     <div
-                      className={`p-3.5 rounded-xl border text-xs ${
+                      className={`p-3.5 rounded-2xl border text-xs ${
                         rfidTestResult.found
                           ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
                           : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-100'
@@ -1228,10 +1229,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
                           {rfidTestResult.found && rfidTestResult.person && (
                             <div className="mt-2 space-y-1 font-sans">
-                              <p className="font-bold text-sm text-slate-900 dark:text-white">
+                              <p className="font-bold text-sm text-white">
                                 {rfidTestResult.person.nama}
                               </p>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              <p className="text-[11px] text-slate-300">
                                 {rfidTestResult.type === 'siswa'
                                   ? `Kelas: ${(rfidTestResult.person as any).kelas || '-'} | NISN: ${(rfidTestResult.person as any).nisn || '-'}`
                                   : `Jabatan: ${(rfidTestResult.person as any).jabatan || '-'} | NIP: ${(rfidTestResult.person as any).nip || '-'}`}
@@ -1240,16 +1241,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                           )}
 
                           <div className="mt-2.5 flex flex-wrap gap-2 text-[10.5px] font-mono">
-                            <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                            <span className="px-2 py-0.5 bg-black/20 backdrop-blur-md rounded border border-current opacity-90">
                               Input: {rfidTestResult.rawInput}
                             </span>
                             {rfidTestResult.normalizedHex && (
-                              <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                              <span className="px-2 py-0.5 bg-black/20 backdrop-blur-md rounded border border-current opacity-90">
                                 HEX: {rfidTestResult.normalizedHex}
                               </span>
                             )}
                             {rfidTestResult.normalizedDec && (
-                              <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-current opacity-90">
+                              <span className="px-2 py-0.5 bg-black/20 backdrop-blur-md rounded border border-current opacity-90">
                                 DEC: {rfidTestResult.normalizedDec}
                               </span>
                             )}
@@ -1268,7 +1269,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 border border-white/10 shadow-lg shadow-blue-500/20 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               <span>Simpan & Sinkronkan Konfigurasi</span>
@@ -1280,20 +1281,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       <SettingsHolidays settings={settings} setSettings={setSettings} />
 
       {/* RFID & NFC Hardware Diagnostics Card */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-5 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-500/20">
+            <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-500/20">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>Diagnostik & Uji Coba Reader RFID / NFC</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
                   USB Plug & Play
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-400">
                 Uji langsung pembacaan kartu RFID (13.56 MHz / 125 kHz) dan verifikasi konversi otomatis format Hexadecimal (Hex) dan Decimal (Dec).
               </p>
             </div>
@@ -1320,14 +1321,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   }
                 }}
                 placeholder="Tempel kartu RFID pada scanner USB atau ketik UID (contoh: 21B842F9 / 0565723897)..."
-                className="w-full pl-9 pr-3.5 py-2.5 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono"
+                className="w-full pl-9 pr-3.5 py-2.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-indigo-600 font-mono"
               />
               <Radio className="w-4 h-4 text-indigo-500 absolute left-3 top-3 animate-pulse" />
             </div>
             <button
               type="button"
               onClick={() => handleTestRfidCard(rfidTestInput)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-2xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
             >
               Cek Kartu
             </button>
@@ -1338,7 +1339,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   setRfidTestInput('');
                   setRfidTestResult(null);
                 }}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-2xl transition-all cursor-pointer"
               >
                 Reset
               </button>
@@ -1347,7 +1348,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           {rfidTestResult && (
             <div
-              className={`p-4 rounded-xl border space-y-2.5 transition-all ${
+              className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
                 rfidTestResult.found
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
                   : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
@@ -1370,34 +1371,34 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
               </div>
 
               {rfidTestResult.person && (
-                <div className="bg-white/80 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
-                  <div className="font-extrabold text-slate-900 dark:text-white">
+                <div className="bg-white/80 dark:bg-slate-900/80 p-3 rounded-lg border border-white/10 text-xs space-y-1">
+                  <div className="font-extrabold text-white">
                     {rfidTestResult.person.nama}
                   </div>
-                  <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <div className="text-[11px] text-slate-300">
                     {rfidTestResult.type === 'siswa' ? (
-                      <span>Kelas: {rfidTestResult.person.kelas} â€¢ NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
+                      <span>Kelas: {rfidTestResult.person.kelas} • NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
                     ) : (
-                      <span>Jabatan: {rfidTestResult.person.jabatan} â€¢ NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
+                      <span>Jabatan: {rfidTestResult.person.jabatan} • NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
                     )}
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">UID Input Asli:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">{rfidTestResult.rawInput}</span>
+                <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-white/10">
+                  <span className="text-[10px] text-slate-400 block">UID Input Asli:</span>
+                  <span className="font-mono font-bold text-white">{rfidTestResult.rawInput}</span>
                 </div>
                 {rfidTestResult.normalizedHex && (
-                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Konversi Hex (8-Digit):</span>
+                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-white/10">
+                    <span className="text-[10px] text-slate-400 block">Konversi Hex (8-Digit):</span>
                     <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{rfidTestResult.normalizedHex}</span>
                   </div>
                 )}
                 {rfidTestResult.normalizedDec && (
-                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Konversi Dec (10-Digit):</span>
+                  <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-white/10">
+                    <span className="text-[10px] text-slate-400 block">Konversi Dec (10-Digit):</span>
                     <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{rfidTestResult.normalizedDec}</span>
                   </div>
                 )}
@@ -1410,17 +1411,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       <SettingsHealthCheck />
 
       {/* Change Password Card for Admin */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-5 transition-colors">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
+            <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-500/20">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-extrabold text-white">
                 Ubah Kata Sandi (Role Admin)
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-400">
                 Perbarui password akun Administrator Utama untuk menjaga keamanan sistem.
               </p>
             </div>
@@ -1433,14 +1434,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
         </div>
 
         {passSuccess && (
-          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
+          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{passSuccess}</span>
           </div>
         )}
 
         {passError && (
-          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-xl text-xs font-bold flex items-center gap-2">
+          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-2xl text-xs font-bold flex items-center gap-2">
             <span className="text-rose-600 dark:text-rose-400 shrink-0 font-bold">âŒ</span>
             <span>{passError}</span>
           </div>
@@ -1463,7 +1464,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 autoCapitalize="none"
                 spellCheck={false}
                 data-lpignore="true"
-                className="w-full pl-10 pr-10 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                className="w-full pl-10 pr-10 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
                 required
               />
               <button
@@ -1493,7 +1494,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   autoCapitalize="none"
                   spellCheck={false}
                   data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
               </div>
@@ -1515,7 +1516,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   autoCapitalize="none"
                   spellCheck={false}
                   data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
               </div>
@@ -1528,7 +1529,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </p>
             <button
               type="submit"
-              className="w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Simpan & Sinkronkan Kata Sandi</span>
@@ -1538,11 +1539,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       </div>
 
       {/* Reset & Maintenance Zone */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-4 transition-colors">
         <h4 className="font-bold text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Pemeliharaan Cache & Reset Database</h4>
         
         {/* Clear Cache Card */}
-        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p className="font-bold text-xs text-amber-900 dark:text-amber-300">Bersihkan Cache & Force Refresh Server</p>
             <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
@@ -1553,14 +1554,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             type="button"
             onClick={handleClearCache}
             disabled={isClearingCache || isSyncing}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm cursor-pointer"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm cursor-pointer"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isClearingCache ? 'animate-spin' : ''}`} />
             <span>{isClearingCache ? 'Clearing Cache...' : 'Bersihkan Cache Lokal'}</span>
           </button>
         </div>
 
-        <div className="p-4 bg-red-50/50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-4 bg-red-50/50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p className="font-bold text-xs text-red-900 dark:text-red-300">Kosongkan Khusus Database Siswa</p>
             <p className="text-[11px] text-red-700 dark:text-red-400 mt-0.5">
@@ -1570,24 +1571,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           <button
             type="button"
             onClick={handleClearStudents}
-            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Kosongkan DB Siswa</span>
           </button>
         </div>
 
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-4 bg-white/5/50 border border-white/10 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Ke Data Awal Contoh</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 mt-0.5">
               Mengembalikan data siswa dan rekaman absensi ke contoh awal (termasuk Dadang Buamona & 10 siswa sampel).
             </p>
           </div>
           <button
             type="button"
             onClick={handleResetData}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Reset Database Contoh</span>

@@ -152,23 +152,23 @@ export const ActivityLogs: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <History className="w-4 h-4" />
             <span>Audit System Log & Diagnostik</span>
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">
             Log Aktivitas & Diagnostik Sistem
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Catatan Jejak Pemindaian QR Code, Audit Perubahan Data, serta Alat Diagnostik Perbaikan Absensi.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* Auto-Refresh Real-Time Status Toggle */}
-          <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700">
+          <div className="flex items-center gap-2 p-1.5 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
             <button
               type="button"
               onClick={() => setIsAutoRefresh(!isAutoRefresh)}
@@ -197,7 +197,7 @@ export const ActivityLogs: React.FC = () => {
               <select
                 value={refreshIntervalSec}
                 onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-bold rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl text-slate-800 dark:text-slate-200 text-[11px] font-bold rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                 title="Pilih interval pembaharuan otomatis"
               >
                 <option value={2}>Setiap 2d</option>
@@ -225,7 +225,7 @@ export const ActivityLogs: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari log aktivitas..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+              className="w-full pl-8 pr-3 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
             />
           </div>
         </div>
@@ -252,7 +252,7 @@ export const ActivityLogs: React.FC = () => {
                 {missingCount > 0 ? `${missingCount} Rekaman Belum Sinkron` : 'Data Presensi Sinkron 100%'}
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+            <p className="text-xs text-slate-300 mt-1">
               {missingCount > 0
                 ? `Ditemukan ${missingCount} rekaman absensi di Log Aktivitas yang belum masuk ke Koleksi Master Absensi. Anda dapat meninjau dan memulihkan entri spesifik.`
                 : 'Semua rekaman absensi dari log pemindaian telah tersinkronkan dengan sempurna ke tabel rekap absensi.'}
@@ -273,8 +273,8 @@ export const ActivityLogs: React.FC = () => {
       </div>
 
       {/* Diagnostic & Batch Repair Tool Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all">
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/40">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden transition-all">
+        <div className="p-5 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/5 backdrop-blur-md">
           <div className="flex items-start gap-3">
             <div
               className={`p-2.5 rounded-xl border ${
@@ -291,7 +291,7 @@ export const ActivityLogs: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <h3 className="text-sm font-extrabold text-white flex items-center gap-1.5">
                   <Wrench className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   Alat Diagnostik & Perbaikan 'Masuk' Ganda
                 </h3>
@@ -307,7 +307,7 @@ export const ActivityLogs: React.FC = () => {
                     : 'Sistem Normal'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Mendeteksi siswa yang terrekam 'Masuk' lebih dari 1 kali pada hari yang sama dan mengubah entri kedua secara otomatis menjadi 'Pulang'.
               </p>
             </div>
@@ -330,7 +330,7 @@ export const ActivityLogs: React.FC = () => {
             <button
               type="button"
               onClick={refreshData}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-xl border border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               title="Pindai Ulang Data Absensi"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRepairing ? 'animate-spin' : ''}`} />
@@ -374,9 +374,9 @@ export const ActivityLogs: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                <div className="overflow-x-auto border border-white/10 rounded-xl">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                    <thead className="bg-white/5 backdrop-blur-xl text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-white/10">
                       <tr>
                         <th className="p-3">Siswa & Kelas</th>
                         <th className="p-3">Tanggal</th>
@@ -385,16 +385,16 @@ export const ActivityLogs: React.FC = () => {
                         <th className="p-3 text-right">Aksi Perbaikan</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                    <tbody className="divide-y divide-white/10 text-slate-200">
                       {anomalies.map((item, idx) => {
                         const duplicateIds = item.duplicateRecords.map((r) => r.id);
                         return (
-                          <tr key={`${item.studentNisn}-${item.dateStr}-${idx}`} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                          <tr key={`${item.studentNisn}-${item.dateStr}-${idx}`} className="hover:bg-white/10 transition-colors">
                             <td className="p-3">
-                              <div className="font-bold text-slate-900 dark:text-white">
+                              <div className="font-bold text-white">
                                 {item.studentName}
                               </div>
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                              <div className="text-[11px] text-slate-400 flex items-center gap-2">
                                 <span>NISN: {item.studentNisn || '-'}</span>
                                 <span>•</span>
                                 <span className="font-semibold text-blue-600 dark:text-blue-400">
@@ -476,8 +476,8 @@ export const ActivityLogs: React.FC = () => {
       </div>
 
       {/* Log Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-800 dark:text-slate-200 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden transition-colors">
+        <div className="p-4 border-b border-white/10 font-bold text-xs text-slate-800 dark:text-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span>Riwayat Audit System Log ({filteredLogs.length} Entri)</span>
             {selectedLogIds.length > 0 && (
@@ -500,7 +500,7 @@ export const ActivityLogs: React.FC = () => {
               </button>
             )}
 
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[11px] rounded-lg border border-white/10">
               <Clock className="w-3 h-3 text-slate-400" />
               <span>
                 Update: {lastRefreshedAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jayapura' })} WIT
@@ -525,7 +525,7 @@ export const ActivityLogs: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+            <thead className="bg-white/5 backdrop-blur-xl/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
@@ -543,14 +543,14 @@ export const ActivityLogs: React.FC = () => {
                 <th className="p-3.5 text-right w-16">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+            <tbody className="divide-y divide-white/10 text-slate-200">
               {paginatedLogs.length > 0 ? (
                 paginatedLogs.map((log) => {
                   const isSelected = selectedLogIds.includes(log.id);
                   return (
                     <tr
                       key={log.id}
-                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                      className={`hover:bg-white/10 transition-colors ${
                         isSelected ? 'bg-sky-50/60 dark:bg-sky-950/30' : ''
                       }`}
                     >
@@ -562,7 +562,7 @@ export const ActivityLogs: React.FC = () => {
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                       </td>
-                      <td className="p-3.5 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      <td className="p-3.5 font-mono text-slate-400 whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleString('id-ID', {
                           dateStyle: 'short',
                           timeStyle: 'medium',
@@ -570,13 +570,13 @@ export const ActivityLogs: React.FC = () => {
                         })} WIT
                       </td>
                       <td className="p-3.5">
-                        <div className="font-bold text-slate-900 dark:text-white">{log.user}</div>
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded font-semibold">
+                        <div className="font-bold text-white">{log.user}</div>
+                        <span className="text-[10px] bg-white/5 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded font-semibold">
                           {log.role}
                         </span>
                       </td>
                       <td className="p-3.5 font-bold text-blue-700 dark:text-blue-400">{log.action}</td>
-                      <td className="p-3.5 text-slate-600 dark:text-slate-300">{log.details}</td>
+                      <td className="p-3.5 text-slate-300">{log.details}</td>
                       <td className="p-3.5 text-right whitespace-nowrap">
                         <button
                           type="button"
@@ -608,7 +608,7 @@ export const ActivityLogs: React.FC = () => {
 
         {/* Pagination Footer */}
         {filteredLogs.length > 0 && (
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+          <div className="px-4 py-3 bg-white/5 backdrop-blur-xl/50 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
             <div className="flex flex-wrap items-center gap-3">
               <div>
                 Menampilkan{' '}
@@ -622,7 +622,7 @@ export const ActivityLogs: React.FC = () => {
                 dari <span className="font-bold text-slate-800 dark:text-slate-200">{filteredLogs.length}</span> log
               </div>
 
-              <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+              <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
                 <span className="text-slate-500 font-medium">Per Halaman:</span>
                 <select
                   value={pageSize}
@@ -630,7 +630,7 @@ export const ActivityLogs: React.FC = () => {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg font-semibold focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                  className="px-2 py-1 text-xs border border-white/10 bg-white/5 backdrop-blur-xl rounded-lg font-semibold focus:ring-2 focus:ring-blue-600 cursor-pointer"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -647,7 +647,7 @@ export const ActivityLogs: React.FC = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Sebelumnya
                 </button>
@@ -658,7 +658,7 @@ export const ActivityLogs: React.FC = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Berikutnya
                 </button>

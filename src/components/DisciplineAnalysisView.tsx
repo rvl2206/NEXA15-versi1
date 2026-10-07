@@ -150,16 +150,16 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
       </div>
 
       {/* Discipline Analysis Table & Sub-filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
               <span>Rekapitulasi Kedisiplinan Siswa</span>
               <span className="text-[10px] bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 px-2 py-0.5 rounded-full font-mono">
                 Urutan Tingkat Kritis
               </span>
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5">
               Daftar diurutkan berdasarkan jumlah hari Alpa dan frekuensi keterlambatan siswa. Filter Aktif: <strong className="text-slate-800 dark:text-slate-200">{filterKelas}</strong>.
             </p>
           </div>
@@ -172,7 +172,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 disciplineFilterType === 'semua_indisiplin'
                   ? 'bg-red-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl text-slate-300 hover:bg-slate-200'
               }`}
             >
               Semua Terlambat & Alpa ({latenessAnalysisData.length})
@@ -183,7 +183,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 disciplineFilterType === 'hanya_terlambat'
                   ? 'bg-amber-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl text-slate-300 hover:bg-slate-200'
               }`}
             >
               Terlambat ({totalTerlambat})
@@ -194,7 +194,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 disciplineFilterType === 'hanya_alpa'
                   ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl text-slate-300 hover:bg-slate-200'
               }`}
             >
               Alpa / Tidak Hadir ({totalAlpa})
@@ -204,7 +204,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+            <thead className="bg-white/5 backdrop-blur-xl/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
               <tr>
                 <th className="p-3.5">No</th>
                 <th className="p-3.5">Nama Siswa</th>
@@ -216,7 +216,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
                 <th className="p-3.5 text-center">Kirim WA Ortu</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-200">
               {filteredDisciplineData.length > 0 ? (
                 paginateList<LateGuidanceExportItem>(filteredDisciplineData, currentPage, pageSize).map((item, idx) => (
                   <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
@@ -224,7 +224,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
                       {pageSize === 0 ? idx + 1 : (currentPage - 1) * pageSize + idx + 1}
                     </td>
                     <td className="p-3.5">
-                      <div className="font-extrabold text-slate-900 dark:text-white">{item.student.nama}</div>
+                      <div className="font-extrabold text-white">{item.student.nama}</div>
                       <div className="space-y-0.5 mt-0.5 text-[10px]">
                         {item.lateDates.length > 0 && (
                           <div className="text-amber-700 dark:text-amber-400 font-mono">
@@ -239,7 +239,7 @@ export const DisciplineAnalysisView: React.FC<DisciplineAnalysisViewProps> = ({
                       </div>
                     </td>
                     <td className="p-3.5">
-                      <span className="font-mono text-slate-600 dark:text-slate-400">{item.student.nisn}</span>
+                      <span className="font-mono text-slate-400">{item.student.nisn}</span>
                       <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({item.student.kelas})</span>
                     </td>
                     <td className="p-3.5 text-center">

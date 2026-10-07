@@ -29,13 +29,12 @@ describe('StudentManagement Component', () => {
   });
 
   it('renders without crashing and displays the search input', () => {
-    // Assuming the component accepts props like userRole
-    render(<StudentManagement userRole="admin" currentUser={null} />);
+    render(<StudentManagement userRole="Admin" />);
     
     // Check if a common element exists, e.g., a search bar or a "Tambah Siswa" button
     // The exact text will depend on your UI
     const searchInput = screen.getByPlaceholderText(/cari/i);
-    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toBeTruthy();
   });
 
   // You can add more tests here, for example simulating clicks on "Tambah Siswa"

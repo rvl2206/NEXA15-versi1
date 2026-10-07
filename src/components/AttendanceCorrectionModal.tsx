@@ -420,7 +420,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full overflow-hidden my-auto transition-colors animate-fadeIn">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl shadow-2xl border border-white/10 max-w-xl w-full overflow-hidden my-auto transition-colors animate-fadeIn">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-4 sm:p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -451,7 +451,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
         {/* Existing Status Banner */}
         {currentStudent && (
-          <div className="bg-slate-50 dark:bg-slate-800/80 px-5 py-2.5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="bg-white/5 backdrop-blur-xl/80 px-5 py-2.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -480,7 +480,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             <select
               value={selectedStudentId}
               onChange={(e) => handleStudentChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl text-white font-bold"
               required
             >
               <option value="">-- Pilih Siswa --</option>
@@ -503,7 +503,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                 type="date"
                 value={tanggal}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+                className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl text-white font-bold"
                 required
               />
             </div>
@@ -519,7 +519,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                   className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all border ${
                     jenis === 'Masuk'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300 dark:ring-blue-800'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      : 'bg-white/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-slate-200'
                   }`}
                 >
                   <LogIn className="w-3.5 h-3.5" />
@@ -531,7 +531,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                   className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all border ${
                     jenis === 'Pulang'
                       ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-2 ring-purple-300 dark:ring-purple-800'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      : 'bg-white/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-slate-200'
                   }`}
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -571,7 +571,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                           : item.key === 'Sakit'
                           ? 'bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-300'
                           : 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-300'
-                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200/80'
+                        : 'bg-white/5 backdrop-blur-xl/80 text-slate-700 dark:text-slate-300 border-white/10 hover:bg-slate-200/80'
                     }`}
                   >
                     <div className={isSelected ? 'text-white' : ''}>
@@ -585,7 +585,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           </div>
 
           {/* Jam Scan & Late Minutes Row */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2.5">
+          <div className="p-3.5 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-2.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1">
@@ -596,7 +596,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                   type="time"
                   value={jamScan}
                   onChange={(e) => handleJamScanChange(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono font-bold"
+                  className="w-full px-3 py-1.5 text-xs border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-600 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl text-white font-mono font-bold"
                   required
                 />
               </div>
@@ -620,7 +620,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
             {/* Jam Scan Shortcut Buttons */}
             <div>
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+              <span className="text-[10px] font-semibold text-slate-400 block mb-1">
                 Pilihan Waktu Cepat ({jenis}):
               </span>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -632,7 +632,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                     className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-all border ${
                       jamScan === timeStr
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                        : 'bg-white/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-slate-100'
                     }`}
                   >
                     {timeStr}
@@ -667,7 +667,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
               placeholder="Contoh: Koreksi salah jam scan piket, Dispensasi lomba OSIS"
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl text-white"
             />
             {/* Presets */}
             <div className="flex flex-wrap gap-1 mt-1.5">
@@ -682,7 +682,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                   key={preset}
                   type="button"
                   onClick={() => setCatatan(preset)}
-                  className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-400 rounded text-[10px] transition-colors"
+                  className="px-2 py-0.5 bg-white/5 backdrop-blur-xl hover:bg-slate-200 text-slate-400 rounded text-[10px] transition-colors"
                 >
                   + {preset}
                 </button>
@@ -720,7 +720,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 rounded-xl transition-colors"
             >
               Batal
             </button>

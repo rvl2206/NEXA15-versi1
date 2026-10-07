@@ -37,7 +37,7 @@ export const ManualInputModal: React.FC<ManualInputModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl shadow-xl border border-white/10 max-w-md w-full overflow-hidden">
         <div className="bg-emerald-900 p-4 text-white flex items-center justify-between">
           <h3 className="font-bold text-xs uppercase tracking-wider">Pencatatan Absensi Manual (Izin/Sakit/Alpa)</h3>
           <button onClick={onClose} className="text-emerald-200 hover:text-white">
@@ -51,7 +51,7 @@ export const ManualInputModal: React.FC<ManualInputModalProps> = ({
             <select
               value={manualForm.studentNisn}
               onChange={(e) => setManualForm({ ...manualForm, studentNisn: e.target.value })}
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white/5 backdrop-blur-xl dark:text-white"
               required
             >
               <option value="" disabled>-- Cari atau Pilih Siswa --</option>
@@ -67,7 +67,7 @@ export const ManualInputModal: React.FC<ManualInputModalProps> = ({
               <select
                 value={manualForm.jenis}
                 onChange={(e) => setManualForm({ ...manualForm, jenis: e.target.value as AttendanceType })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2 text-xs border border-white/10 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white/5 backdrop-blur-xl dark:text-white"
               >
                 <option value="Masuk">Absen Masuk</option>
                 <option value="Pulang">Absen Pulang</option>
@@ -78,7 +78,7 @@ export const ManualInputModal: React.FC<ManualInputModalProps> = ({
               <select
                 value={manualForm.status}
                 onChange={(e) => setManualForm({ ...manualForm, status: e.target.value as AttendanceStatus })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
+                className="w-full px-3 py-2 text-xs border border-white/10 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white/5 backdrop-blur-xl dark:text-white"
               >
                 <option value="Hadir">Hadir</option>
                 <option value="Terlambat">Terlambat</option>
@@ -97,15 +97,15 @@ export const ManualInputModal: React.FC<ManualInputModalProps> = ({
               value={manualForm.catatan}
               onChange={(e) => setManualForm({ ...manualForm, catatan: e.target.value })}
               placeholder="Contoh: Sakit demam dengan surat dokter"
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-800 dark:text-white"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-lg focus:ring-2 focus:ring-emerald-600 bg-white/5 backdrop-blur-xl dark:text-white"
             />
           </div>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+          <div className="pt-2 border-t border-white/10 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 rounded-lg transition-colors"
             >
               Batal
             </button>

@@ -174,21 +174,21 @@ export const DigitalCardTemplate: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Bar */}
-      <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl/90 border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-gradient-to-br from-amber-500/10 to-blue-600/10 border border-amber-500/20 rounded-2xl">
             <CreditCard className="w-8 h-8 text-amber-500 dark:text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 Template Kartu Absensi Digital
               </h1>
               <span className="bg-amber-400/20 text-amber-800 dark:text-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-400/30">
                 Resmi SMA N 15 Ambon
               </span>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">
               Desain resmi kartu identitas presensi digital SMA Negeri 15 Ambon (Pilihan Individu &amp; Cetak Massal Per Kelas)
             </p>
           </div>
@@ -211,7 +211,7 @@ export const DigitalCardTemplate: React.FC = () => {
       {/* Control Configuration Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Settings Column */}
-        <div className="lg:col-span-1 space-y-5 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-2xs transition-colors">
+        <div className="lg:col-span-1 space-y-5 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl/90 border border-white/10 p-5 rounded-2xl shadow-2xs transition-colors">
           <h2 className="text-sm font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-500" />
             Pengaturan Pratinjau &amp; Cetak
@@ -220,14 +220,14 @@ export const DigitalCardTemplate: React.FC = () => {
           {/* Mode Selection */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Mode Isian Kartu:</label>
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-white/10">
               <button
                 type="button"
                 onClick={() => setMode('student')}
                 className={`py-2 px-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer ${
                   mode === 'student'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Data Siswa
@@ -238,7 +238,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 className={`py-2 px-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer ${
                   mode === 'blank'
                     ? 'bg-amber-400 text-slate-950 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Kosong
@@ -249,7 +249,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 className={`py-2 px-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer ${
                   mode === 'custom'
                     ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Manual
@@ -456,7 +456,7 @@ export const DigitalCardTemplate: React.FC = () => {
           )}
 
           {/* Universal Field Overrides */}
-          <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div className="space-y-3 pt-2 border-t border-white/10">
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
                 Tahun Ajaran:
@@ -466,7 +466,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 value={tahunAjaran}
                 onChange={(e) => setTahunAjaran(e.target.value)}
                 placeholder="2024/2025"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
@@ -479,7 +479,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 value={statusSiswa}
                 onChange={(e) => setStatusSiswa(e.target.value)}
                 placeholder="Siswa Aktif"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
@@ -490,7 +490,7 @@ export const DigitalCardTemplate: React.FC = () => {
               <select
                 value={cardSize}
                 onChange={(e) => setCardSize(e.target.value as CardSizeOption)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
               >
                 <option value="CR80">CR80 Standar KTP/ATM (53.98 x 85.60 mm)</option>
                 <option value="B2">Plastik B2 (70 x 100 mm / 7 x 10 cm)</option>
@@ -500,7 +500,7 @@ export const DigitalCardTemplate: React.FC = () => {
           </div>
 
           {/* Side View Selector */}
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div className="pt-2 border-t border-white/10">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 block">
               Tampilan Sisi Kartu:
             </label>
@@ -511,7 +511,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                   activeSide === 'both'
                     ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-950 border-white/10 text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Depan &amp; Belakang
@@ -522,7 +522,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                   activeSide === 'front'
                     ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-950 border-white/10 text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Sisi Depan
@@ -533,7 +533,7 @@ export const DigitalCardTemplate: React.FC = () => {
                 className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                   activeSide === 'back'
                     ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-950 border-white/10 text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Sisi Belakang

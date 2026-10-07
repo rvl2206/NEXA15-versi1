@@ -46,7 +46,7 @@ export function StudentRfidBindModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden transition-colors">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl shadow-xl border border-white/10 max-w-md w-full overflow-hidden transition-colors">
         {/* Modal Header */}
         <div className="bg-indigo-600 p-4 text-white flex items-center justify-between">
           <h3 className="font-bold text-sm flex items-center gap-2">
@@ -66,18 +66,18 @@ export function StudentRfidBindModal({
           className="p-5 space-y-5"
         >
           {/* Target Student Info */}
-          <div className="flex gap-4 items-center p-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+          <div className="flex gap-4 items-center p-3.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl">
             <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center border border-indigo-200 dark:border-indigo-800 shrink-0">
               <span className="text-xl font-bold text-indigo-700 dark:text-indigo-300">
                 {rfidBindStudent.nama.charAt(0)}
               </span>
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+              <p className="text-sm font-bold text-white truncate">
                 {rfidBindStudent.nama}
               </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded font-semibold">
+                <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-300 rounded font-semibold">
                   {rfidBindStudent.kelas}
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">
@@ -130,14 +130,14 @@ export function StudentRfidBindModal({
                 <button
                   type="button"
                   onClick={() => setRfidInputVal('')}
-                  className="absolute right-2.5 top-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded text-slate-600 dark:text-slate-300 cursor-pointer"
+                  className="absolute right-2.5 top-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded text-slate-300 cursor-pointer"
                 >
                   Bersihkan
                 </button>
               )}
             </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span>💡</span>
               <span>
                 <strong>USB Reader:</strong> Klik kolom di atas lalu tempelkan kartu RFID ke alat USB Reader untuk membaca nomor UID otomatis.
@@ -153,20 +153,20 @@ export function StudentRfidBindModal({
                 <span>Konversi Format Kartu Otomatis</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                <div className="p-2 bg-white/5 backdrop-blur-xl rounded-lg border border-indigo-100 dark:border-indigo-800">
                   <span className="text-[10px] text-slate-400 block">Hexadecimal (Hex):</span>
                   <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                     {hexFormatted || '-'}
                   </span>
                 </div>
-                <div className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                <div className="p-2 bg-white/5 backdrop-blur-xl rounded-lg border border-indigo-100 dark:border-indigo-800">
                   <span className="text-[10px] text-slate-400 block">Decimal (Dec):</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {decFormatted || '-'}
                   </span>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] text-slate-400">
                 Sistem otomatis mengenali kartu ini baik saat dipindai reader USB bertipe Hex maupun Dec.
               </p>
             </div>
@@ -210,7 +210,7 @@ export function StudentRfidBindModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
                 Batal
               </button>

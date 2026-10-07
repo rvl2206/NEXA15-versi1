@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { store } from '../lib/store';
 import { Teacher, TeacherAttendanceRecord, TeacherAttendanceStatus, AttendanceType, UserRole } from '../types';
 import { toast } from '../lib/toast';
+import { EmptyStateWidget } from './EmptyStateWidget';
 import {
   exportTeacherAttendanceToExcel,
   exportTeacherAttendanceToPDF,
@@ -364,15 +365,15 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Strip */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-sm border border-white/10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="p-2.5 bg-sky-100 text-sky-800 rounded-xl">
               <UserCheck className="w-6 h-6" />
             </span>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Rekap Presensi Guru & Tendik</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-xl font-bold text-white">Rekap Presensi Guru & Tendik</h1>
+              <p className="text-xs text-slate-400">
                 Laporan presensi harian, bulanan, dan histori scan guru berbasis NIP
               </p>
             </div>
@@ -409,10 +410,10 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-100">
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-            <span className="text-[11px] text-slate-500 font-medium">Total Rekaman</span>
-            <p className="text-xl font-bold text-slate-900 mt-0.5">{stats.total}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-white/5">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-xl p-3 border border-white/5">
+            <span className="text-[11px] text-slate-400 font-medium">Total Rekaman</span>
+            <p className="text-xl font-bold text-white mt-0.5">{stats.total}</p>
           </div>
           <div className="bg-emerald-50/70 rounded-xl p-3 border border-emerald-100">
             <span className="text-[11px] text-emerald-700 font-medium">Hadir Tepat Waktu</span>
@@ -434,7 +435,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       </div>
 
       {/* Filter Control Bar */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-sm border border-white/10 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           {/* Search Box */}
           <div className="relative md:col-span-2">
@@ -447,12 +448,12 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -469,7 +470,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 if (e.target.value) setFilterMonth('');
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
             <button
               type="button"
@@ -490,7 +491,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Status</option>
               <option value="Hadir">Hadir</option>
@@ -510,7 +511,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterJenis(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Jenis (Masuk/Pulang)</option>
               <option value="Masuk">Masuk Saja</option>
@@ -520,16 +521,16 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
         </div>
 
         {/* Second Filter Row */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-white/5">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs text-slate-500 font-medium">Jabatan:</span>
+            <span className="text-xs text-slate-400 font-medium">Jabatan:</span>
             <select
               value={filterJabatan}
               onChange={(e) => {
                 setFilterJabatan(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="px-3 py-1.5 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Jabatan</option>
               {uniqueJabatanList.map((j) => (
@@ -564,7 +565,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterJabatan('Semua');
                 setSearchQuery('');
               }}
-              className="text-xs text-slate-600 hover:underline font-medium"
+              className="text-xs text-slate-300 hover:underline font-medium"
             >
               Bulan Ini
             </button>
@@ -578,7 +579,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterJabatan('Semua');
                 setSearchQuery('');
               }}
-              className="text-xs text-slate-600 hover:underline font-medium"
+              className="text-xs text-slate-300 hover:underline font-medium"
             >
               Semua Data
             </button>
@@ -603,10 +604,10 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       </div>
 
       {/* Attendance Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-semibold">
+            <thead className="bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border-b border-white/10 text-slate-300 font-semibold">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
@@ -615,7 +616,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                       filteredRecords.length > 0 && selectedIds.length === filteredRecords.length
                     }
                     onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    className="rounded border-white/20 text-sky-600 focus:ring-sky-500"
                   />
                 </th>
                 <th className="p-3.5 w-12 text-center">No</th>
@@ -631,13 +632,10 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 <th className="p-3.5 text-center w-24">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/5">
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="p-8 text-center text-slate-400">
-                    <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="font-medium">Tidak ada rekaman presensi guru yang sesuai dengan filter.</p>
-                  </td>
+                  <td colSpan={12} className="p-4"><EmptyStateWidget title="Data Kehadiran Kosong" message="Tidak ada rekaman presensi guru yang sesuai dengan filter." /></td>
                 </tr>
               ) : (
                 paginatedRecords.map((record, index) => {
@@ -656,7 +654,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                       : record.timestamp;
                   }
 
-                  let statusBadgeClass = 'bg-slate-100 text-slate-800 border-slate-200';
+                  let statusBadgeClass = 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-white border-white/10';
                   if (record.status === 'Hadir') {
                     statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
                   } else if (record.status === 'Terlambat') {
@@ -672,7 +670,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                   return (
                     <tr
                       key={record.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
+                      className={`hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10/70 transition-colors ${
                         isSelected ? 'bg-sky-50/40' : ''
                       }`}
                     >
@@ -681,26 +679,26 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => handleSelectOne(record.id, e.target.checked)}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                          className="rounded border-white/20 text-sky-600 focus:ring-sky-500"
                         />
                       </td>
-                      <td className="p-3.5 text-center text-slate-500 font-medium">
+                      <td className="p-3.5 text-center text-slate-400 font-medium">
                         {(currentPage - 1) * itemsPerPage + index + 1}
                       </td>
-                      <td className="p-3.5 font-medium text-slate-700 whitespace-nowrap">
+                      <td className="p-3.5 font-medium text-slate-200 whitespace-nowrap">
                         {record.tanggal}
                       </td>
-                      <td className="p-3.5 font-mono text-slate-600 whitespace-nowrap">
+                      <td className="p-3.5 font-mono text-slate-300 whitespace-nowrap">
                         {timeStr}
                       </td>
-                      <td className="p-3.5 font-mono font-bold text-slate-900">
+                      <td className="p-3.5 font-mono font-bold text-white">
                         {record.nip}
                       </td>
-                      <td className="p-3.5 font-semibold text-slate-900">
+                      <td className="p-3.5 font-semibold text-white">
                         {record.nama}
                       </td>
-                      <td className="p-3.5 text-slate-700">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-medium">
+                      <td className="p-3.5 text-slate-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-white text-[11px] font-medium">
                           {record.jabatan}
                         </span>
                       </td>
@@ -733,7 +731,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                           {record.status}
                         </span>
                       </td>
-                      <td className="p-3.5 text-slate-600 max-w-[180px] truncate">
+                      <td className="p-3.5 text-slate-300 max-w-[180px] truncate">
                         {record.terlambatMenit && record.terlambatMenit > 0 ? (
                           <span className="text-amber-700 font-semibold">
                             Terlambat +{record.terlambatMenit} mnt
@@ -742,7 +740,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                           record.catatan || '-'
                         )}
                       </td>
-                      <td className="p-3.5 text-slate-500 text-[11px]">
+                      <td className="p-3.5 text-slate-400 text-[11px]">
                         {record.petugas || '-'}
                       </td>
                       <td className="p-3.5 text-center">
@@ -750,14 +748,14 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                           <button
                             onClick={() => openEditModal(record)}
                             title="Edit Presensi"
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-sky-50 transition"
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-sky-700 hover:bg-sky-50 transition"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingRecord(record)}
                             title="Hapus Presensi"
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -772,27 +770,27 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
         </div>
 
         {/* Pagination */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-          <p className="text-xs text-slate-500">
-            Menampilkan <span className="font-semibold text-slate-700">{paginatedRecords.length}</span> dari{' '}
-            <span className="font-semibold text-slate-700">{filteredRecords.length}</span> data presensi
+        <div className="p-4 border-t border-white/5 flex items-center justify-between flex-wrap gap-3">
+          <p className="text-xs text-slate-400">
+            Menampilkan <span className="font-semibold text-slate-200">{paginatedRecords.length}</span> dari{' '}
+            <span className="font-semibold text-slate-200">{filteredRecords.length}</span> data presensi
           </p>
 
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-3 py-1 text-xs font-semibold text-slate-700">
+            <span className="px-3 py-1 text-xs font-semibold text-slate-200">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -803,17 +801,17 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: MANUAL ATTENDANCE FOR TEACHER */}
       {showManualModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 text-sky-800 rounded-xl">
                   <Plus className="w-4 h-4" />
                 </span>
-                <h2 className="text-base font-bold text-slate-900">Presensi Manual Guru</h2>
+                <h2 className="text-base font-bold text-white">Presensi Manual Guru</h2>
               </div>
               <button
                 onClick={() => setShowManualModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-300 p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -828,14 +826,14 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Pilih Guru / NIP <span className="text-rose-500">*</span>
                 </label>
                 <select
                   required
                   value={manualForm.nip}
                   onChange={(e) => handleTeacherSelectForManual(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
                 >
                   <option value="">-- Pilih Guru Berdasarkan NIP & Nama --</option>
                   {teachers.map((t) => (
@@ -847,7 +845,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               </div>
 
               {manualForm.nama && (
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border border-white/10 text-xs space-y-1">
                   <p>
                     <strong>Nama:</strong> {manualForm.nama}
                   </p>
@@ -862,34 +860,34 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Tanggal Presensi
                   </label>
                   <input
                     type="date"
                     value={manualForm.tanggal}
                     onChange={(e) => setManualForm({ ...manualForm, tanggal: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Jam Scan (WIT)
                   </label>
                   <input
                     type="time"
                     value={manualForm.jamScan}
                     onChange={(e) => setManualForm({ ...manualForm, jamScan: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-mono font-bold"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-mono font-bold"
                     required
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-slate-500 font-medium">Pilihan Jam:</span>
+                <span className="text-[10px] text-slate-400 font-medium">Pilihan Jam:</span>
                 {['06:45', '07:00', '07:15', '07:30', '13:00', '14:00', '15:00'].map((t) => (
                   <button
                     key={t}
@@ -898,7 +896,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       manualForm.jamScan === t
                         ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
                     }`}
                   >
                     {t}
@@ -908,7 +906,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Jenis Presensi
                   </label>
                   <select
@@ -916,7 +914,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     onChange={(e) =>
                       setManualForm({ ...manualForm, jenis: e.target.value as AttendanceType })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Masuk">Masuk</option>
                     <option value="Pulang">Pulang</option>
@@ -926,7 +924,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Status Kehadiran
                   </label>
                   <select
@@ -937,7 +935,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         status: e.target.value as TeacherAttendanceStatus,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Hadir">Hadir</option>
                     <option value="Terlambat">Terlambat</option>
@@ -950,7 +948,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
                 {manualForm.status === 'Terlambat' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
                       Terlambat (Menit)
                     </label>
                     <input
@@ -960,14 +958,14 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                       onChange={(e) =>
                         setManualForm({ ...manualForm, terlambatMenit: Number(e.target.value) })
                       }
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                     />
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Catatan / Keterangan
                 </label>
                 <input
@@ -975,15 +973,15 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                   placeholder="Contoh: Mengikuti MGMP / Pelatihan Dinas"
                   value={manualForm.catatan}
                   onChange={(e) => setManualForm({ ...manualForm, catatan: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/5">
                 <button
                   type="button"
                   onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition"
                 >
                   Batal
                 </button>
@@ -1002,27 +1000,27 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: EDIT ATTENDANCE RECORD */}
       {showEditModal && currentRecord && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 text-sky-800 rounded-xl">
                   <Edit2 className="w-4 h-4" />
                 </span>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Edit Rekaman Presensi Guru</h2>
-                  <p className="text-xs text-slate-500">{currentRecord.nama}</p>
+                  <h2 className="text-base font-bold text-white">Edit Rekaman Presensi Guru</h2>
+                  <p className="text-xs text-slate-400">{currentRecord.nama}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-300 p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 mt-4">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border border-white/10 text-xs space-y-1">
                 <p>
                   <strong>NIP:</strong> {currentRecord.nip}
                 </p>
@@ -1036,34 +1034,34 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Tanggal Presensi
                   </label>
                   <input
                     type="date"
                     value={editTanggal}
                     onChange={(e) => setEditTanggal(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Jam Scan (WIT)
                   </label>
                   <input
                     type="time"
                     value={editJamScan}
                     onChange={(e) => setEditJamScan(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-mono font-bold"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-mono font-bold"
                     required
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-slate-500 font-medium">Pilihan Jam:</span>
+                <span className="text-[10px] text-slate-400 font-medium">Pilihan Jam:</span>
                 {['06:45', '07:00', '07:15', '07:30', '13:00', '14:00', '15:00'].map((t) => (
                   <button
                     key={t}
@@ -1072,7 +1070,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       editJamScan === t
                         ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
                     }`}
                   >
                     {t}
@@ -1082,7 +1080,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Jenis Presensi
                   </label>
                   <select
@@ -1090,7 +1088,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     onChange={(e) =>
                       setCurrentRecord({ ...currentRecord, jenis: e.target.value as AttendanceType })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Masuk">Masuk</option>
                     <option value="Pulang">Pulang</option>
@@ -1098,7 +1096,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Status Kehadiran
                   </label>
                   <select
@@ -1109,7 +1107,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         status: e.target.value as TeacherAttendanceStatus,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Hadir">Hadir</option>
                     <option value="Terlambat">Terlambat</option>
@@ -1122,7 +1120,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Terlambat (Menit)
                 </label>
                 <input
@@ -1132,27 +1130,27 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                   onChange={(e) =>
                     setCurrentRecord({ ...currentRecord, terlambatMenit: Number(e.target.value) })
                   }
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Catatan / Keterangan
                 </label>
                 <input
                   type="text"
                   value={currentRecord.catatan || ''}
                   onChange={(e) => setCurrentRecord({ ...currentRecord, catatan: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/5">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition"
                 >
                   Batal
                 </button>
@@ -1171,35 +1169,35 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: DELETE SINGLE RECORD CONFIRMATION */}
       {deletingRecord && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/5">
               <span className="p-2.5 bg-rose-100 text-rose-600 rounded-xl">
                 <AlertTriangle className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Hapus Rekaman Presensi?</h3>
-                <p className="text-xs text-slate-500">Tindakan ini tidak dapat dibatalkan</p>
+                <h3 className="text-base font-bold text-white">Hapus Rekaman Presensi?</h3>
+                <p className="text-xs text-slate-400">Tindakan ini tidak dapat dibatalkan</p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Apakah Anda yakin ingin menghapus data presensi guru berikut?
               </p>
               <div className="bg-rose-50 p-3 rounded-xl border border-rose-200 text-xs">
-                <p className="font-bold text-slate-900">{deletingRecord.nama}</p>
-                <p className="font-mono text-slate-600 mt-0.5">NIP: {deletingRecord.nip}</p>
-                <p className="text-slate-500 mt-0.5">
+                <p className="font-bold text-white">{deletingRecord.nama}</p>
+                <p className="font-mono text-slate-300 mt-0.5">NIP: {deletingRecord.nip}</p>
+                <p className="text-slate-400 mt-0.5">
                   Tanggal: {deletingRecord.tanggal} | Jenis: {deletingRecord.jenis} ({deletingRecord.status})
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/5">
               <button
                 type="button"
                 onClick={() => setDeletingRecord(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>
@@ -1218,32 +1216,32 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: BATCH DELETE ATTENDANCE CONFIRMATION */}
       {isBatchDeleteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/5">
               <span className="p-2.5 bg-rose-100 text-rose-600 rounded-xl">
                 <Trash2 className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-base font-bold text-white">
                   Hapus {selectedIds.length} Rekaman Terpilih?
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-400">
                   Tindakan penghapusan massal tidak dapat dibatalkan
                 </p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Anda akan menghapus <strong>{selectedIds.length}</strong> baris presensi guru yang dipilih secara permanen dari sistem.
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/5">
               <button
                 type="button"
                 onClick={() => setIsBatchDeleteModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>

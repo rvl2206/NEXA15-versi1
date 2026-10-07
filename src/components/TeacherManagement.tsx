@@ -418,7 +418,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
   return (
     <div className="space-y-6">
       {/* Header & Stats Strip */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+      <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/10 transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -435,7 +435,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     <span>NIP Base</span>
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-400 mt-0.5">
                   Manajemen data identitas guru & staf berbasis NIP untuk presensi digital dan cetak ID Card
                 </p>
               </div>
@@ -448,7 +448,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               onClick={handleSyncToSupabase}
               disabled={isSyncing}
               title="Sinkronkan data guru ke Supabase Cloud PostgreSQL"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-200 border border-white/10 transition shadow-xs cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-sky-600 dark:text-sky-400 ${isSyncing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{isSyncing ? 'Sinkron...' : 'Sinkron Supabase'}</span>
@@ -471,18 +471,18 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
             <div className="relative" ref={exportDropdownRef}>
               <button
                 onClick={() => setIsExportDropdownOpen((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-200 border border-white/10 transition shadow-xs cursor-pointer"
               >
-                <Download className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <Download className="w-4 h-4 text-slate-400" />
                 <span>Export</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
               {isExportDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-2 w-48 bg-white/5 backdrop-blur-xl rounded-xl shadow-lg border border-white/10 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
                   <button
                     onClick={handleExportExcelAction}
-                    className="w-full text-left px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 cursor-pointer"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <div>
@@ -492,7 +492,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   </button>
                   <button
                     onClick={handleExportCSVAction}
-                    className="w-full text-left px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 cursor-pointer"
                   >
                     <FileText className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                     <div>
@@ -531,8 +531,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
 
         {/* Quick Summary Counts */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-100 dark:border-slate-800/80">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Guru & Staf</span>
+          <div className="bg-white/5 backdrop-blur-xl/60 rounded-xl p-3 border border-slate-100 dark:border-slate-800/80">
+            <span className="text-[11px] text-slate-400 font-medium">Total Guru & Staf</span>
             <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">{teachers.length}</p>
           </div>
           <div className="bg-emerald-50/70 dark:bg-emerald-950/40 rounded-xl p-3 border border-emerald-100 dark:border-emerald-800/40">
@@ -553,7 +553,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-3 items-center justify-between transition-colors">
+      <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-white/10 flex flex-col md:flex-row gap-3 items-center justify-between transition-colors">
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
           {/* Search Input */}
           <div className="relative w-full sm:w-80">
@@ -566,7 +566,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
             />
             {searchQuery && (
               <button
@@ -587,7 +587,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 setFilterJabatan(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 w-full sm:w-48 cursor-pointer"
+              className="px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 w-full sm:w-48 cursor-pointer"
             >
               <option value="Semua">Semua Jabatan</option>
               {uniqueJabatanList.map((j) => (
@@ -605,7 +605,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               setFilterStatus(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 w-full sm:w-32 cursor-pointer"
+            className="px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 w-full sm:w-32 cursor-pointer"
           >
             <option value="Semua">Semua Status</option>
             <option value="aktif">Aktif</option>
@@ -617,7 +617,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
             <button
               onClick={resetFilters}
               title="Reset semua filter pencarian"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset</span>
@@ -628,7 +628,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
         {/* Selected Batch Actions */}
         {selectedIds.length > 0 && (
           <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+            <span className="text-xs text-slate-300 font-semibold">
               {selectedIds.length} guru dipilih
             </span>
 
@@ -652,10 +652,10 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       </div>
 
       {/* Teachers Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+      <div className="bg-black/20 backdrop-blur-md rounded-2xl shadow-sm border border-white/10 overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+            <thead className="bg-slate-50/90 dark:bg-slate-800/80 border-b border-white/10 text-slate-300 font-semibold">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
@@ -664,7 +664,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                       filteredTeachers.length > 0 && selectedIds.length === filteredTeachers.length
                     }
                     onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="rounded border-slate-300 dark:border-slate-600 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                    className="rounded border-white/20 text-sky-600 focus:ring-sky-500 cursor-pointer"
                   />
                 </th>
                 <th className="p-3.5 w-12 text-center">No</th>
@@ -697,7 +697,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                       {isFilterActive && (
                         <button
                           onClick={resetFilters}
-                          className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
+                          className="px-3.5 py-1.5 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
                         >
                           Reset Filter
                         </button>
@@ -722,14 +722,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => handleSelectOne(teacher.id, e.target.checked)}
-                          className="rounded border-slate-300 dark:border-slate-600 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                          className="rounded border-white/20 text-sky-600 focus:ring-sky-500 cursor-pointer"
                         />
                       </td>
-                      <td className="p-3.5 text-center text-slate-500 dark:text-slate-400 font-medium">
+                      <td className="p-3.5 text-center text-slate-400 font-medium">
                         {(currentPage - 1) * itemsPerPage + index + 1}
                       </td>
                       <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-slate-100">
-                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                        <span className="bg-white/5 backdrop-blur-xl px-2 py-0.5 rounded-md border border-white/10">
                           {teacher.nip}
                         </span>
                         {teacher.rfid_uid && (
@@ -746,7 +746,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                         </div>
                       </td>
                       <td className="p-3.5 text-slate-700 dark:text-slate-300">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[11px] font-medium border border-slate-200 dark:border-slate-700">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 backdrop-blur-xl text-slate-800 dark:text-slate-200 text-[11px] font-medium border border-white/10">
                           {teacher.jabatan}
                         </span>
                       </td>
@@ -796,7 +796,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                               setShowCardModal(true);
                             }}
                             title="Lihat & Cetak Kartu ID"
-                            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/60 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/60 transition cursor-pointer"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
                           </button>
@@ -804,7 +804,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                             type="button"
                             onClick={() => openEditModal(teacher)}
                             title="Edit Data Guru"
-                            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/60 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/60 transition cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -812,7 +812,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                             type="button"
                             onClick={() => setDeletingTeacher(teacher)}
                             title="Hapus Data Guru"
-                            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -829,12 +829,12 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
         {/* Pagination Bar */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Menampilkan <span className="font-semibold text-slate-700 dark:text-slate-200">{paginatedTeachers.length}</span> dari{' '}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">{filteredTeachers.length}</span> data guru
+            <p className="text-xs text-slate-400">
+              Menampilkan <span className="font-semibold text-slate-200">{paginatedTeachers.length}</span> dari{' '}
+              <span className="font-semibold text-slate-200">{filteredTeachers.length}</span> data guru
             </p>
 
-            <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1 text-xs text-slate-400">
               <span>Baris:</span>
               <select
                 value={itemsPerPage}
@@ -842,7 +842,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="px-2 py-0.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="px-2 py-0.5 text-xs rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl text-slate-700 dark:text-slate-300 cursor-pointer"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -855,17 +855,17 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+            <span className="px-3 py-1 text-xs font-semibold text-slate-200">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -876,7 +876,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: ADD TEACHER */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-white/10 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-400 rounded-xl">
@@ -911,7 +911,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   placeholder="Contoh: Drs. La Ode Alimin, M.Pd."
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
@@ -925,7 +925,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   placeholder="Contoh: 196803151994031008"
                   value={formData.nip}
                   onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                   NIP digunakan sebagai kunci unik scan QR presensi guru & sinkronisasi Supabase.
@@ -942,7 +942,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   placeholder="Contoh: Guru Matematika / Guru Kelas / Kepala Sekolah"
                   value={formData.jabatan}
                   onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
@@ -956,7 +956,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     placeholder="Contoh: X-1 / XI IPA 1"
                     value={formData.wali_kelas}
                     onChange={(e) => setFormData({ ...formData, wali_kelas: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -968,7 +968,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     placeholder="Contoh: 081234567890"
                     value={formData.no_hp}
                     onChange={(e) => setFormData({ ...formData, no_hp: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -1014,7 +1014,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   onChange={(e) =>
                     setFormData({ ...formData, status: e.target.value as 'aktif' | 'nonaktif' })
                   }
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
                 >
                   <option value="aktif">Aktif (Dapat Melakukan Presensi)</option>
                   <option value="nonaktif">Nonaktif (Cuti / Mutasi / Pensiun)</option>
@@ -1025,7 +1025,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1044,7 +1044,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: EDIT TEACHER */}
       {showEditModal && currentTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-white/10 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-400 rounded-xl">
@@ -1078,7 +1078,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   required
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
@@ -1091,7 +1091,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   required
                   value={formData.nip}
                   onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
@@ -1104,7 +1104,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   required
                   value={formData.jabatan}
                   onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
@@ -1118,7 +1118,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     placeholder="Contoh: X-1 / XI IPA 1"
                     value={formData.wali_kelas}
                     onChange={(e) => setFormData({ ...formData, wali_kelas: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -1130,7 +1130,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     placeholder="Contoh: 081234567890"
                     value={formData.no_hp}
                     onChange={(e) => setFormData({ ...formData, no_hp: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -1176,7 +1176,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   onChange={(e) =>
                     setFormData({ ...formData, status: e.target.value as 'aktif' | 'nonaktif' })
                   }
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
                 >
                   <option value="aktif">Aktif (Dapat Melakukan Presensi)</option>
                   <option value="nonaktif">Nonaktif (Cuti / Mutasi / Pensiun)</option>
@@ -1187,7 +1187,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1206,7 +1206,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: DELETE SINGLE TEACHER CONFIRMATION */}
       {deletingTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
               <span className="p-2.5 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-xl">
                 <Archive className="w-5 h-5" />
@@ -1215,20 +1215,20 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   Nonaktifkan Data Guru?
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-400">
                   Penghapusan Halus (Soft Delete)
                 </p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Apakah Anda yakin ingin <strong>menonaktifkan</strong> data guru berikut? Statusnya akan berubah menjadi Nonaktif dan presensi lamanya tetap aman.
               </p>
               <div className="bg-amber-50 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs">
                 <p className="font-bold text-slate-900 dark:text-slate-100">{deletingTeacher.nama}</p>
-                <p className="font-mono text-slate-600 dark:text-slate-400 mt-0.5">NIP: {deletingTeacher.nip}</p>
-                <p className="text-slate-500 dark:text-slate-400 mt-0.5">{deletingTeacher.jabatan}</p>
+                <p className="font-mono text-slate-400 mt-0.5">NIP: {deletingTeacher.nip}</p>
+                <p className="text-slate-400 mt-0.5">{deletingTeacher.jabatan}</p>
               </div>
             </div>
 
@@ -1236,7 +1236,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               <button
                 type="button"
                 onClick={() => setDeletingTeacher(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>
@@ -1256,7 +1256,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: BATCH DELETE CONFIRMATION */}
       {isBatchDeleteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-900 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
               <span className="p-2.5 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-xl">
                 <Archive className="w-5 h-5" />
@@ -1265,14 +1265,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   Nonaktifkan {selectedIds.length} Guru Terpilih?
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-400">
                   Penghapusan Halus (Soft Delete Massal)
                 </p>
               </div>
             </div>
 
             <div className="py-4 space-y-3">
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Anda akan mengubah status <strong>{selectedIds.length}</strong> data guru menjadi Nonaktif. Mereka tidak akan muncul di daftar presensi harian, namun riwayat presensinya tetap tersimpan.
               </p>
               <div className="max-h-32 overflow-y-auto bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs space-y-1">
@@ -1297,7 +1297,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               <button
                 type="button"
                 onClick={() => setIsBatchDeleteModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>
@@ -1317,7 +1317,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: SINGLE CARD PREVIEW & PRINT */}
       {showCardModal && currentTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-white/10 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-400 rounded-xl">
@@ -1327,7 +1327,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                     Kartu Presensi Guru
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{currentTeacher.nama}</p>
+                  <p className="text-xs text-slate-400">{currentTeacher.nama}</p>
                 </div>
               </div>
               <button
@@ -1341,14 +1341,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
 
             {/* Size & Side Selector */}
             <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
-              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <div className="flex items-center gap-1.5 bg-white/5 backdrop-blur-xl p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setCardSide('front')}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition cursor-pointer ${
                     cardSide === 'front'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                      ? 'bg-white dark:bg-slate-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
                   Sisi Depan
@@ -1358,8 +1358,8 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   onClick={() => setCardSide('back')}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition cursor-pointer ${
                     cardSide === 'back'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                      ? 'bg-white dark:bg-slate-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
                   Sisi Belakang
@@ -1369,7 +1369,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               <select
                 value={selectedCardSize}
                 onChange={(e) => setSelectedCardSize(e.target.value as CardSizeOption)}
-                className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer"
+                className="px-3 py-1.5 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer"
               >
                 <option value="CR80">Ukuran CR80 (Standar KTP 54 x 85.6 mm)</option>
                 <option value="B2">Ukuran Plastik B2 (70 x 100 mm)</option>
@@ -1401,7 +1401,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={() => setShowCardModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
                   Tutup
                 </button>
@@ -1422,7 +1422,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: MASS PRINT TEACHER CARDS */}
       {showMassCardModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col p-6 shadow-2xl border border-white/10 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-400 rounded-xl">
@@ -1432,7 +1432,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                     Cetak Massal Kartu Guru (Grid A4)
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-400">
                     Mencetak {selectedIds.length} kartu guru siap potong dan laminasi
                   </p>
                 </div>
@@ -1453,7 +1453,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <select
                   value={selectedCardSize}
                   onChange={(e) => setSelectedCardSize(e.target.value as CardSizeOption)}
-                  className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 cursor-pointer"
+                  className="px-3 py-1.5 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl text-slate-900 dark:text-slate-100 cursor-pointer"
                 >
                   <option value="CR80">CR80 Standar KTP (53.98 x 85.6 mm)</option>
                   <option value="B2">Plastik B2 (70 x 100 mm)</option>
@@ -1465,14 +1465,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={() => setSelectedIds(teachers.map((t) => t.id))}
-                  className="px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
+                  className="px-3 py-1 text-xs font-medium text-slate-300 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
                 >
                   Pilih Semua ({teachers.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedIds([])}
-                  className="px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                  className="px-3 py-1 text-xs font-medium text-slate-300 hover:bg-white/10 rounded-lg cursor-pointer"
                 >
                   Batal Pilih
                 </button>
@@ -1484,7 +1484,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               {selectedIds.length === 0 ? (
                 <div className="p-12 text-center text-slate-400">
                   <CreditCard className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                  <p className="font-semibold text-slate-600 dark:text-slate-300">Belum ada kartu guru yang dipilih.</p>
+                  <p className="font-semibold text-slate-300">Belum ada kartu guru yang dipilih.</p>
                   <p className="text-xs text-slate-400 mt-1">Silakan klik 'Pilih Semua' di atas untuk mencetak seluruh kartu guru.</p>
                 </div>
               ) : (
@@ -1510,14 +1510,14 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
 
             {/* Footer actions */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 flex-shrink-0">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-400">
                 Total kartu yang akan dicetak: <strong className="text-slate-800 dark:text-slate-200">{selectedIds.length}</strong>
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowMassCardModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
                   Tutup
                 </button>
@@ -1539,7 +1539,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       {/* MODAL: IMPORT EXCEL */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-white/10 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 rounded-xl">
@@ -1571,7 +1571,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 <button
                   type="button"
                   onClick={handleDownloadTemplate}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-slate-800 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 rounded-lg text-xs font-semibold shadow-xs hover:bg-sky-50 dark:hover:bg-slate-700 transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/5 backdrop-blur-xl text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 rounded-lg text-xs font-semibold shadow-xs hover:bg-sky-50 dark:hover:bg-slate-700 transition cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download Template</span>
@@ -1587,7 +1587,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   type="file"
                   accept=".xlsx, .xls, .csv"
                   onChange={handleFileChange}
-                  className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 dark:file:bg-sky-950 file:text-sky-700 dark:file:text-sky-300 hover:file:bg-sky-100 dark:hover:file:bg-sky-900 cursor-pointer"
+                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 dark:file:bg-sky-950 file:text-sky-700 dark:file:text-sky-300 hover:file:bg-sky-100 dark:hover:file:bg-sky-900 cursor-pointer"
                 />
               </div>
 
@@ -1602,11 +1602,11 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     className={`p-3 rounded-xl border text-left text-xs transition cursor-pointer ${
                       importMode === 'append'
                         ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-950/60 text-sky-900 dark:text-sky-200 font-semibold'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                        : 'border-white/10 text-slate-400'
                     }`}
                   >
                     <p className="font-bold">Tambah / Gabung</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-[10px] text-slate-400 mt-0.5">
                       Memperbarui data jika NIP sama & menambahkan yang baru
                     </p>
                   </button>
@@ -1617,11 +1617,11 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     className={`p-3 rounded-xl border text-left text-xs transition cursor-pointer ${
                       importMode === 'replace'
                         ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 font-semibold'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                        : 'border-white/10 text-slate-400'
                     }`}
                   >
                     <p className="font-bold text-rose-700 dark:text-rose-400">Ganti Seluruh Data</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-[10px] text-slate-400 mt-0.5">
                       Menghapus data lama dan mengganti dengan isi file baru
                     </p>
                   </button>
@@ -1634,9 +1634,9 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Pratinjau ({importPreview.length} baris guru terbaca):
                   </p>
-                  <div className="max-h-36 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+                  <div className="max-h-36 overflow-y-auto border border-white/10 rounded-xl">
                     <table className="w-full text-left text-[11px]">
-                      <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold sticky top-0">
+                      <thead className="bg-white/5 backdrop-blur-xl text-slate-700 dark:text-slate-300 font-semibold sticky top-0">
                         <tr>
                           <th className="p-2">NIP</th>
                           <th className="p-2">Nama Guru</th>
@@ -1648,7 +1648,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                           <tr key={i} className="dark:bg-slate-900">
                             <td className="p-2 font-mono text-slate-900 dark:text-slate-100">{row.nip}</td>
                             <td className="p-2 font-medium text-slate-900 dark:text-slate-100">{row.nama}</td>
-                            <td className="p-2 text-slate-600 dark:text-slate-300">{row.jabatan}</td>
+                            <td className="p-2 text-slate-300">{row.jabatan}</td>
                           </tr>
                         ))}
                         {importPreview.length > 5 && (
@@ -1672,7 +1672,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                     setImportPreview([]);
                     setImportFile(null);
                   }}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>

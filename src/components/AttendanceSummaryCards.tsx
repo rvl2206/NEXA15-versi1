@@ -23,10 +23,10 @@ export const AttendanceSummaryCards: React.FC<AttendanceSummaryCardsProps> = ({ 
     <>
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3.5 rounded-2xl border border-white/10 shadow-sm transition-colors">
           <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500">Total Siswa Presensi</div>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{stats.totalSiswaMasuk}</div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5" title={`${stats.totalScanMasuk} Masuk, ${stats.totalScanPulang} Pulang`}>
+          <div className="text-xl font-black text-white mt-1">{stats.totalSiswaMasuk}</div>
+          <div className="text-[10px] text-slate-400 mt-0.5" title={`${stats.totalScanMasuk} Masuk, ${stats.totalScanPulang} Pulang`}>
             {stats.total} Total Scan ({stats.totalScanPulang} Pulang)
           </div>
         </div>
@@ -78,8 +78,8 @@ export const AttendanceSummaryCards: React.FC<AttendanceSummaryCardsProps> = ({ 
       </div>
 
       {/* Synchronization & Breakdown Info Banner */}
-      <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
+      <div className="bg-black/20 backdrop-blur-md/60 p-3.5 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-200 font-medium">
           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           <span>
             <strong>Data Sinkron dengan Dashboard:</strong> {stats.totalSiswaMasuk} Siswa Masuk ({stats.hadir} Hadir Tepat Waktu + {stats.terlambat} Terlambat) • {stats.scanPulang} Siswa Scan Pulang • {stats.total} Total Transaksi Scan.

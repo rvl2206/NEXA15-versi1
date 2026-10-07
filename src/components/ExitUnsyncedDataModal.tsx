@@ -118,12 +118,12 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/80 rounded-3xl max-w-lg w-full p-6 shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border-2 border-rose-500/80 rounded-3xl max-w-lg w-full p-6 shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/10 transition-all cursor-pointer"
           title="Batal dan Kembali"
         >
           <X className="w-5 h-5" />
@@ -135,10 +135,10 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
             <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50 dark:ring-emerald-900/20">
               <CloudCheck className="w-9 h-9" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">
+            <h3 className="text-lg font-black text-white">
               Semua Data Telah Terkirim ke Database!
             </h3>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
               Seluruh data presensi dan perubahan telah tersimpan aman di Database Server. Perangkat Anda dapat keluar sekarang tanpa risiko kehilangan data.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -153,7 +153,7 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="w-full sm:w-auto px-5 py-2.5 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Kembali ke Aplikasi
               </button>
@@ -173,7 +173,7 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
                     Peringatan Keluar Aplikasi
                   </span>
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 leading-snug">
+                <h3 className="text-base sm:text-lg font-black text-white mt-1 leading-snug">
                   Ada {total} Data Belum Terkirim ke Database!
                 </h3>
               </div>
@@ -230,14 +230,14 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
             </div>
 
             {/* Preview items */}
-            <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 mb-5 scrollbar-thin">
+            <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 rounded-2xl bg-white/5 backdrop-blur-xl/60 border border-white/10 mb-5 scrollbar-thin">
               {queueDetails.items.slice(0, 10).map((item, idx) => {
                 const info = getItemLabel(item);
                 const IconComponent = info.icon;
                 return (
                   <div
                     key={`${item.id}-${idx}`}
-                    className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-xs"
+                    className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10/80 text-xs"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="p-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shrink-0">
@@ -247,7 +247,7 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
                         <p className="font-bold text-slate-900 dark:text-slate-100 truncate text-[11px]">
                           {info.title}
                         </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                        <p className="text-[10px] text-slate-400 truncate">
                           {info.subtitle}
                         </p>
                       </div>
@@ -259,7 +259,7 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
                 );
               })}
               {queueDetails.items.length > 10 && (
-                <p className="text-center text-[10px] text-slate-500 dark:text-slate-400 py-1">
+                <p className="text-center text-[10px] text-slate-400 py-1">
                   ...dan {queueDetails.items.length - 10} data lainnya
                 </p>
               )}
@@ -292,7 +292,7 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer text-center"
+                  className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer text-center"
                 >
                   Batal & Kembali
                 </button>

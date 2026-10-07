@@ -231,29 +231,29 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize) || 1;
 
     return (
-      <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+      <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10/50 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
         <div className="flex flex-wrap items-center gap-3">
           <div>
             Menampilkan{' '}
-            <span className="font-bold text-slate-800 dark:text-slate-200">
+            <span className="font-bold text-white dark:text-slate-200">
               {pageSize === 0 ? 1 : (currentPage - 1) * pageSize + 1}
             </span>{' '}
             -{' '}
-            <span className="font-bold text-slate-800 dark:text-slate-200">
+            <span className="font-bold text-white dark:text-slate-200">
               {pageSize === 0 ? totalItems : Math.min(currentPage * pageSize, totalItems)}
             </span>{' '}
-            dari <span className="font-bold text-slate-800 dark:text-slate-200">{totalItems}</span> data
+            dari <span className="font-bold text-white dark:text-slate-200">{totalItems}</span> data
           </div>
 
-          <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
-            <span className="text-slate-500 font-medium">Per Halaman:</span>
+          <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
+            <span className="text-slate-400 font-medium">Per Halaman:</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg font-semibold focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              className="px-2 py-1 text-xs border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg font-semibold focus:ring-2 focus:ring-blue-600 cursor-pointer"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -270,18 +270,18 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
             >
               Sebelumnya
             </button>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
+            <span className="font-semibold text-white dark:text-slate-200">
               Halaman {currentPage} dari {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
             >
               Berikutnya
             </button>
@@ -1134,16 +1134,16 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+      <div className="bg-black/20 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/10 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <FileSpreadsheet className="w-4 h-4" />
             <span>Rekapitulasi Kehadiran Siswa</span>
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">
             Laporan Absensi NEXA15
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Pilih jenis rekapitulasi (Harian / Bulanan), atur filter kelas, dan unduh laporan resmi Excel/PDF.
           </p>
         </div>
@@ -1295,14 +1295,14 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10/80 p-1.5 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           <button
             onClick={() => setRecapMode('harian')}
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'harian'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <CalendarDays className="w-4 h-4" />
@@ -1314,7 +1314,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'bulanan'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <CalendarRange className="w-4 h-4" />
@@ -1326,7 +1326,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`w-full sm:w-auto sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'analisis_terlambat'
                 ? 'bg-red-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
@@ -1338,7 +1338,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'semua'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <Calendar className="w-4 h-4" />
@@ -1347,7 +1347,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         </div>
 
         {/* Status Indicator */}
-        <div className="px-3 py-1 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-slate-200/60 dark:border-slate-700 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hidden md:flex items-center gap-2">
+        <div className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10/80 dark:bg-slate-900/80 rounded-xl border border-white/10/60 dark:border-slate-700 text-[11px] font-semibold text-slate-300 hidden md:flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
           <span>
             {recapMode === 'harian' && `Menampilkan Data Hari: ${formatIndoDate(filterTanggal)}`}
@@ -1360,7 +1360,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
 
       {/* Main Filter Control Box */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 transition-colors">
+      <div className="bg-black/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-sm space-y-3 transition-colors">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Dynamic Time Filter Selector based on Mode */}
           {recapMode === 'harian' && (
@@ -1401,7 +1401,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                       className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all ${
                         isSelected
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                          : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-200 dark:text-slate-300 border-white/10 hover:bg-slate-200'
                       }`}
                       title={`Tampilkan data tanggal ${dStr}`}
                     >
@@ -1442,7 +1442,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
           {recapMode === 'semua' && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">Filter Tanggal (Opsional)</label>
+                <label className="block text-[11px] font-semibold text-slate-400">Filter Tanggal (Opsional)</label>
                 {semuaTanggalFilter && (
                   <button
                     type="button"
@@ -1458,14 +1458,14 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 value={semuaTanggalFilter}
                 onChange={(e) => setSemuaTanggalFilter(e.target.value)}
                 placeholder="Semua Tanggal"
-                className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                className="w-full px-3 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
               />
             </div>
           )}
 
           {/* Search Name/NISN */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Cari Nama / NISN</label>
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Cari Nama / NISN</label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -1473,18 +1473,18 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 value={filterNama}
                 onChange={(e) => setFilterNama(e.target.value)}
                 placeholder="Nama / NISN..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
               />
             </div>
           </div>
 
           {/* Filter Class */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filter Kelas</label>
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Filter Kelas</label>
             <select
               value={filterKelas}
               onChange={(e) => setFilterKelas(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white font-medium"
+              className="w-full px-3 py-1.5 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl border border-white/10 dark:text-white font-medium"
             >
               <option value="Semua">Semua Kelas</option>
               {classOptions.map((c) => (
@@ -1497,11 +1497,11 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           {/* Filter Status */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Status Kehadiran</label>
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Status Kehadiran</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white font-medium"
+              className="w-full px-3 py-1.5 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl border border-white/10 dark:text-white font-medium"
             >
               <option value="Semua">Semua Status</option>
               <option value="Hadir">Hadir</option>
@@ -1514,11 +1514,11 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           {/* Filter Jenis Presensi (Masuk / Pulang) */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Jenis Presensi</label>
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Jenis Presensi</label>
             <select
               value={filterJenis}
               onChange={(e) => setFilterJenis(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white font-medium"
+              className="w-full px-3 py-1.5 text-xs border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl border border-white/10 dark:text-white font-medium"
             >
               <option value="Semua">Semua Scan (Masuk & Pulang)</option>
               <option value="Masuk">Hanya Scan Masuk</option>
@@ -1530,10 +1530,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500">Total Siswa Presensi</div>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{stats.totalSiswaMasuk}</div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5" title={`${stats.totalScanMasuk} Masuk, ${stats.totalScanPulang} Pulang`}>
+        <div className="bg-black/20 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 shadow-sm transition-colors">
+          <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-400">Total Siswa Presensi</div>
+          <div className="text-xl font-black text-white mt-1">{stats.totalSiswaMasuk}</div>
+          <div className="text-[10px] text-slate-400 mt-0.5" title={`${stats.totalScanMasuk} Masuk, ${stats.totalScanPulang} Pulang`}>
             {stats.total} Total Scan ({stats.totalScanPulang} Pulang)
           </div>
         </div>
@@ -1585,8 +1585,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       </div>
 
       {/* Synchronization & Breakdown Info Banner */}
-      <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
+      <div className="bg-black/20 backdrop-blur-md/60 p-3.5 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-slate-200 font-medium">
           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           <span>
             <strong>Data Sinkron dengan Dashboard:</strong> {stats.totalSiswaMasuk} Siswa Masuk ({stats.hadir} Hadir Tepat Waktu + {stats.terlambat} Terlambat) • {stats.scanPulang} Siswa Scan Pulang • {stats.total} Total Transaksi Scan.
@@ -1604,8 +1604,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
       {/* Sub-View Selector for Harian mode */}
       {recapMode === 'harian' && (
-        <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+        <div className="flex items-center justify-between bg-black/20 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
             <Clock3 className="w-4 h-4 text-blue-600" />
             <span>Tampilan Absensi Harian ({formatIndoDate(filterTanggal)}):</span>
           </div>
@@ -1616,7 +1616,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 harianViewType === 'pasangan'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -1628,7 +1628,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 harianViewType === 'log'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
               }`}
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1640,8 +1640,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
       {/* Monthly Sub-View Selector (Only when in Bulanan mode) */}
       {recapMode === 'bulanan' && (
-        <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+        <div className="flex items-center justify-between bg-black/20 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
             <BarChart3 className="w-4 h-4 text-blue-600" />
             <span>Tampilan Rekap Bulanan ({formatIndoMonth(filterBulan)}):</span>
           </div>
@@ -1652,7 +1652,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 monthlyViewType === 'agregat'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -1664,7 +1664,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 monthlyViewType === 'log'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
               }`}
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1677,13 +1677,13 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       {/* Render Table based on selected mode & view type */}
       {recapMode === 'harian' && harianViewType === 'pasangan' ? (
         /* Harian Paired View Table (Jam Masuk, Jam Pulang, Status, Jumlah Waktu Terlambat) */
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
+          <div className="p-4 border-b border-white/5 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+              <h3 className="font-extrabold text-sm text-white">
                 Rekap Pasangan Waktu Masuk & Pulang Siswa ({formatIndoDate(filterTanggal)})
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-400">
                 Mencatat waktu masuk, waktu pulang, serta perhitungan akurat jumlah waktu keterlambatan siswa.
               </p>
             </div>
@@ -1724,8 +1724,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 onClick={() => setFilterStatusPulang('Semua')}
                 className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
                   filterStatusPulang === 'Semua'
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    ? 'bg-slate-900 text-white dark:bg-white/10 border border-white/10 dark:text-white shadow-sm'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
                 }`}
               >
                 Semua ({pairedSummaryCounts.total})
@@ -1761,7 +1761,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5">No</th>
                   <th className="p-3.5">Nama Siswa</th>
@@ -1774,17 +1774,17 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   <th className="p-3.5 text-center">Aksi / Koreksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+              <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200">
                 {pairedDailyRecords.length > 0 ? (
                   paginateList<any>(pairedDailyRecords, currentPage, pageSize).map((item, index) => (
-                    <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
+                    <tr key={item.student.id} className="hover:bg-white/5 border border-white/10 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-400">
                         {pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                       </td>
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">{item.student.nama}</td>
+                      <td className="p-3.5 font-bold text-white">{item.student.nama}</td>
                       <td className="p-3.5">
-                        <span className="font-mono text-slate-600 dark:text-slate-400">{item.student.nisn}</span>
-                        <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({item.student.kelas})</span>
+                        <span className="font-mono text-slate-400">{item.student.nisn}</span>
+                        <span className="text-slate-400 dark:text-slate-400 font-semibold ml-1.5">({item.student.kelas})</span>
                       </td>
                       <td className="p-3.5">
                         {item.masuk ? (
@@ -1802,7 +1802,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                           <button
                             type="button"
                             onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Masuk')}
-                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-0.5 rounded border border-dashed border-white/10 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
                             title={`Input Presensi Masuk untuk ${item.student.nama}`}
                           >
                             <span>-</span>
@@ -1846,7 +1846,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             <button
                               type="button"
                               onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
-                              className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                              className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-white/10 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
                               title={`Input Presensi Pulang untuk ${item.student.nama}`}
                             >
                               <span>-</span>
@@ -1890,10 +1890,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             Tepat Waktu
                           </span>
                         ) : (
-                          <span className="text-slate-400 dark:text-slate-500">-</span>
+                          <span className="text-slate-400 dark:text-slate-400">-</span>
                         )}
                       </td>
-                      <td className="p-3.5 text-slate-500 truncate max-w-[120px]">{formatPetugasRole(item.petugas)}</td>
+                      <td className="p-3.5 text-slate-400 truncate max-w-[120px]">{formatPetugasRole(item.petugas)}</td>
                       <td className="p-3.5 text-center flex items-center justify-center gap-1">
                         <button
                           type="button"
@@ -1945,7 +1945,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                           className={`p-1.5 rounded-lg transition-colors inline-flex items-center justify-center ${
                             item.student.no_hp_ortu
                               ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
-                              : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                              : 'text-slate-400 dark:text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/10'
                           }`}
                           title={item.student.no_hp_ortu ? `Kirim Notifikasi WA (${item.student.no_hp_ortu})` : 'Input No HP & Kirim WA'}
                         >
@@ -2009,7 +2009,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
             {/* Discipline Stat Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-red-800/50 text-xs">
-              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
                 <div className="text-red-200 text-[10px] uppercase font-bold">Total Siswa Indisiplin</div>
                 <div className="text-lg font-black text-white mt-0.5">{latenessAnalysisData.length} Siswa</div>
               </div>
@@ -2041,17 +2041,17 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
           </div>
 
           {/* Discipline Analysis Table & Sub-filters */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
+            <div className="p-4 border-b border-white/5 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
                   <span>Rekapitulasi Kedisiplinan Siswa</span>
                   <span className="text-[10px] bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 px-2 py-0.5 rounded-full font-mono">
                     Urutan Tingkat Kritis
                   </span>
                 </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Daftar diurutkan berdasarkan jumlah hari Alpa dan frekuensi keterlambatan siswa. Filter Aktif: <strong className="text-slate-800 dark:text-slate-200">{filterKelas}</strong>.
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Daftar diurutkan berdasarkan jumlah hari Alpa dan frekuensi keterlambatan siswa. Filter Aktif: <strong className="text-white dark:text-slate-200">{filterKelas}</strong>.
                 </p>
               </div>
 
@@ -2063,7 +2063,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                     disciplineFilterType === 'semua_indisiplin'
                       ? 'bg-red-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
                   }`}
                 >
                   Semua Terlambat & Alpa ({latenessAnalysisData.length})
@@ -2074,7 +2074,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                     disciplineFilterType === 'hanya_terlambat'
                       ? 'bg-amber-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
                   }`}
                 >
                   Terlambat ({latenessAnalysisData.filter((i) => i.lateCount > 0).length})
@@ -2085,7 +2085,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                     disciplineFilterType === 'hanya_alpa'
                       ? 'bg-rose-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200'
                   }`}
                 >
                   Alpa / Tidak Hadir ({latenessAnalysisData.filter((i) => i.alpaCount > 0).length})
@@ -2095,7 +2095,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+                <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                   <tr>
                     <th className="p-3.5">No</th>
                     <th className="p-3.5">Nama Siswa</th>
@@ -2107,15 +2107,15 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                     <th className="p-3.5 text-center">Kirim WA Ortu</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+                <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200">
                   {filteredDisciplineData.length > 0 ? (
                     paginateList<any>(filteredDisciplineData, currentPage, pageSize).map((item, idx) => (
-                      <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="p-3.5 font-bold text-slate-400 dark:text-slate-500">
+                      <tr key={item.student.id} className="hover:bg-white/5 border border-white/10 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="p-3.5 font-bold text-slate-400 dark:text-slate-400">
                           {pageSize === 0 ? idx + 1 : (currentPage - 1) * pageSize + idx + 1}
                         </td>
                         <td className="p-3.5">
-                          <div className="font-extrabold text-slate-900 dark:text-white">{item.student.nama}</div>
+                          <div className="font-extrabold text-white">{item.student.nama}</div>
                           <div className="space-y-0.5 mt-0.5 text-[10px]">
                             {item.lateDates.length > 0 && (
                               <div className="text-amber-700 dark:text-amber-400 font-mono">
@@ -2130,8 +2130,8 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                           </div>
                         </td>
                         <td className="p-3.5">
-                          <span className="font-mono text-slate-600 dark:text-slate-400">{item.student.nisn}</span>
-                          <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({item.student.kelas})</span>
+                          <span className="font-mono text-slate-400">{item.student.nisn}</span>
+                          <span className="text-slate-400 dark:text-slate-400 font-semibold ml-1.5">({item.student.kelas})</span>
                         </td>
                         <td className="p-3.5 text-center">
                           {item.lateCount > 0 ? (
@@ -2169,7 +2169,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             </span>
                           )}
                         </td>
-                        <td className="p-3.5 max-w-xs leading-relaxed text-[11px] text-slate-700 dark:text-slate-300">
+                        <td className="p-3.5 max-w-xs leading-relaxed text-[11px] text-slate-200 dark:text-slate-300">
                           {item.rekomendasiPembinaan}
                         </td>
                         <td className="p-3.5 text-center">
@@ -2225,24 +2225,24 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       ) : recapMode === 'bulanan' && monthlyViewType === 'agregat' ? (
 
         /* Monthly Aggregate Table Per Student */
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
+          <div className="p-4 border-b border-white/5 dark:border-slate-800 flex items-center justify-between">
             <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+              <h3 className="font-extrabold text-sm text-white">
                 Tabel Ringkasan Kehadiran Bulanan Per Siswa
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-400">
                 Total kumulatif kehadiran dan akumulasi waktu keterlambatan siswa pada bulan {formatIndoMonth(filterBulan)}.
               </p>
             </div>
-            <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">
+            <span className="text-xs font-semibold text-slate-400 bg-white/5 backdrop-blur-xl border border-white/10 px-3 py-1 rounded-xl">
               {monthlyStudentSummaries.length} Siswa Terdaftar
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5">No</th>
                   <th className="p-3.5">Nama Siswa</th>
@@ -2258,17 +2258,17 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   <th className="p-3.5 text-center">Cetak / Slip</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+              <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200">
                 {monthlyStudentSummaries.length > 0 ? (
                   paginateList<any>(monthlyStudentSummaries, currentPage, pageSize).map((item, index) => (
-                    <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
+                    <tr key={item.student.id} className="hover:bg-white/5 border border-white/10 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-400">
                         {pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                       </td>
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">{item.student.nama}</td>
+                      <td className="p-3.5 font-bold text-white">{item.student.nama}</td>
                       <td className="p-3.5">
-                        <span className="font-mono text-slate-600 dark:text-slate-400">{item.student.nisn}</span>
-                        <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({item.student.kelas})</span>
+                        <span className="font-mono text-slate-400">{item.student.nisn}</span>
+                        <span className="text-slate-400 dark:text-slate-400 font-semibold ml-1.5">({item.student.kelas})</span>
                       </td>
                       <td className="p-3.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{item.hadir}</td>
                       <td className="p-3.5 text-center font-bold text-amber-600 dark:text-amber-400">{item.terlambat}</td>
@@ -2278,7 +2278,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                       <td className="p-3.5 text-center font-bold text-blue-600 dark:text-blue-400">{item.izin}</td>
                       <td className="p-3.5 text-center font-bold text-purple-600 dark:text-purple-400">{item.sakit}</td>
                       <td className="p-3.5 text-center font-bold text-red-600 dark:text-red-400">{item.alpa}</td>
-                      <td className="p-3.5 text-center font-bold text-slate-900 dark:text-white">{item.totalMasuk} kali</td>
+                      <td className="p-3.5 text-center font-bold text-white">{item.totalMasuk} kali</td>
                       <td className="p-3.5 text-center">
                         <span
                           className={`inline-block font-extrabold px-2.5 py-0.5 rounded-full text-[11px] ${
@@ -2332,11 +2332,11 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         </div>
       ) : (
         /* Standard Attendance Record Log Table */
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
+          <div className="p-4 border-b border-white/5 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                <h3 className="font-extrabold text-sm text-white">
                   Log Detail Absensi Siswa ({filteredAttendance.length} Rekaman)
                 </h3>
                 {selectedAttendanceIds.length > 0 && (
@@ -2345,7 +2345,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 {recapMode === 'harian' && `Catatan riwayat scan absensi pada hari ${formatIndoDate(filterTanggal)}.`}
                 {recapMode === 'bulanan' && `Catatan riwayat scan absensi pada bulan ${formatIndoMonth(filterBulan)}.`}
                 {recapMode === 'semua' && 'Seluruh log riwayat scan absensi.'}
@@ -2367,7 +2367,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5 w-10 text-center">
                     <input
@@ -2377,7 +2377,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                         selectedAttendanceIds.length === filteredAttendance.length
                       }
                       onChange={() => handleToggleSelectAllAttendance(filteredAttendance)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="rounded border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       title="Pilih Semua / Batal Pilih"
                     />
                   </th>
@@ -2393,7 +2393,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                   <th className="p-3.5 text-center">Hapus</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+              <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200">
                 {filteredAttendance.length > 0 ? (
                   paginateList<any>(filteredAttendance, currentPage, pageSize).map((r, index) => {
                     const lateMin = calculateLateMinutes(r, store.getSettings().cutoffTime);
@@ -2401,7 +2401,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                     return (
                       <tr
                         key={r.id}
-                        className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                        className={`hover:bg-white/5 border border-white/10 dark:hover:bg-slate-800/50 transition-colors ${
                           isSelected ? 'bg-sky-50/60 dark:bg-sky-950/30' : ''
                         }`}
                       >
@@ -2410,20 +2410,20 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleSelectAttendance(r.id)}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            className="rounded border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
                         </td>
-                        <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
+                        <td className="p-3.5 font-medium text-slate-400 dark:text-slate-400">
                           {pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                         </td>
-                        <td className="p-3.5 font-semibold text-slate-900 dark:text-white">{r.tanggal}</td>
-                        <td className="p-3.5 font-mono text-slate-700 dark:text-slate-300">
+                        <td className="p-3.5 font-semibold text-white">{r.tanggal}</td>
+                        <td className="p-3.5 font-mono text-slate-200 dark:text-slate-300">
                           {r.timestamp ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jayapura' }) + ' WIT' : '-'}
                         </td>
-                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">{r.nama}</td>
+                        <td className="p-3.5 font-bold text-white">{r.nama}</td>
                         <td className="p-3.5">
-                          <span className="font-mono text-slate-600 dark:text-slate-400">{r.nisn}</span>
-                          <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({r.kelas})</span>
+                          <span className="font-mono text-slate-400">{r.nisn}</span>
+                          <span className="text-slate-400 dark:text-slate-400 font-semibold ml-1.5">({r.kelas})</span>
                         </td>
                         <td className="p-3.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -2456,10 +2456,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                               Tepat Waktu
                             </span>
                           ) : (
-                            <span className="text-slate-400 dark:text-slate-500">-</span>
+                            <span className="text-slate-400 dark:text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="p-3.5 text-slate-500 truncate max-w-[120px]">{formatPetugasRole(r.petugas)}</td>
+                        <td className="p-3.5 text-slate-400 truncate max-w-[120px]">{formatPetugasRole(r.petugas)}</td>
                         <td className="p-3.5 text-center flex items-center justify-center gap-1">
                           <button
                             type="button"

@@ -100,17 +100,17 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
   return (
     <>
       {/* Change Password Card for Admin */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-5 transition-colors">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-extrabold text-white">
                 Ubah Kata Sandi (Role Admin)
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-400">
                 Perbarui password akun Administrator Utama untuk menjaga keamanan sistem.
               </p>
             </div>
@@ -131,7 +131,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
 
         {passError && (
           <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-xl text-xs font-bold flex items-center gap-2">
-            <span className="text-rose-600 dark:text-rose-400 shrink-0 font-bold">âŒ</span>
+            <span className="text-rose-600 dark:text-rose-400 shrink-0 font-bold">❌</span>
             <span>{passError}</span>
           </div>
         )}
@@ -153,7 +153,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
                 autoCapitalize="none"
                 spellCheck={false}
                 data-lpignore="true"
-                className="w-full pl-10 pr-10 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                className="w-full pl-10 pr-10 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                 required
               />
               <button
@@ -183,7 +183,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
                   autoCapitalize="none"
                   spellCheck={false}
                   data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
               </div>
@@ -205,7 +205,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
                   autoCapitalize="none"
                   spellCheck={false}
                   data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
+                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600 font-medium"
                   required
                 />
               </div>
@@ -228,7 +228,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
       </div>
 
       {/* Reset & Maintenance Zone */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-4 transition-colors">
         <h4 className="font-bold text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Pemeliharaan Cache & Reset Database</h4>
         
         {/* Clear Cache Card */}
@@ -289,10 +289,10 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
           </button>
         </div>
 
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-4 bg-white/5 backdrop-blur-xl/50 border border-white/10 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Ke Data Awal Contoh</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 mt-0.5">
               Mengembalikan data siswa dan rekaman absensi ke contoh awal (termasuk Dadang Buamona & 10 siswa sampel).
             </p>
           </div>

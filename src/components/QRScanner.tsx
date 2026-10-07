@@ -1165,8 +1165,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   return (
     <div className="space-y-6">
       {/* Mode Switcher & Scan Configuration Banner */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span
               className={`p-2.5 rounded-xl ${
@@ -1183,10 +1184,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </span>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Scanner Presensi Digital NEXA15
+                <h2 className="text-xl font-bold text-white tracking-wide">
+                  Scanner Presensi NEXA15
                 </h2>
-                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
                   <ShieldCheck className="w-3 h-3" />
                   Anti Scan Ganda Aktif
                 </span>
@@ -1206,7 +1207,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 {scanTargetMode === 'guru'
                   ? 'Mode target: Presensi Guru & Pegawai (Scan Kartu NIP / QR)'
                   : 'Mode target: Presensi Siswa Sekolah (Scan Kartu NISN / QR)'}
@@ -1215,7 +1216,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
 
           {/* Segmented Switcher for Target (Siswa vs Guru) */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 w-full lg:w-auto">
+          <div className="relative z-10 flex items-center gap-1.5 bg-slate-900/50 p-1.5 rounded-xl border border-white/5 w-full lg:w-auto">
             <button
               type="button"
               onClick={() => {
@@ -1224,8 +1225,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               }}
               className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
                 scanTargetMode === 'siswa'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 shadow-sm border border-indigo-200/60 dark:border-indigo-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  ? 'bg-indigo-500 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5'
               }`}
             >
               <GraduationCap className="w-4 h-4" />
@@ -1240,8 +1241,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               }}
               className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
                 scanTargetMode === 'guru'
-                  ? 'bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-sm border border-sky-200/60 dark:border-sky-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  ? 'bg-sky-500 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5'
               }`}
             >
               <Briefcase className="w-4 h-4" />
@@ -1259,7 +1260,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <CreditCard className="w-4 h-4 text-amber-100" />
               <span>Lupa Kartu (Piket)</span>
               {todayLupaKartuCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 bg-white/30 text-white text-[10px] font-black rounded-full border border-white/40">
+                <span className="ml-1 px-1.5 py-0.2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/30 text-white text-[10px] font-black rounded-full border border-white/40">
                   {todayLupaKartuCount}
                 </span>
               )}
@@ -1284,7 +1285,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       Antisipasi Data Hilang
                     </span>
                   </div>
-                  <p className="text-xs text-slate-800 dark:text-slate-200 mt-1 leading-relaxed">
+                  <p className="text-xs text-white dark:text-slate-200 mt-1 leading-relaxed">
                     Data scan presensi ini tersimpan di memori lokal dan <b>belum terekam ke Database Cloud</b>. Segera klik tombol <b>Kirim ke Database</b> agar rekapitulasi presensi tidak hilang saat berpindah perangkat atau browser ditutup.
                   </p>
                 </div>
@@ -1293,7 +1294,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-unsynced-modal'))}
-                  className="px-3.5 py-2 text-xs font-black bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-slate-700 active:scale-95 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-black bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-slate-700 active:scale-95 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
                   <span>Buka Popup Petugas</span>
@@ -1336,7 +1337,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       Presensi Disimpan di Cache Lokal
                     </span>
                   </div>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-200 dark:text-slate-300 mt-1 leading-relaxed">
                     Aplikasi presensi mengandalkan koneksi database remote Supabase Cloud PostgreSQL. Karena internet terputus, Anda tetap dapat melakukan scan QR - data akan disimpan sementara di memori lokal browser dan otomatis disinkronkan ke server cloud saat internet terhubung kembali.
                   </p>
                 </div>
@@ -1358,34 +1359,34 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         )}
 
         {/* Banner Status Hari & Aturan Jam Presensi (Senin-Kamis vs Jumat) */}
-        <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all shadow-xs ${
+        <div className={`p-4 rounded-3xl border transition-all ${
           scheduleStatus.isFriday
-            ? 'bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border-emerald-500/30 dark:border-emerald-500/20'
+            ? 'bg-emerald-500/10 border-emerald-500/20'
             : scheduleStatus.isWeekend
-            ? 'bg-slate-100/80 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
-            : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-slate-500/5 border-blue-500/25 dark:border-blue-500/20'
+            ? 'bg-slate-800/50 border-slate-700/50'
+            : 'bg-blue-500/10 border-blue-500/20'
         }`}>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className={`p-2.5 rounded-xl shrink-0 ${
                 scheduleStatus.isFriday
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-emerald-500/20 text-emerald-400'
                   : scheduleStatus.isWeekend
-                  ? 'bg-slate-500 text-white'
-                  : 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-slate-700 text-slate-300'
+                  : 'bg-blue-500/20 text-blue-400'
               }`}>
                 <Calendar className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                  <h4 className="text-xs sm:text-sm font-black text-white">
                     {scheduleStatus.statusTitle}
                   </h4>
                   <span className={`px-2 py-0.5 text-[10px] font-black rounded-full border ${
                     scheduleStatus.isFriday
                       ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                       : scheduleStatus.isWeekend
-                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300'
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-200 dark:text-slate-300 border-white/20'
                       : 'bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700'
                   }`}>
                     {scheduleStatus.statusBadge}
@@ -1395,15 +1396,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
                       : scheduleStatus.currentSession === 'Masuk'
                       ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-400'
                   }`}>
                     Sesi Aktif: {scheduleStatus.currentSession === 'Pulang' ? '🔔 Absen Pulang' : scheduleStatus.currentSession === 'Masuk' ? '⏰ Absen Masuk' : '🌴 Hari Libur'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
                   {scheduleStatus.statusDescription}
                 </p>
-                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 flex-wrap">
                   <span>⏰ <b>Batas Masuk:</b> {store.getSettings().cutoffTime || '07:15'} WIT</span>
                   <span>•</span>
                   <span>🚪 <b>Mulai Pulang:</b> Jam {scheduleStatus.pulangStartTime} WIT ke atas</span>
@@ -1414,21 +1415,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         </div>
 
         {/* Scan Type & Queue Mode Control Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-white/5 dark:border-slate-800 text-xs">
           {/* Scan Type Selector (Otomatis / Masuk / Pulang) */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <span className="font-extrabold text-[11px] uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-blue-500" />
               <span>Sesi Presensi:</span>
             </span>
-            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+            <div className="inline-flex rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl p-1 border border-white/10">
               <button
                 type="button"
                 onClick={() => setScanTypeMode('Auto')}
                 className={`px-3 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                   scanTypeMode === 'Auto'
-                    ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl text-blue-700 dark:text-blue-400 shadow-sm border border-white/10'
+                    : 'text-slate-400 hover:text-white'
                 }`}
                 title={`Otomatis tentukan Masuk/Pulang: Hari Jumat mulai jam ${scheduleStatus.pulangStartTime} WIT, hari biasa mulai ${store.getSettings().pulangStartTimeNormal || '13:30'} WIT`}
               >
@@ -1440,7 +1441,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3 py-1 text-[11px] font-extrabold rounded-lg flex items-center gap-1 transition-all ${
                   scanTypeMode === 'Masuk'
                     ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white'
                 }`}
                 title="Paksa hanya rekam presensi Masuk"
               >
@@ -1453,7 +1454,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3 py-1 text-[11px] font-extrabold rounded-lg flex items-center gap-1 transition-all ${
                   scanTypeMode === 'Pulang'
                     ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    : 'text-slate-400 hover:text-white'
                 }`}
                 title="Paksa hanya rekam presensi Pulang"
               >
@@ -1493,9 +1494,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Camera & Scanner Panel */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-between transition-colors">
+        <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden flex flex-col items-center justify-between">
           {/* Header Controls */}
-          <div className="w-full flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 flex-wrap gap-2">
+          <div className="w-full flex items-center justify-between pb-3 border-b border-white/5 dark:border-slate-800 mb-4 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span className="flex h-3 w-3 relative">
                 <span
@@ -1509,11 +1510,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   }`}
                 ></span>
               </span>
-              <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              <span className="text-xs font-extrabold text-white uppercase tracking-wider">
                 {isCameraActive ? 'Kamera Aktif & Siap Scan' : 'Kamera Siaga (Off)'}
               </span>
               {isOnline ? (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                   <Wifi className="w-3 h-3" />
                   <span>Cloud Online</span>
                 </span>
@@ -1536,7 +1537,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       startCamera(e.target.value);
                     }
                   }}
-                  className="px-2.5 py-1 text-[11px] font-bold border border-slate-200 dark:border-slate-700 rounded-lg dark:bg-slate-800 dark:text-white"
+                  className="px-2.5 py-1 text-[11px] font-bold border border-white/10 rounded-lg dark:bg-slate-800 dark:text-white"
                 >
                   {availableCameras.map((cam) => (
                     <option key={cam.id} value={cam.id}>
@@ -1561,14 +1562,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
           {/* Video Container Box */}
           <div
-            className={`w-full max-w-md aspect-square bg-slate-950 rounded-2xl border-2 overflow-hidden relative flex items-center justify-center shadow-inner transition-all ${
+            className={`w-full max-w-md aspect-square bg-slate-950/60 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] overflow-hidden relative flex items-center justify-center transition-all ${
               scanFlash
-                ? 'border-emerald-400 ring-4 ring-emerald-400/30'
-                : 'border-dashed border-slate-700'
+                ? 'border-emerald-400 ring-4 ring-emerald-400/30 shadow-[inset_0_0_40px_rgba(16,185,129,0.2)]'
+                : 'shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]'
             }`}
           >
             {/* Target element for html5-qrcode */}
             <div id="reader" className="w-full h-full"></div>
+
+            {/* Premium Animated Crosshair / Scanner Frame */}
+            {isCameraActive && !isSmallQrMode && (
+              <div className="absolute inset-8 sm:inset-12 pointer-events-none z-10">
+                {/* Corner Accents */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400/80 dark:border-blue-500/80 rounded-tl-2xl animate-pulse"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400/80 dark:border-blue-500/80 rounded-tr-2xl animate-pulse"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400/80 dark:border-blue-500/80 rounded-bl-2xl animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400/80 dark:border-blue-500/80 rounded-br-2xl animate-pulse"></div>
+                
+                {/* Subtle Inner Frame */}
+                <div className="absolute inset-0 border border-white/10 rounded-2xl shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"></div>
+              </div>
+            )}
 
             {/* Active Scanning Laser Line Overlay */}
             {isCameraActive && (
@@ -1579,14 +1594,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             {isCameraActive && isSmallQrMode && (
               <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-amber-400/80 rounded-2xl pointer-events-none z-10 flex flex-col justify-between p-2 shadow-inner">
                 <div className="flex justify-between items-center text-[10px] font-black text-amber-300">
-                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40">
+                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40 shadow-sm">
                     MACRO ZOOM {zoomLevel.toFixed(1)}X
                   </span>
-                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40">
+                  <span className="bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-amber-500/40 shadow-sm">
                     HD SCAN
                   </span>
                 </div>
-                <div className="self-center bg-slate-950/85 px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-200 border border-amber-500/40 backdrop-blur-sm shadow-md">
+                <div className="self-center bg-slate-950/85 px-3 py-1.5 rounded-xl text-[10px] font-bold text-amber-200 border border-amber-500/40 backdrop-blur-sm shadow-xl">
                   Jarak Kartu Ideal: 15-20 cm
                 </div>
               </div>
@@ -1688,12 +1703,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             )}
 
             {!isCameraActive && (
-              <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center text-center p-6 space-y-3 z-10 overflow-y-auto">
-                <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center shadow-md flex-shrink-0">
+              <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-3 z-10 overflow-y-auto">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-cyan-400 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0">
                   {cameraError ? (
                     <CameraOff className="w-7 h-7 text-amber-400" />
                   ) : (
-                    <QrCode className="w-7 h-7" />
+                    <QrCode className="w-7 h-7 text-emerald-400" />
                   )}
                 </div>
                 <div>
@@ -1741,21 +1756,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
 
           {/* Camera Settings & Tuning Bar */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 w-full px-1 text-xs text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 w-full px-1 text-xs text-white/50 pt-2 border-t border-white/10">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setSoundEnabled(!soundEnabled)}
                 className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all flex items-center gap-1.5 border ${
                   soundEnabled
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800'
-                    : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-400 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
                 }`}
                 title="Suara Bip/Nada Indikator Absensi"
               >
                 {soundEnabled ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <Volume2 className="w-3.5 h-3.5 text-blue-400" />
                     <span>Suara Beep (On)</span>
                   </>
                 ) : (
@@ -1766,15 +1781,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 )}
               </button>
 
-              <div className="flex items-center gap-1 text-[11px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 px-2.5 py-1 rounded-xl border border-white/10">
                 <Clock className="w-3 h-3 text-slate-400" />
-                <span className="font-medium text-slate-500 dark:text-slate-400">
+                <span className="font-medium text-slate-400">
                   Durasi Popup:
                 </span>
                 <select
                   value={modalDuration}
                   onChange={(e) => setModalDuration(Number(e.target.value))}
-                  className="bg-transparent font-bold text-blue-600 dark:text-blue-400 focus:outline-none"
+                  className="bg-transparent font-bold text-blue-400 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white"
                   title="Durasi waktu tampilan popup informasi hasil scan"
                 >
                   <option value={2}>2 Detik</option>
@@ -1784,15 +1799,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 </select>
               </div>
 
-              <div className="flex items-center gap-1 text-[11px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 px-2.5 py-1 rounded-xl border border-white/10">
                 <ShieldAlert className="w-3 h-3 text-slate-400" />
-                <span className="font-medium text-slate-500 dark:text-slate-400">
+                <span className="font-medium text-slate-400">
                   Jeda Anti-Ganda:
                 </span>
                 <select
                   value={debounceSeconds}
                   onChange={(e) => setDebounceSeconds(Number(e.target.value))}
-                  className="bg-transparent font-bold text-blue-600 dark:text-blue-400 focus:outline-none"
+                  className="bg-transparent font-bold text-blue-400 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white"
                   title="Jeda waktu (detik) untuk mencegah kode QR yang sama ter-scan berulang kali"
                 >
                   <option value={1}>1s</option>
@@ -1823,17 +1838,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 }}
                 className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all flex items-center gap-1.5 border btn-press ${
                   qrOnlyMode
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800'
-                    : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-400 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
                 }`}
                 title="Fokus decode hanya pada QR Code sehingga menghemat 70% beban CPU"
               >
-                <Zap className={`w-3.5 h-3.5 ${qrOnlyMode ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
+                <Zap className={`w-3.5 h-3.5 ${qrOnlyMode ? 'text-emerald-400' : 'text-slate-400'}`} />
                 <span>{qrOnlyMode ? 'QR Murni (Kilat)' : 'Multi-Barcode (1D+QR)'}</span>
               </button>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                <span className="text-[11px] font-bold text-slate-400">
                   FPS Frame:
                 </span>
                 {[10, 12, 15, 20].map((fps) => (
@@ -1846,8 +1861,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     }}
                     className={`px-2 py-0.5 text-[10px] font-extrabold rounded-lg border transition-all btn-press ${
                       scanFps === fps
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        ? 'bg-blue-500 text-white border-blue-500 shadow-xs'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-300 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
                     }`}
                     title={fps === 12 ? '12 FPS: Optimal tanpa lag antrean buffer' : `${fps} Frame Per Second`}
                   >
@@ -1867,14 +1882,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                    <span className="text-xs font-black text-white dark:text-slate-100">
                       Solusi Scan Cepat & QR Kecil
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 uppercase tracking-wider">
                       Macro HD Engine
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <p className="text-[11px] text-slate-400">
                     Solusi agar QR fisik kecil (kartu pelajar/pegawai) terbaca seketika tanpa perlu menempelkan kartu terlalu dekat.
                   </p>
                 </div>
@@ -1888,7 +1903,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-sm btn-press ${
                   isSmallQrMode
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white ring-2 ring-amber-400/50 shadow-md'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:border-amber-400'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 border border-white/10 hover:border-amber-400'
                 }`}
               >
                 <ZoomIn className={`w-4 h-4 ${isSmallQrMode ? 'text-white' : 'text-amber-500'}`} />
@@ -1900,7 +1915,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             <div className="pt-2.5 border-t border-amber-200/60 dark:border-amber-800/40 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               {/* Zoom Presets */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                   <span className="flex items-center gap-1">
                     <ZoomIn className="w-3.5 h-3.5 text-amber-500" />
                     <span>Tingkat Zoom Kamera:</span>
@@ -1918,7 +1933,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       className={`px-2.5 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer btn-press ${
                         Math.abs(zoomLevel - z) < 0.05
                           ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-slate-700'
+                          : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-amber-50 dark:hover:bg-slate-700'
                       }`}
                     >
                       {z.toFixed(1)}x
@@ -1929,7 +1944,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
               {/* Resolution & Engine Status */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                   <span className="flex items-center gap-1">
                     <Maximize2 className="w-3.5 h-3.5 text-blue-500" />
                     <span>Resolusi Sensor:</span>
@@ -1941,7 +1956,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       setScanResolution(newRes);
                       if (isCameraActive) startCamera(undefined);
                     }}
-                    className="px-2 py-0.5 text-[11px] font-extrabold rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
+                    className="px-2 py-0.5 text-[11px] font-extrabold rounded-md border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl dark:text-white"
                   >
                     <option value="fast">Instan 800x600 (Paling Ringan & Cepat)</option>
                     <option value="hd">HD 720p (Standar)</option>
@@ -1950,7 +1965,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                     <span>Akselerasi BarcodeDetector Aktif</span>
@@ -1969,20 +1984,20 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
             {/* Explanatory Guide Box (Tips QR Kecil) */}
             {showQrTips && (
-              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 text-[11px] text-slate-600 dark:text-slate-300 space-y-2 animate-fadeIn">
+              <div className="p-3 rounded-xl bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-amber-200 dark:border-amber-800 text-[11px] text-slate-300 space-y-2 animate-fadeIn">
                 <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                   <Info className="w-4 h-4 text-amber-500" />
                   <span>Petunjuk Agar QR Code Kecil Terbaca Kilat (0.1 Detik):</span>
                 </div>
-                <ul className="space-y-1.5 text-slate-600 dark:text-slate-400 list-disc list-inside">
+                <ul className="space-y-1.5 text-slate-400 list-disc list-inside">
                   <li>
-                    <strong className="text-slate-800 dark:text-slate-200">Gunakan Zoom 2.0x (Macro):</strong> QR code yang kecil jangan didekatkan terlalu dekat (&lt;10 cm) karena lensa webcam akan blur/buram akibat melewati titik fokus terdekat. Dengan Zoom 2.0x, QR code langsung tampak besar dan tajam dari jarak aman.
+                    <strong className="text-white dark:text-slate-200">Gunakan Zoom 2.0x (Macro):</strong> QR code yang kecil jangan didekatkan terlalu dekat (&lt;10 cm) karena lensa webcam akan blur/buram akibat melewati titik fokus terdekat. Dengan Zoom 2.0x, QR code langsung tampak besar dan tajam dari jarak aman.
                   </li>
                   <li>
-                    <strong className="text-slate-800 dark:text-slate-200">Jaga Jarak 15 - 20 cm:</strong> Ini adalah jarak optimal di mana sensor kamera dapat menangkap detail garis QR hitam-putih dengan kontras maksimal.
+                    <strong className="text-white dark:text-slate-200">Jaga Jarak 15 - 20 cm:</strong> Ini adalah jarak optimal di mana sensor kamera dapat menangkap detail garis QR hitam-putih dengan kontras maksimal.
                   </li>
                   <li>
-                    <strong className="text-slate-800 dark:text-slate-200">Hindari Pantulan Lampu (Glare):</strong> Jika kartu siswa dilaminasi plastik berkilau, miringkan kartu sedikit 15° agar pantulan cahaya lampu ruangan tidak menutupi pola QR.
+                    <strong className="text-white dark:text-slate-200">Hindari Pantulan Lampu (Glare):</strong> Jika kartu siswa dilaminasi plastik berkilau, miringkan kartu sedikit 15° agar pantulan cahaya lampu ruangan tidak menutupi pola QR.
                   </li>
                 </ul>
               </div>
@@ -1990,8 +2005,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
 
           {/* Hardware Scanner, USB RFID Reader & Web NFC Card */}
-          <div className="w-full mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex-wrap gap-2">
+          <div className="w-full mt-4 pt-3 border-t border-white/5 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-wrap gap-2">
               <span className="flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
                 <span>Reader RFID USB, Web NFC & Barcode Scanner</span>
@@ -2039,7 +2054,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       ? 'Tempelkan Kartu RFID / Ketik NIP / Nama Guru lalu Enter...'
                       : 'Tempelkan Kartu RFID / Ketik NISN / Nama Siswa lalu Enter...'
                   }
-                  className="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
+                  className="w-full pl-8 pr-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-600"
                 />
                 <CreditCard className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               </div>
@@ -2052,8 +2067,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
             </form>
 
             {/* Quick helper for Lupa Kartu */}
-            <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap text-[11px]">
-              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <div className="mt-2.5 pt-2 border-t border-white/5 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap text-[11px]">
+              <span className="text-slate-400 flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                 <span>Siswa atau Guru tidak membawa kartu fisik?</span>
               </span>
@@ -2072,16 +2087,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         {/* Realtime Output Panel & Session Stream */}
         <div className="lg:col-span-5 space-y-4">
           {/* Latest Scan Result Card */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-            <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+            <h3 className="text-xs font-extrabold text-white uppercase tracking-wider mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-emerald-500" />
+                <UserCheck className="w-4 h-4 text-emerald-400" />
                 <span>
                   Hasil Scan Terakhir ({scanTargetMode === 'guru' ? 'Guru' : 'Siswa'})
                 </span>
               </span>
               {scanResult && (
-                <span className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded">
                   {scanResult.timestamp}
                 </span>
               )}
@@ -2091,14 +2106,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <div
                 className={`rounded-2xl p-4 border flex flex-col justify-between transition-all ${
                   scanResult.success
-                    ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
                     : scanResult.isDuplicate
-                    ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200'
-                    : 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200'
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                 }`}
               >
                 <div>
-                  <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-200/60 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-white/10/60 dark:border-slate-800">
                     {scanResult.success ? (
                       <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     ) : scanResult.isDuplicate ? (
@@ -2121,7 +2136,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug mt-0.5">
+                      <p className="text-xs text-slate-300 leading-snug mt-0.5">
                         {scanResult.message}
                       </p>
                     </div>
@@ -2131,15 +2146,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   {scanResult.teacher && (
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center py-0.5">
-                        <span className="text-slate-500 dark:text-slate-400">Nama Guru:</span>
-                        <span className="font-extrabold text-slate-900 dark:text-white uppercase">
+                        <span className="text-slate-400">Nama Guru:</span>
+                        <span className="font-extrabold text-white uppercase">
                           {scanResult.teacher.nama}
                         </span>
                       </div>
 
                       <div className="flex justify-between items-center py-0.5">
-                        <span className="text-slate-500 dark:text-slate-400">NIP / Jabatan:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="text-slate-400">NIP / Jabatan:</span>
+                        <span className="font-semibold text-white dark:text-slate-200">
                           <span className="font-mono font-bold text-sky-800 dark:text-sky-300">
                             {scanResult.teacher.nip}
                           </span>{' '}
@@ -2149,7 +2164,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
                       {scanResult.type && (
                         <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500 dark:text-slate-400">
+                          <span className="text-slate-400">
                             Status & Jenis:
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -2177,7 +2192,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                               className={`font-extrabold text-[9px] px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 border ${
                                 scanResult.scanMethod === 'RFID'
                                   ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                  : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
                               }`}
                             >
                               {scanResult.scanMethod === 'RFID' ? (
@@ -2214,15 +2229,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   {scanResult.student && (
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center py-0.5">
-                        <span className="text-slate-500 dark:text-slate-400">Nama Siswa:</span>
-                        <span className="font-extrabold text-slate-900 dark:text-white uppercase">
+                        <span className="text-slate-400">Nama Siswa:</span>
+                        <span className="font-extrabold text-white uppercase">
                           {scanResult.student.nama}
                         </span>
                       </div>
 
                       <div className="flex justify-between items-center py-0.5">
-                        <span className="text-slate-500 dark:text-slate-400">Kelas / NISN:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="text-slate-400">Kelas / NISN:</span>
+                        <span className="font-semibold text-white dark:text-slate-200">
                           {scanResult.student.kelas} •{' '}
                           <span className="font-mono">{scanResult.student.nisn}</span>
                         </span>
@@ -2230,7 +2245,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
                       {scanResult.type && (
                         <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500 dark:text-slate-400">
+                          <span className="text-slate-400">
                             Status & Jenis:
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -2260,7 +2275,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                                   ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
                                   : scanResult.scanMethod === 'Manual'
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                  : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
                               }`}
                             >
                               {scanResult.scanMethod === 'RFID' ? (
@@ -2313,7 +2328,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-black text-[10px] uppercase tracking-wider block">Mode Offline: Disimpan di Cache Lokal</span>
-                      <span className="text-[11px] text-slate-700 dark:text-slate-300">
+                      <span className="text-[11px] text-slate-200 dark:text-slate-300">
                         Koneksi internet terputus. Presensi diamankan di memori lokal dan akan disinkronkan otomatis ke database cloud saat online.
                       </span>
                     </div>
@@ -2337,14 +2352,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 )}
               </div>
             ) : (
-              <div className="py-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-center text-slate-400 dark:text-slate-500 space-y-1">
-                <QrCode className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
-                <p className="font-bold text-xs text-slate-600 dark:text-slate-300">
+              <div className="py-8 border-2 border-dashed border-white/20 rounded-2xl text-center text-slate-400 space-y-1">
+                <QrCode className="w-8 h-8 mx-auto text-white/30" />
+                <p className="font-bold text-xs text-white/70">
                   {scanTargetMode === 'guru'
                     ? 'Arahkan Kartu NIP Guru ke Kamera'
                     : 'Arahkan QR Siswa ke Kamera'}
                 </p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-white/40">
                   Hasil absensi akan otomatis diperbarui secara instant di sini.
                 </p>
               </div>
@@ -2352,10 +2367,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
 
           {/* Session Stream / Live Feed List */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-            <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-blue-500" />
+          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/10">
+              <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-blue-400" />
                 <span>Riwayat Scan Sesi Ini ({scanFeed.length})</span>
               </span>
 
@@ -2378,25 +2393,25 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 scanFeed.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs flex items-center justify-between gap-2 transition-all backdrop-blur-xl shadow-sm ${
                       item.success
-                        ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]'
                         : item.isDuplicate
-                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800'
-                        : 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+                        ? 'bg-rose-500/10 border-rose-500/20 shadow-[inset_0_0_15px_rgba(244,63,94,0.05)]'
+                        : 'bg-amber-500/10 border-amber-500/20 shadow-[inset_0_0_15px_rgba(245,158,11,0.05)]'
                     }`}
                   >
                     <div className="flex items-center gap-2 overflow-hidden">
                       {item.success ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                       ) : item.isDuplicate ? (
-                        <ShieldAlert className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                        <ShieldAlert className="w-4 h-4 text-rose-400 flex-shrink-0" />
                       ) : (
-                        <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
                       )}
                       <div className="truncate">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-extrabold text-slate-900 dark:text-white truncate block">
+                          <span className="font-extrabold text-white truncate block">
                             {item.teacher
                               ? item.teacher.nama
                               : item.student
@@ -2404,13 +2419,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                               : item.scannedCode}
                           </span>
                           {item.isOffline && (
-                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-200/80 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-0.5">
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
                               <WifiOff className="w-2.5 h-2.5" />
                               <span>Lokal</span>
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+                        <span className="text-[10px] text-white/50 block truncate">
                           {item.teacher
                             ? `NIP: ${item.teacher.nip} • ${item.teacher.jabatan}`
                             : item.student
@@ -2421,21 +2436,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
+                      <span className="font-mono text-[10px] font-bold text-white/50 block">
                         {item.timestamp.split(' ')[0]}
                       </span>
                       {item.status ? (
                         <span
                           className={`inline-block text-[9px] font-black px-1.5 py-0.2 rounded ${
                             item.status === 'Hadir'
-                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                              : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : 'bg-amber-500/20 text-amber-300'
                           }`}
                         >
                           {item.status}
                         </span>
                       ) : item.isDuplicate ? (
-                        <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300">
+                        <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300">
                           Ditolak
                         </span>
                       ) : null}

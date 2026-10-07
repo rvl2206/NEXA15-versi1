@@ -29,8 +29,6 @@ interface NavbarProps {
   settings: SchoolSettings;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  theme?: 'light' | 'dark';
-  onToggleTheme?: () => void;
   onToggleMobileSidebar?: () => void;
   isMobileSidebarOpen?: boolean;
   onStartTour?: () => void;
@@ -42,8 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   settings,
   activeTab,
   setActiveTab,
-  theme = 'light',
-  onToggleTheme,
   onToggleMobileSidebar,
   isMobileSidebarOpen,
   onStartTour,
@@ -188,137 +184,99 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Realtime Clock & Actions */}
-          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
-            {/* Online / Offline Network & Background Sync Indicators */}
-            <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Realtime Clock (Desktop only) */}
+            <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-medium text-slate-400 tabular-nums">
+              <Clock className="w-3.5 h-3.5 text-cyan-400 opacity-70" />
+              <span>{time}</span>
+            </div>
+
+            <div className="h-4 w-px bg-white/10 hidden xl:block mx-1"></div>
+
+            {/* Sync & Network Status */}
+            <div className="flex items-center gap-0.5 sm:gap-1">
+               {/* Online Indicator Dot */}
               <div
-                className={`flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2 py-1 rounded-lg sm:rounded-xl border font-bold transition-all ${
-                  isOnline
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                    : 'bg-amber-500/20 text-amber-200 border-amber-400/40 animate-pulse'
-                }`}
-                title={
-                  isOnline
-                    ? 'Sistem terhubung ke server (Online Sync Active)'
-                    : 'Mode Offline: Semua data scan tersimpan otomatis di perangkat.'
-                }
+                className="flex items-center justify-center w-7 h-7 rounded-full"
+                title={isOnline ? 'Sistem terhubung ke server (Online)' : 'Mode Offline'}
               >
-                {isOnline ? (
-                  <>
-                    <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-emerald-400"></span>
-                    </span>
-                    <Wifi className="w-3 h-3 text-emerald-400 hidden sm:inline" />
-                    <span className="text-[10px] sm:text-[11px] font-bold hidden xs:inline">Online</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-amber-400"></span>
-                    </span>
-                    <WifiOff className="w-3 h-3 text-amber-300 hidden sm:inline" />
-                    <span className="text-[10px] sm:text-[11px] font-bold">Offline</span>
-                  </>
-                )}
+                <span className="relative flex h-2 w-2">
+                  {isOnline ? (
+                     <>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                     </>
+                  ) : (
+                     <>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                     </>
+                  )}
+                </span>
               </div>
 
-              {/* Sync Button (Always Available) */}
+              {/* Sync Button */}
               <button
                 onClick={handleForceSync}
                 disabled={isSyncing}
-                className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shadow-xs btn-press ${
+                className={`relative flex items-center justify-center w-8 h-8 rounded-full transition-all cursor-pointer btn-press ${
                   isSyncing
-                    ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40 animate-pulse'
+                    ? 'text-cyan-400 bg-cyan-500/10'
                     : offlineQueueCount > 0
-                    ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white border-rose-400 font-black shadow-md ring-2 ring-rose-500/40 animate-pulse'
-                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border-slate-700 hover:border-slate-600'
+                    ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
-                title={
-                  offlineQueueCount > 0
-                    ? `PERINGATAN: Ada ${offlineQueueCount} data belum terkirim ke database Cloud! Klik untuk mengirim sekarang.`
-                    : 'Klik untuk menyinkronkan data presensi & siswa ke Server & Cloud'
-                }
+                title={offlineQueueCount > 0 ? `PERINGATAN: Ada ${offlineQueueCount} data belum terkirim! Klik untuk sync.` : 'Sinkronisasi data'}
               >
-                <RefreshCw
-                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-cyan-300' : offlineQueueCount > 0 ? 'text-white' : 'text-sky-300'}`}
-                />
-                <span className="text-[10px] sm:text-[11px] tabular-nums">
-                  {isSyncing ? 'Mengirim...' : offlineQueueCount > 0 ? `${offlineQueueCount} Tertunda` : 'Sync'}
-                </span>
-              </button>
-            </div>
-
-            {/* Realtime Clock (Desktop only) */}
-            <div className="hidden xl:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/80 font-mono shadow-xs tabular-nums">
-              <Clock className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span className="tracking-tight">{time}</span>
-            </div>
-
-            {/* Global Dark Mode Theme Toggle */}
-            {onToggleTheme && (
-              <button
-                onClick={onToggleTheme}
-                className="p-1.5 sm:p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 hover:border-slate-600 rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0 btn-press"
-                title={theme === 'dark' ? 'Ganti ke Mode Terang (Light Mode)' : 'Ganti ke Mode Gelap (Dark Mode)'}
-              >
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 animate-spin-slow" />
-                    <span className="hidden xl:inline text-amber-200 text-[11px] font-bold">Terang</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300" />
-                    <span className="hidden xl:inline text-cyan-100 text-[11px] font-bold">Gelap</span>
-                  </>
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {offlineQueueCount > 0 && !isSyncing && (
+                  <span className="absolute top-0 right-0 -mt-0.5 -mr-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-slate-900 shadow-md">
+                    {offlineQueueCount}
+                  </span>
                 )}
               </button>
+            </div>
+
+
+
+            {/* Quick AI Button */}
+            {currentUser && (
+              <button
+                onClick={onStartTour}
+                className="hidden md:flex items-center justify-center w-8 h-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-full transition-all cursor-pointer btn-press"
+                title="Panduan"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
             )}
 
-            {/* Quick AI Button (Extra Large screens only) */}
+            {/* User Profile / Role & Critical Actions */}
             {currentUser && (
-              <>
-                <button
-                  onClick={onStartTour}
-                  className="hidden md:flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs rounded-lg sm:rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 hover:bg-indigo-500/30 transition-all font-semibold cursor-pointer shrink-0 btn-press"
-                  title="Mulai Tur Panduan Aplikasi"
-                >
-                  <HelpCircle className="w-3.5 h-3.5 text-indigo-300" />
-                  <span className="text-[11px]">Panduan</span>
-                </button>
-              </>
-            )}
-
-            {/* User Profile / Role & Critical Actions (Settings + Logout) */}
-            {currentUser && (
-              <div className="flex items-center gap-1 sm:gap-1.5 pl-1 sm:pl-2 border-l border-slate-800 shrink-0">
-                <div className="hidden md:block text-right pr-0.5">
-                  <div className="text-xs font-bold text-white leading-tight truncate max-w-[110px]">
-                    {currentUser.name}
+              <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-white/10 shrink-0 ml-1">
+                <div className="hidden md:flex flex-col items-end">
+                  <div className="text-sm font-bold text-white leading-none truncate max-w-[120px]">
+                    {currentUser.name.split(' ').slice(0, 2).join(' ')}
                   </div>
-                  <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
+                  <div className="text-[10px] font-medium text-slate-400 mt-1.5 uppercase tracking-widest">{currentUser.role}</div>
                 </div>
 
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className="p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 hover:border-amber-400/50 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center justify-center btn-press"
-                  title="Pengaturan & Kata Sandi"
-                  aria-label="Pengaturan Sekolah"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/5 shadow-inner">
+                    <button
+                    onClick={() => setActiveTab('settings')}
+                    className="flex items-center justify-center w-8 h-8 text-amber-400/80 hover:text-amber-300 hover:bg-amber-400/20 rounded-full transition-all cursor-pointer btn-press"
+                    title="Pengaturan"
+                    >
+                    <KeyRound className="w-4 h-4" />
+                    </button>
 
-                <button
-                  onClick={onLogout}
-                  className="p-1.5 sm:p-2 text-rose-300 hover:text-white bg-rose-500/15 hover:bg-rose-600/90 border border-rose-500/30 hover:border-rose-500 rounded-lg sm:rounded-xl transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-1 font-bold text-xs btn-press"
-                  title="Keluar / Ganti Akun"
-                  aria-label="Keluar Aplikasi"
-                >
-                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300 group-hover:text-white" />
-                  <span className="hidden sm:inline text-[11px]">Keluar</span>
-                </button>
+                    <button
+                    onClick={onLogout}
+                    className="flex items-center justify-center w-8 h-8 text-rose-400/80 hover:text-rose-300 hover:bg-rose-500/20 rounded-full transition-all cursor-pointer btn-press"
+                    title="Keluar"
+                    >
+                    <LogOut className="w-4 h-4 pl-0.5" />
+                    </button>
+                </div>
               </div>
             )}
           </div>

@@ -71,7 +71,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             }
           `}</style>
 
-          <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-auto flex flex-col max-h-[92vh] overflow-hidden transition-colors">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl w-full max-w-5xl rounded-2xl shadow-2xl border border-white/10 my-auto flex flex-col max-h-[92vh] overflow-hidden transition-colors">
             {/* Modal Header & Controls (Non-Printable) */}
             <div className="no-print p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -112,7 +112,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
 
             {/* Filter & Customization Toolbar (Non-Printable) */}
-            <div className="no-print p-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="no-print p-3 bg-white/5 backdrop-blur-xl/80 border-b border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Jenis Laporan Dokumen:
@@ -126,7 +126,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       setPrintStudentSlip(students[0]);
                     }
                   }}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
+                  className="w-full px-3 py-1.5 rounded-lg border border-white/20 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl font-bold text-white"
                 >
                   <option value="kelas">Laporan Rekapitulasi Seluruh Siswa Kelas ({monthlyStudentSummaries.length} Siswa)</option>
                   <option value="slip">Slip Rekapitulasi Kehadiran Individu (Untuk Orang Tua)</option>
@@ -144,7 +144,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       const found = students.find((s) => s.id === e.target.value);
                       if (found) setPrintStudentSlip(found);
                     }}
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
+                    className="w-full px-3 py-1.5 rounded-lg border border-white/20 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl font-bold text-white"
                   >
                     {students.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -163,13 +163,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={printWaliKelasName}
                     onChange={(e) => setPrintWaliKelasName(e.target.value)}
                     placeholder="Contoh: Drs. Ahmad Dahlan, M.Pd"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-900 dark:text-white"
+                    className="w-full px-3 py-1.5 rounded-lg border border-white/20 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl font-bold text-white"
                   />
                 </div>
               )}
 
               <div className="flex items-end">
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-3 py-1.5 rounded-lg w-full flex items-center gap-1.5">
+                <div className="text-[11px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-3 py-1.5 rounded-lg w-full flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
                   <span>Petunjuk: Gunakan pengaturan browser "Save as PDF" jika ingin menyimpan file PDF resmi.</span>
                 </div>
@@ -211,9 +211,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       </h3>
                       <div className="flex items-center justify-center gap-4 text-[11px] text-slate-700 font-semibold pt-1">
                         <span>Periode: <strong className="text-slate-900">{formatIndoMonth(filterBulan)}</strong></span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span>Kelas: <strong className="text-slate-900">{filterKelas}</strong></span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span>Tanggal Cetak: <strong className="text-slate-900">{formatIndoDate(todayISO)} WIT</strong></span>
                       </div>
                     </div>

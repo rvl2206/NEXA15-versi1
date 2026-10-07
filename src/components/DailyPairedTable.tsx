@@ -105,13 +105,13 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+    <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
       <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+          <h3 className="font-extrabold text-sm text-white">
             Rekap Pasangan Waktu Masuk & Pulang Siswa ({formatIndoDate(filterTanggal)})
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-400">
             Mencatat waktu masuk, waktu pulang, serta perhitungan akurat jumlah waktu keterlambatan siswa.
           </p>
         </div>
@@ -142,7 +142,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
             className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
               filterStatusPulang === 'Semua'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                : 'bg-white/5 backdrop-blur-xl text-slate-300 hover:bg-slate-200'
             }`}
           >
             Semua ({pairedSummaryCounts.total})
@@ -178,7 +178,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+          <thead className="bg-white/5 backdrop-blur-xl/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
             <tr>
               <th className="p-3.5">No</th>
               <th className="p-3.5">Nama Siswa</th>
@@ -191,16 +191,16 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
               <th className="p-3.5 text-center">Aksi / Koreksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-200">
             {pairedDailyRecords.length > 0 ? (
               paginateList<any>(pairedDailyRecords, currentPage, pageSize).map((item, index) => (
                 <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
                     {pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                   </td>
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white">{item.student.nama}</td>
+                  <td className="p-3.5 font-bold text-white">{item.student.nama}</td>
                   <td className="p-3.5">
-                    <span className="font-mono text-slate-600 dark:text-slate-400">{item.student.nisn}</span>
+                    <span className="font-mono text-slate-400">{item.student.nisn}</span>
                     <span className="text-slate-400 dark:text-slate-500 font-semibold ml-1.5">({item.student.kelas})</span>
                   </td>
                   <td className="p-3.5">
@@ -219,7 +219,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Masuk')}
-                        className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                        className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-0.5 rounded border border-dashed border-white/10 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
                         title={`Input Presensi Masuk untuk ${item.student.nama}`}
                       >
                         <span>-</span>
@@ -251,7 +251,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenCorrection(null, item.student, filterTanggal, 'Pulang')}
-                        className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-slate-300 dark:border-slate-700 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
+                        className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 px-2 py-0.5 rounded border border-dashed border-white/10 font-mono text-[11px] inline-flex items-center gap-1 transition cursor-pointer"
                         title={`Input Presensi Pulang untuk ${item.student.nama}`}
                       >
                         <span>-</span>
@@ -306,7 +306,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
                       className={`p-1.5 rounded-lg transition-colors inline-flex items-center justify-center ${
                         item.student.no_hp_ortu
                           ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
-                          : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          : 'text-slate-400 dark:text-slate-500 hover:bg-white/10'
                       }`}
                       title={item.student.no_hp_ortu ? `Kirim Notifikasi WA (${item.student.no_hp_ortu})` : 'Input No HP & Kirim WA'}
                     >

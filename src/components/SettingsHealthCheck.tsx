@@ -38,17 +38,17 @@ export const SettingsHealthCheck: React.FC = () => {
   };
 
   return (
-      <div id="data-health-check" className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
+      <div id="data-health-check" className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-5 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>Pemeriksaan Kesehatan Data & Backup (Data Health Check)</span>
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-400">
                 Memvalidasi konsistensi jumlah siswa aktif terhadap log absensi dan cadangan lokal browser.
               </p>
             </div>
@@ -57,7 +57,7 @@ export const SettingsHealthCheck: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleRecheckHealth}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               title="Periksa ulang kesehatan data"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -119,8 +119,8 @@ export const SettingsHealthCheck: React.FC = () => {
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+          <div className="p-3 bg-white/5 backdrop-blur-xl/60 border border-white/10 rounded-xl">
+            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
               <Users className="w-3 h-3 text-blue-500" />
               <span>Siswa Aktif</span>
             </div>
@@ -129,8 +129,8 @@ export const SettingsHealthCheck: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+          <div className="p-3 bg-white/5 backdrop-blur-xl/60 border border-white/10 rounded-xl">
+            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
               <FileText className="w-3 h-3 text-emerald-500" />
               <span>Rekap Presensi</span>
             </div>
@@ -139,8 +139,8 @@ export const SettingsHealthCheck: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+          <div className="p-3 bg-white/5 backdrop-blur-xl/60 border border-white/10 rounded-xl">
+            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
               <Users className="w-3 h-3 text-purple-500" />
               <span>Siswa di Absensi</span>
             </div>
@@ -149,8 +149,8 @@ export const SettingsHealthCheck: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+          <div className="p-3 bg-white/5 backdrop-blur-xl/60 border border-white/10 rounded-xl">
+            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
               <Database className="w-3 h-3 text-amber-500" />
               <span>Backup Browser</span>
             </div>
@@ -191,11 +191,11 @@ export const SettingsHealthCheck: React.FC = () => {
                   {health.missingStudentDetails.map((s, idx) => (
                     <div
                       key={idx}
-                      className="p-2 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center justify-between text-xs"
+                      className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-rose-200 dark:border-rose-800 rounded-lg flex items-center justify-between text-xs"
                     >
                       <div>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{s.name}</span>
-                        <span className="ml-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <span className="ml-2 text-[10px] text-slate-400 font-mono">
                           (NISN: {s.nisn} | Kelas: {s.class})
                         </span>
                       </div>

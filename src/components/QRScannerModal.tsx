@@ -72,7 +72,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
         {/* Header Banner */}
         <div
           className={`p-6 text-white relative overflow-hidden text-center ${
@@ -92,7 +92,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           </button>
 
           <div className="flex justify-center mb-2">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
               {scanResult.success ? (
                 <CheckCircle2 className="w-10 h-10 text-white" />
               ) : scanResult.isDuplicate ? (
@@ -103,7 +103,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-extrabold uppercase tracking-wider mb-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 rounded-full text-xs font-extrabold uppercase tracking-wider mb-1">
             {scanResult.success ? (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
@@ -136,11 +136,11 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         <div className="p-6 space-y-4">
           {scanResult.teacher ? (
             <>
-              <div className="text-center pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+              <div className="text-center pb-2 border-b border-white/5 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest block mb-0.5">
                   Nama Guru / Pegawai
                 </span>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">
                   {scanResult.teacher.nama}
                 </h2>
               </div>
@@ -150,7 +150,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400 block mb-0.5">
                     NIP
                   </span>
-                  <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                  <span className="font-mono text-sm font-black text-white">
                     {scanResult.teacher.nip}
                   </span>
                 </div>
@@ -159,7 +159,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-0.5">
                     Jabatan
                   </span>
-                  <span className="text-xs font-black text-slate-900 dark:text-white truncate block">
+                  <span className="text-xs font-black text-white truncate block">
                     {scanResult.teacher.jabatan}
                   </span>
                 </div>
@@ -167,11 +167,11 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </>
           ) : scanResult.student ? (
             <>
-              <div className="text-center pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+              <div className="text-center pb-2 border-b border-white/5 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest block mb-0.5">
                   Nama Siswa
                 </span>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">
                   {scanResult.student.nama}
                 </h2>
               </div>
@@ -181,7 +181,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
                     NISN
                   </span>
-                  <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                  <span className="font-mono text-sm font-black text-white">
                     {scanResult.student.nisn}
                   </span>
                 </div>
@@ -190,7 +190,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-0.5">
                     Kelas
                   </span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white">
+                  <span className="text-sm font-black text-white">
                     {scanResult.student.kelas}
                   </span>
                 </div>
@@ -198,9 +198,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </>
           ) : (
             <div className="space-y-3 text-left">
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
-                  <span className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 p-3.5 rounded-2xl border border-white/10 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                  <span className="text-[11px] font-extrabold text-white dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     {scanResult.scanMethod === 'RFID' ? (
                       <>
                         <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -213,7 +213,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                       </>
                     )}
                   </span>
-                  <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
+                  <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-200 dark:text-slate-300 font-bold">
                     {scanResult.scannedCode || lastScannedQR}
                   </span>
                 </div>
@@ -221,14 +221,14 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 {/* Choose Target Type if in Auto or specific mode */}
                 {(scanTargetMode === 'auto' || scanTargetMode === 'siswa') && (
                   <div className="space-y-1.5 pt-1">
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    <label className="block text-[11px] font-bold text-slate-200 dark:text-slate-300">
                       1. Hubungkan ke Siswa
                     </label>
                     <div className="flex gap-2">
                       <select
                         value={selectedStudentForQR}
                         onChange={(e) => setSelectedStudentForQR(e.target.value)}
-                        className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
+                        className="flex-1 px-3 py-2 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
                       >
                         <option value="">-- Pilih Nama Siswa --</option>
                         {studentsList.map((s) => (
@@ -256,15 +256,15 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 )}
 
                 {(scanTargetMode === 'auto' || scanTargetMode === 'guru') && (
-                  <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  <div className="space-y-1.5 pt-2 border-t border-white/10">
+                    <label className="block text-[11px] font-bold text-slate-200 dark:text-slate-300">
                       2. Hubungkan ke Guru / Tenaga Pendidik
                     </label>
                     <div className="flex gap-2">
                       <select
                         value={selectedTeacherForQR}
                         onChange={(e) => setSelectedTeacherForQR(e.target.value)}
-                        className="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
+                        className="flex-1 px-3 py-2 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-xl font-medium"
                       >
                         <option value="">-- Pilih Nama Guru / NIP --</option>
                         {teachersList.map((t) => (

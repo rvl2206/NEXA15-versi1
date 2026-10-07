@@ -3,7 +3,15 @@ import { QRCodeSVG } from 'qrcode.react';
 import { store, isGenericQrCode } from '../lib/store';
 import { toast } from '../lib/toast';
 import { Student, UserRole, AttendanceRecord, Teacher } from '../types';
-import { exportStudentListToExcel, exportStudentListToCSV, downloadStudentImportTemplate, parseStudentImportFile, printElement, getWhatsAppLink, generateWhatsAppMessage } from '../lib/exportUtils';
+import {
+  exportStudentListToExcel,
+  exportStudentListToCSV,
+  downloadStudentImportTemplate,
+  parseStudentImportFile,
+  printElement,
+  getWhatsAppLink,
+  generateWhatsAppMessage,
+} from '../lib/exportUtils';
 import { SchoolLogo } from './SchoolLogo';
 import { StudentImportModal } from './StudentImportModal';
 import { StudentMassPrintModal } from './StudentMassPrintModal';
@@ -14,10 +22,7 @@ import { StudentDeleteConfirmModal } from './StudentDeleteConfirmModal';
 import { StudentRfidBindModal } from './StudentRfidBindModal';
 import { StudentQrPrintModal } from './StudentQrPrintModal';
 import { StudentClearAllModal } from './StudentClearAllModal';
-import {
-  OfficialStudentIDCardFront,
-  OfficialStudentIDCardBack,
-} from './OfficialStudentIDCard';
+import { OfficialStudentIDCardFront, OfficialStudentIDCardBack } from './OfficialStudentIDCard';
 import {
   Users,
   Search,
@@ -97,7 +102,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
   const [isBatchMoveModalOpen, setIsBatchMoveModalOpen] = useState(false);
-    const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
   // Import Excel Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -117,23 +122,36 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
 
   const handleExportExcel = (customList?: Student[]) => {
-    const target = customList || (selectedIds.length > 0 ? students.filter((s) => selectedIds.includes(s.id)) : filteredStudents);
-    const classLabel = selectedKelas !== 'Semua' ? `Kelas_${selectedKelas.replace(/\s+/g, '_')}` : '';
+    const target =
+      customList ||
+      (selectedIds.length > 0
+        ? students.filter((s) => selectedIds.includes(s.id))
+        : filteredStudents);
+    const classLabel =
+      selectedKelas !== 'Semua' ? `Kelas_${selectedKelas.replace(/\s+/g, '_')}` : '';
     const searchLabel = searchTerm ? `Filter_Cari` : '';
     const prefix = `Data_Siswa_NEXA15${classLabel ? '_' + classLabel : ''}${searchLabel ? '_' + searchLabel : ''}`;
     exportStudentListToExcel(target, prefix);
   };
 
   const handleExportCSV = (customList?: Student[]) => {
-    const target = customList || (selectedIds.length > 0 ? students.filter((s) => selectedIds.includes(s.id)) : filteredStudents);
-    const classLabel = selectedKelas !== 'Semua' ? `Kelas_${selectedKelas.replace(/\s+/g, '_')}` : '';
+    const target =
+      customList ||
+      (selectedIds.length > 0
+        ? students.filter((s) => selectedIds.includes(s.id))
+        : filteredStudents);
+    const classLabel =
+      selectedKelas !== 'Semua' ? `Kelas_${selectedKelas.replace(/\s+/g, '_')}` : '';
     const searchLabel = searchTerm ? `Filter_Cari` : '';
     const prefix = `Data_Siswa_NEXA15${classLabel ? '_' + classLabel : ''}${searchLabel ? '_' + searchLabel : ''}`;
     exportStudentListToCSV(target, prefix);
   };
 
   const handleOpenMassPrint = (preselectedIds?: string[]) => {
-    const listToUse = preselectedIds && preselectedIds.length > 0 ? preselectedIds : filteredStudents.map((s) => s.id);
+    const listToUse =
+      preselectedIds && preselectedIds.length > 0
+        ? preselectedIds
+        : filteredStudents.map((s) => s.id);
     setMassPrintSelectedIds(listToUse);
     setIsMassPrintModalOpen(true);
   };
@@ -173,7 +191,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   }, [rfidBindStudent]);
 
   const { hexFormatted, decFormatted } = useMemo(() => {
-    const clean = rfidInputVal.trim().toUpperCase().replace(/[\s:-]/g, '');
+    const clean = rfidInputVal
+      .trim()
+      .toUpperCase()
+      .replace(/[\s:-]/g, '');
     if (!clean) return { hexFormatted: '', decFormatted: '' };
 
     let hex = '';
@@ -227,7 +248,26 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       const g = getGradeFromClass(s.kelas);
       if (g) grades.add(g);
     });
-    const order = ['X', 'XI', 'XII', 'VII', 'VIII', 'IX', '10', '11', '12', '7', '8', '9', '1', '2', '3', '4', '5', '6'];
+    const order = [
+      'X',
+      'XI',
+      'XII',
+      'VII',
+      'VIII',
+      'IX',
+      '10',
+      '11',
+      '12',
+      '7',
+      '8',
+      '9',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ];
     return Array.from(grades).sort((a, b) => {
       const idxA = order.indexOf(a);
       const idxB = order.indexOf(b);
@@ -249,10 +289,12 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
         classCounts.set(s.kelas, (classCounts.get(s.kelas) || 0) + 1);
       }
     });
-    return Array.from(classCounts.keys()).sort().map((c) => ({
-      name: c,
-      count: classCounts.get(c) || 0,
-    }));
+    return Array.from(classCounts.keys())
+      .sort()
+      .map((c) => ({
+        name: c,
+        count: classCounts.get(c) || 0,
+      }));
   }, [students, selectedTingkat]);
 
   // Fast O(1) attendance lookup map instead of scanning full attendance array on every student
@@ -270,8 +312,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       const targetMap = isToday ? todayMap : fallbackMap;
 
       if (nisn && !targetMap.has(`nisn:${nisn}`)) targetMap.set(`nisn:${nisn}`, a);
-      if (idQr && !isGenericQrCode(idQr) && !targetMap.has(`qr:${idQr.toLowerCase()}`)) targetMap.set(`qr:${idQr.toLowerCase()}`, a);
-      if (namaKelas && !targetMap.has(`namakelas:${namaKelas}`)) targetMap.set(`namakelas:${namaKelas}`, a);
+      if (idQr && !isGenericQrCode(idQr) && !targetMap.has(`qr:${idQr.toLowerCase()}`))
+        targetMap.set(`qr:${idQr.toLowerCase()}`, a);
+      if (namaKelas && !targetMap.has(`namakelas:${namaKelas}`))
+        targetMap.set(`namakelas:${namaKelas}`, a);
     }
 
     return { todayMap, fallbackMap };
@@ -285,12 +329,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     const { todayMap, fallbackMap } = todayAttendanceMap;
 
     if (targetNisn && todayMap.has(`nisn:${targetNisn}`)) return todayMap.get(`nisn:${targetNisn}`);
-    if (targetQr && !isGenericQrCode(targetQr) && todayMap.has(`qr:${targetQr.toLowerCase()}`)) return todayMap.get(`qr:${targetQr.toLowerCase()}`);
-    if (targetNamaKelas && todayMap.has(`namakelas:${targetNamaKelas}`)) return todayMap.get(`namakelas:${targetNamaKelas}`);
+    if (targetQr && !isGenericQrCode(targetQr) && todayMap.has(`qr:${targetQr.toLowerCase()}`))
+      return todayMap.get(`qr:${targetQr.toLowerCase()}`);
+    if (targetNamaKelas && todayMap.has(`namakelas:${targetNamaKelas}`))
+      return todayMap.get(`namakelas:${targetNamaKelas}`);
 
-    if (targetNisn && fallbackMap.has(`nisn:${targetNisn}`)) return fallbackMap.get(`nisn:${targetNisn}`);
-    if (targetQr && !isGenericQrCode(targetQr) && fallbackMap.has(`qr:${targetQr.toLowerCase()}`)) return fallbackMap.get(`qr:${targetQr.toLowerCase()}`);
-    if (targetNamaKelas && fallbackMap.has(`namakelas:${targetNamaKelas}`)) return fallbackMap.get(`namakelas:${targetNamaKelas}`);
+    if (targetNisn && fallbackMap.has(`nisn:${targetNisn}`))
+      return fallbackMap.get(`nisn:${targetNisn}`);
+    if (targetQr && !isGenericQrCode(targetQr) && fallbackMap.has(`qr:${targetQr.toLowerCase()}`))
+      return fallbackMap.get(`qr:${targetQr.toLowerCase()}`);
+    if (targetNamaKelas && fallbackMap.has(`namakelas:${targetNamaKelas}`))
+      return fallbackMap.get(`namakelas:${targetNamaKelas}`);
 
     return undefined;
   };
@@ -484,8 +533,6 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       toast.success('Siswa Ditambahkan', `Siswa baru ${formattedData.nama} berhasil didaftarkan.`);
     }
   };
-;
-
   const handleDeleteClick = (s: Student) => {
     setDeletingStudent(s);
   };
@@ -507,7 +554,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
   const handleRfidInputChange = (val: string) => {
     setRfidInputVal(val);
-    const clean = val.trim().toUpperCase().replace(/[\s:-]/g, '');
+    const clean = val
+      .trim()
+      .toUpperCase()
+      .replace(/[\s:-]/g, '');
     if (!clean) {
       setRfidConflict(null);
       return;
@@ -527,7 +577,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const handleSaveRfidBind = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!rfidBindStudent) return;
-    const clean = rfidInputVal.trim().toUpperCase().replace(/[\s:-]/g, '');
+    const clean = rfidInputVal
+      .trim()
+      .toUpperCase()
+      .replace(/[\s:-]/g, '');
     if (!clean) {
       toast.error('UID Kosong', 'Silakan ketik atau tempelkan kartu RFID fisik ke reader.');
       return;
@@ -536,7 +589,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     store.assignRfidToStudent(rfidBindStudent.id, clean);
     toast.success(
       'Kartu RFID Ditautkan',
-      `Kartu [${clean}] berhasil dipetakan ke profil siswa ${rfidBindStudent.nama} (${rfidBindStudent.kelas}).`
+      `Kartu [${clean}] berhasil dipetakan ke profil siswa ${rfidBindStudent.nama} (${rfidBindStudent.kelas}).`,
     );
     setRfidBindStudent(null);
   };
@@ -546,7 +599,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     store.updateStudent(rfidBindStudent.id, { rfid_uid: undefined });
     toast.info(
       'Tautan Kartu Dihapus',
-      `Kartu RFID untuk siswa ${rfidBindStudent.nama} berhasil dilepas.`
+      `Kartu RFID untuk siswa ${rfidBindStudent.nama} berhasil dilepas.`,
     );
     setRfidBindStudent(null);
   };
@@ -560,7 +613,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       const ndef = new (window as any).NDEFReader();
       await ndef.scan();
       setIsNfcActive(true);
-      toast.info('NFC Smartphone Aktif', 'Tempelkan kartu RFID/NFC ke bagian belakang smartphone Anda.');
+      toast.info(
+        'NFC Smartphone Aktif',
+        'Tempelkan kartu RFID/NFC ke bagian belakang smartphone Anda.',
+      );
       ndef.addEventListener('reading', (event: any) => {
         const serial = (event.serialNumber || '').replace(/[:\s-]/g, '').toUpperCase();
         if (serial) {
@@ -570,14 +626,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       });
     } catch (err: any) {
       setIsNfcActive(false);
-      toast.error('Gagal Mengaktifkan NFC', err?.message || 'Izin NFC ditolak atau tidak tersedia.');
+      toast.error(
+        'Gagal Mengaktifkan NFC',
+        err?.message || 'Izin NFC ditolak atau tidak tersedia.',
+      );
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <Users className="w-4 h-4" />
@@ -587,8 +646,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               Single DB Admin & Piket ({students.length} Siswa)
             </span>
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">Manajemen Data Siswa & QR</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">
+            Manajemen Data Siswa & QR
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
             Database utama siswa terpusat untuk Admin, Guru Piket, & Kepala Sekolah.
           </p>
         </div>
@@ -642,7 +703,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             <button
               type="button"
               onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-              className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-sm"
+              className="px-3.5 py-2.5 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 border border-white/10 shadow-sm"
               title="Unduh Data Siswa (Excel / CSV)"
             >
               <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -651,8 +712,11 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
             {isExportDropdownOpen && (
               <>
-                <div className="fixed inset-0 z-20" onClick={() => setIsExportDropdownOpen(false)} />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-30 p-1.5 space-y-1 animate-in fade-in zoom-in-95">
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setIsExportDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-black/20 backdrop-blur-md border border-white/10 rounded-xl shadow-xl z-30 p-1.5 space-y-1 animate-in fade-in zoom-in-95">
                   <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Export ({filteredStudents.length} Siswa Terfilter)
                   </div>
@@ -662,12 +726,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                       handleExportExcel();
                       setIsExportDropdownOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-2.5 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-2.5 transition-colors"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <div>
                       <div>Download Excel (.xlsx)</div>
-                      <div className="text-[10px] font-normal text-slate-400">Format Spreadsheet Excel</div>
+                      <div className="text-[10px] font-normal text-slate-400">
+                        Format Spreadsheet Excel
+                      </div>
                     </div>
                   </button>
                   <button
@@ -676,12 +742,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                       handleExportCSV();
                       setIsExportDropdownOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-2.5 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-2.5 transition-colors"
                   >
                     <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <div>
                       <div>Download CSV (.csv)</div>
-                      <div className="text-[10px] font-normal text-slate-400">Format Teks Komutatif (CSV)</div>
+                      <div className="text-[10px] font-normal text-slate-400">
+                        Format Teks Komutatif (CSV)
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -737,7 +805,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             </button>
             <button
               onClick={() => setSelectedIds([])}
-              className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-200/50 rounded-lg transition-colors"
             >
               Batal Pilih
             </button>
@@ -760,7 +828,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       )}
 
       {/* Search & Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
+      <div className="bg-black/20 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10 shadow-sm space-y-4 transition-colors">
         {/* Top Search Row */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
           {/* Main Search Input */}
@@ -771,7 +839,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari nama siswa, NISN, ID QR, atau kelas..."
-              className="w-full pl-10 pr-9 py-2.5 text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800/90 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
+              className="w-full pl-10 pr-9 py-2.5 text-xs border border-white/10 dark:bg-slate-800/90 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
             />
             {searchTerm && (
               <button
@@ -786,13 +854,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
           {/* Result Count & Reset Button */}
           <div className="flex items-center justify-between lg:justify-end gap-3 text-xs">
-            <span className="text-slate-500 dark:text-slate-400 font-medium">
-              Menampilkan <strong className="text-blue-600 dark:text-blue-400 font-bold">{filteredStudents.length}</strong> dari {students.length} siswa
+            <span className="text-slate-400 font-medium">
+              Menampilkan{' '}
+              <strong className="text-blue-600 dark:text-blue-400 font-bold">
+                {filteredStudents.length}
+              </strong>{' '}
+              dari {students.length} siswa
             </span>
             {hasActiveFilters && (
               <button
                 onClick={resetAllFilters}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-lg text-[11px] flex items-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-700 shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-lg text-[11px] flex items-center gap-1.5 transition-colors border border-white/10 shrink-0 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Filter</span>
@@ -805,13 +877,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
           {/* 1. Grade Level (Tingkat Kelas) */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
               Tingkat Kelas
             </label>
             <select
               value={selectedTingkat}
               onChange={(e) => handleTingkatChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white transition-all cursor-pointer font-semibold"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl dark:text-white transition-all cursor-pointer font-semibold"
             >
               <option value="Semua">Semua Tingkat ({gradeOptions.length})</option>
               {gradeOptions.map((g) => (
@@ -824,16 +896,18 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
           {/* 2. Class Section (Kelas / Rombel) */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
               Kelas / Section
             </label>
             <select
               value={selectedKelas}
               onChange={(e) => setSelectedKelas(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white transition-all cursor-pointer font-semibold"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl dark:text-white transition-all cursor-pointer font-semibold"
             >
               <option value="Semua">
-                {selectedTingkat !== 'Semua' ? `Semua Kelas (Tingkat ${selectedTingkat})` : `Semua Kelas (${classOptions.length})`}
+                {selectedTingkat !== 'Semua'
+                  ? `Semua Kelas (Tingkat ${selectedTingkat})`
+                  : `Semua Kelas (${classOptions.length})`}
               </option>
               {classOptions.map((c) => (
                 <option key={c.name} value={c.name}>
@@ -845,20 +919,20 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
           {/* 3. Presensi Hari Ini */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
               Presensi Hari Ini
             </label>
             <select
               value={selectedAttendanceStatus}
               onChange={(e) => setSelectedAttendanceStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white transition-all cursor-pointer font-semibold"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl dark:text-white transition-all cursor-pointer font-semibold"
             >
               <option value="Semua">Semua Status Presensi</option>
-              <option value="Hadir_All">ðŸŸ¢ Hadir & Terlambat</option>
-              <option value="Hadir">âœ… Hadir Tepat Waktu</option>
+              <option value="Hadir_All">🟢 Hadir & Terlambat</option>
+              <option value="Hadir">✅ Hadir Tepat Waktu</option>
               <option value="Terlambat">â° Terlambat</option>
               <option value="Excused">â„¹ï¸ Izin & Sakit</option>
-              <option value="Izin">ðŸ“„ Izin</option>
+              <option value="Izin">📄 Izin</option>
               <option value="Sakit">ðŸ¥ Sakit</option>
               <option value="Alpa">âŒ Alpa / Tanpa Keterangan</option>
               <option value="Belum Absen">â³ Belum Absen Hari Ini</option>
@@ -867,17 +941,17 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
           {/* 4. Status Akun Siswa */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
               Status Akun
             </label>
             <select
               value={selectedAccountStatus}
               onChange={(e) => setSelectedAccountStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 dark:text-white transition-all cursor-pointer font-semibold"
+              className="w-full px-3 py-2 text-xs border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white/5 backdrop-blur-xl dark:text-white transition-all cursor-pointer font-semibold"
             >
               <option value="Semua">Semua Status Akun</option>
-              <option value="aktif">ðŸŸ¢ Aktif</option>
-              <option value="nonaktif">ðŸ”´ Nonaktif</option>
+              <option value="aktif">🟢 Aktif</option>
+              <option value="nonaktif">🔴 Nonaktif</option>
             </select>
           </div>
         </div>
@@ -892,7 +966,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             {searchTerm && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 Pencarian: "{searchTerm}"
-                <button onClick={() => setSearchTerm('')} className="hover:text-blue-900 dark:hover:text-white cursor-pointer ml-0.5">
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="hover:text-blue-900 dark:hover:text-white cursor-pointer ml-0.5"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -901,7 +978,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             {selectedTingkat !== 'Semua' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 Tingkat: {selectedTingkat}
-                <button onClick={() => setSelectedTingkat('Semua')} className="hover:text-indigo-900 dark:hover:text-white cursor-pointer ml-0.5">
+                <button
+                  onClick={() => setSelectedTingkat('Semua')}
+                  className="hover:text-indigo-900 dark:hover:text-white cursor-pointer ml-0.5"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -910,7 +990,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             {selectedKelas !== 'Semua' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                 Kelas: {selectedKelas}
-                <button onClick={() => setSelectedKelas('Semua')} className="hover:text-purple-900 dark:hover:text-white cursor-pointer ml-0.5">
+                <button
+                  onClick={() => setSelectedKelas('Semua')}
+                  className="hover:text-purple-900 dark:hover:text-white cursor-pointer ml-0.5"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -919,7 +1002,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             {selectedAttendanceStatus !== 'Semua' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 Presensi: {selectedAttendanceStatus}
-                <button onClick={() => setSelectedAttendanceStatus('Semua')} className="hover:text-emerald-900 dark:hover:text-white cursor-pointer ml-0.5">
+                <button
+                  onClick={() => setSelectedAttendanceStatus('Semua')}
+                  className="hover:text-emerald-900 dark:hover:text-white cursor-pointer ml-0.5"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -928,7 +1014,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             {selectedAccountStatus !== 'Semua' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                 Status Akun: {selectedAccountStatus}
-                <button onClick={() => setSelectedAccountStatus('Semua')} className="hover:text-amber-900 dark:hover:text-white cursor-pointer ml-0.5">
+                <button
+                  onClick={() => setSelectedAccountStatus('Semua')}
+                  className="hover:text-amber-900 dark:hover:text-white cursor-pointer ml-0.5"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -938,10 +1027,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       </div>
 
       {/* Student Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      <div className="bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 font-bold uppercase tracking-wider">
+            <thead className="bg-white/5 backdrop-blur-xl/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
@@ -962,13 +1051,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                 <th className="p-3.5 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-200">
               {paginatedStudents.length > 0 ? (
                 paginatedStudents.map((s, index) => {
                   const isSelected = selectedIds.includes(s.id);
                   const todayRec = getStudentTodayAttendance(s);
                   const isToday = todayRec ? store.isRecordForToday(todayRec) : false;
-                  const itemNumber = pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1;
+                  const itemNumber =
+                    pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1;
 
                   return (
                     <tr
@@ -987,17 +1077,24 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                           className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                         />
                       </td>
-                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">{itemNumber}</td>
+                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
+                        {itemNumber}
+                      </td>
                       <td className="p-3.5">
                         <div className="flex items-center gap-3">
                           <img
-                            src={s.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'}
+                            src={
+                              s.foto ||
+                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
+                            }
                             alt={s.nama}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                            className="w-9 h-9 rounded-full object-cover border border-white/10"
                           />
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white">{s.nama}</p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500">QR: 69933068.{s.nisn}.{s.nama}</p>
+                            <p className="font-bold text-white">{s.nama}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                              QR: 69933068.{s.nisn}.{s.nama}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -1010,7 +1107,8 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                             className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 mt-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
                             title={`UID Kartu: ${s.rfid_uid} (Klik untuk ubah / kelola tautan kartu RFID)`}
                           >
-                            <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" /> {s.rfid_uid}
+                            <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" />{' '}
+                            {s.rfid_uid}
                           </button>
                         ) : (
                           <button
@@ -1027,7 +1125,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                         {s.id_qr}
                       </td>
                       <td className="p-3.5 font-medium">
-                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded font-semibold">
+                        <span className="bg-white/5 backdrop-blur-xl text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded font-semibold">
                           {s.kelas}
                         </span>
                       </td>
@@ -1035,7 +1133,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                         {(() => {
                           if (!isToday || !todayRec) {
                             return (
-                              <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                              <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
                                 <Clock className="w-3 h-3 text-slate-400" /> Belum Absen
                               </span>
                             );
@@ -1044,36 +1142,41 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                             case 'Hadir':
                               return (
                                 <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Hadir ({todayRec.jenis})
+                                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />{' '}
+                                  Hadir ({todayRec.jenis})
                                 </span>
                               );
                             case 'Terlambat':
                               return (
                                 <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Terlambat
+                                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />{' '}
+                                  Terlambat
                                 </span>
                               );
                             case 'Izin':
                               return (
                                 <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                                  <FileCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" /> Izin
+                                  <FileCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />{' '}
+                                  Izin
                                 </span>
                               );
                             case 'Sakit':
                               return (
                                 <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
-                                  <Stethoscope className="w-3 h-3 text-purple-600 dark:text-purple-400" /> Sakit
+                                  <Stethoscope className="w-3 h-3 text-purple-600 dark:text-purple-400" />{' '}
+                                  Sakit
                                 </span>
                               );
                             case 'Alpa':
                               return (
                                 <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
-                                  <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Alpa
+                                  <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />{' '}
+                                  Alpa
                                 </span>
                               );
                             default:
                               return (
-                                <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                                <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
                                   <Clock className="w-3 h-3" /> {todayRec.status}
                                 </span>
                               );
@@ -1086,7 +1189,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                             <CheckCircle className="w-3 h-3" /> Aktif
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                          <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/10">
                             <XCircle className="w-3 h-3" /> Nonaktif
                           </span>
                         )}
@@ -1124,10 +1227,16 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                                 const waUrl = getWhatsAppLink(s.no_hp_ortu, waMsg);
                                 window.open(waUrl, '_blank');
                               } else {
-                                const phone = prompt(`Masukkan No WhatsApp Orang Tua untuk ${s.nama}:`, '08123456789');
+                                const phone = prompt(
+                                  `Masukkan No WhatsApp Orang Tua untuk ${s.nama}:`,
+                                  '08123456789',
+                                );
                                 if (phone && phone.trim()) {
                                   store.updateStudent(s.id, { no_hp_ortu: phone.trim() });
-                                  const waMsg = generateWhatsAppMessage({ ...s, no_hp_ortu: phone.trim() }, todayRec);
+                                  const waMsg = generateWhatsAppMessage(
+                                    { ...s, no_hp_ortu: phone.trim() },
+                                    todayRec,
+                                  );
                                   const waUrl = getWhatsAppLink(phone.trim(), waMsg);
                                   window.open(waUrl, '_blank');
                                 }
@@ -1136,9 +1245,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                             className={`p-1.5 rounded-lg transition-colors ${
                               s.no_hp_ortu
                                 ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
-                                : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                : 'text-slate-400 dark:text-slate-500 hover:bg-white/10'
                             }`}
-                            title={s.no_hp_ortu ? `Kirim Notifikasi WA ke Ortu (${s.no_hp_ortu})` : 'Tambah No WA Ortu & Kirim Pesan'}
+                            title={
+                              s.no_hp_ortu
+                                ? `Kirim Notifikasi WA ke Ortu (${s.no_hp_ortu})`
+                                : 'Tambah No WA Ortu & Kirim Pesan'
+                            }
                           >
                             <MessageCircle className="w-4 h-4" />
                           </button>
@@ -1165,8 +1278,11 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                 <tr>
                   <td colSpan={9} className="p-10 text-center text-slate-400 text-xs">
                     <Users className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                    <p className="font-bold text-slate-600 dark:text-slate-300">Belum Ada Data Siswa</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Silakan gunakan tombol "Import Excel" atau "Tambah Siswa" untuk mengisi database.</p>
+                    <p className="font-bold text-slate-300">Belum Ada Data Siswa</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Silakan gunakan tombol "Import Excel" atau "Tambah Siswa" untuk mengisi
+                      database.
+                    </p>
                   </td>
                 </tr>
               )}
@@ -1177,14 +1293,24 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
 
       {/* Pagination Controls */}
       {filteredStudents.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-xs transition-colors">
-          <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+        <div className="bg-black/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-xs transition-colors">
+          <div className="flex items-center gap-3 text-slate-400">
             <span>
-              Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{pageSize === 0 ? 1 : (currentPage - 1) * pageSize + 1}</span> -{' '}
+              Menampilkan{' '}
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                {pageSize === 0 ? totalStudentsCount : Math.min(currentPage * pageSize, totalStudentsCount)}
+                {pageSize === 0 ? 1 : (currentPage - 1) * pageSize + 1}
               </span>{' '}
-              dari <span className="font-bold text-slate-800 dark:text-slate-200">{totalStudentsCount}</span> siswa
+              -{' '}
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {pageSize === 0
+                  ? totalStudentsCount
+                  : Math.min(currentPage * pageSize, totalStudentsCount)}
+              </span>{' '}
+              dari{' '}
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {totalStudentsCount}
+              </span>{' '}
+              siswa
             </span>
 
             <div className="flex items-center gap-1.5 ml-2">
@@ -1192,7 +1318,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                className="px-2 py-1 text-xs border border-white/10 bg-white/5 backdrop-blur-xl rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
               >
                 <option value={10}>10 / hal</option>
                 <option value={25}>25 / hal</option>
@@ -1208,7 +1334,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="p-1.5 text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
                 title="Halaman Sebelumnya"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1217,13 +1343,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
               <div className="flex items-center gap-1 px-2 font-semibold">
                 <span className="text-blue-600 dark:text-blue-400 font-bold">{currentPage}</span>
                 <span className="text-slate-400">/</span>
-                <span className="text-slate-600 dark:text-slate-300">{totalPages}</span>
+                <span className="text-slate-300">{totalPages}</span>
               </div>
 
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="p-1.5 text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
                 title="Halaman Berikutnya"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1294,7 +1420,6 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
       <StudentQrPrintModal
         qrModalStudent={qrModalStudent}
         onClose={() => setQrModalStudent(null)}
-        
       />
 
       {/* Modal Clear All Database (Admin Only) */}
@@ -1322,5 +1447,3 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
     </div>
   );
 };
-
-

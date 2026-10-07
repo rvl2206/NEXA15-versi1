@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { store } from '../lib/store';
 import { Student, AttendanceRecord } from '../types';
 import {
@@ -22,6 +22,10 @@ import {
   Flame,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP);
 
 interface DailySummaryWidgetProps {
   students: Student[];
@@ -37,6 +41,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   selectedDate,
   onOpenScanner,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'hadir' | 'terlambat' | 'alpa' | 'belum_absen' | 'izin_sakit'>('all');
   const [showStudentListModal, setShowStudentListModal] = useState<boolean>(false);
   const [modalFilter, setModalFilter] = useState<'hadir' | 'terlambat' | 'alpa' | 'belum_absen' | 'izin_sakit'>('belum_absen');
@@ -47,12 +52,10 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   const todayYyyyMmDd = store.getTodayYyyyMmDd();
   const isToday = selectedDate === todayYyyyMmDd;
 
-  // Raw records for selected date
   const dateRecords = useMemo(() => {
     return attendance.filter((a) => store.isRecordForDate(a, selectedDate));
   }, [attendance, selectedDate]);
 
-  // Deduplicate per student for accurate daily count
   const studentDailyMap = useMemo(() => {
     const map = new Map<string, AttendanceRecord>();
     dateRecords.forEach((r) => {
@@ -72,14 +75,12 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
     return Array.from(studentDailyMap.values());
   }, [studentDailyMap]);
 
-  // Active student list
   const activeStudents = useMemo(() => {
     return students.filter((s) => s.status === 'aktif');
   }, [students]);
 
   const totalActive = activeStudents.length;
 
-  // Counts
   const hadirRecords = useMemo(() => uniqueDailyRecords.filter((a) => a.status === 'Hadir'), [uniqueDailyRecords]);
   const terlambatRecords = useMemo(() => uniqueDailyRecords.filter((a) => a.status === 'Terlambat'), [uniqueDailyRecords]);
   const izinRecords = useMemo(() => uniqueDailyRecords.filter((a) => a.status === 'Izin'), [uniqueDailyRecords]);
@@ -93,7 +94,6 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   const alpaCount = alpaRecords.length;
   const totalMasuk = hadirCount + terlambatCount;
 
-  // Students who have not checked in yet today (Belum Absen)
   const scannedNisns = useMemo(() => {
     return new Set(uniqueDailyRecords.map((r) => r.nisn));
   }, [uniqueDailyRecords]);
@@ -104,11 +104,9 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
 
   const belumAbsenCount = belumAbsenStudents.length;
 
-  // Attendance rate calculation
   const attendanceRate = totalActive > 0 ? Math.round((totalMasuk / totalActive) * 100) : 0;
   const onTimeRate = totalMasuk > 0 ? Math.round((hadirCount / totalMasuk) * 100) : 0;
 
-  // Latest 5 scans for the selected date sorted by timestamp descending
   const recentScans = useMemo(() => {
     return [...dateRecords]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -121,7 +119,6 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
     }
   }, [recentScans]);
 
-  // Class-by-class quick summary
   const classBreakdown = useMemo(() => {
     const classes: string[] = Array.from(
       new Set<string>(activeStudents.map((s) => (s.kelas ? s.kelas.trim() : '')))
@@ -151,51 +148,27 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
     });
   }, [activeStudents, uniqueDailyRecords]);
 
-  // Modal student list based on selected filter
   const modalStudentList = useMemo(() => {
     let list: Array<{ student: Student; record?: AttendanceRecord; statusLabel: string; time?: string }> = [];
 
     if (modalFilter === 'hadir') {
       list = hadirRecords.map((r) => {
         const s = activeStudents.find((st) => st.nisn === r.nisn) || {
-          id: r.nisn,
-          nisn: r.nisn,
-          nama: r.nama,
-          kelas: r.kelas,
-          id_qr: r.id_qr,
-          foto: '',
-          status: 'aktif',
+          id: r.nisn, nisn: r.nisn, nama: r.nama, kelas: r.kelas, id_qr: r.id_qr, foto: '', status: 'aktif',
         };
         return { student: s, record: r, statusLabel: 'Hadir Tepat Waktu', time: r.timestamp };
       });
     } else if (modalFilter === 'terlambat') {
       list = terlambatRecords.map((r) => {
         const s = activeStudents.find((st) => st.nisn === r.nisn) || {
-          id: r.nisn,
-          nisn: r.nisn,
-          nama: r.nama,
-          kelas: r.kelas,
-          id_qr: r.id_qr,
-          foto: '',
-          status: 'aktif',
+          id: r.nisn, nisn: r.nisn, nama: r.nama, kelas: r.kelas, id_qr: r.id_qr, foto: '', status: 'aktif',
         };
-        return {
-          student: s,
-          record: r,
-          statusLabel: `Terlambat (+${r.terlambatMenit || 0} mnt)`,
-          time: r.timestamp,
-        };
+        return { student: s, record: r, statusLabel: `Terlambat (+${r.terlambatMenit || 0} mnt)`, time: r.timestamp };
       });
     } else if (modalFilter === 'alpa') {
       list = alpaRecords.map((r) => {
         const s = activeStudents.find((st) => st.nisn === r.nisn) || {
-          id: r.nisn,
-          nisn: r.nisn,
-          nama: r.nama,
-          kelas: r.kelas,
-          id_qr: r.id_qr,
-          foto: '',
-          status: 'aktif',
+          id: r.nisn, nisn: r.nisn, nama: r.nama, kelas: r.kelas, id_qr: r.id_qr, foto: '', status: 'aktif',
         };
         return { student: s, record: r, statusLabel: 'Alpa (Tanpa Keterangan)', time: r.timestamp };
       });
@@ -203,20 +176,13 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
       const combined = [...izinRecords, ...sakitRecords];
       list = combined.map((r) => {
         const s = activeStudents.find((st) => st.nisn === r.nisn) || {
-          id: r.nisn,
-          nisn: r.nisn,
-          nama: r.nama,
-          kelas: r.kelas,
-          id_qr: r.id_qr,
-          foto: '',
-          status: 'aktif',
+          id: r.nisn, nisn: r.nisn, nama: r.nama, kelas: r.kelas, id_qr: r.id_qr, foto: '', status: 'aktif',
         };
         return { student: s, record: r, statusLabel: r.status, time: r.timestamp };
       });
     } else if (modalFilter === 'belum_absen') {
       list = belumAbsenStudents.map((s) => ({
-        student: s,
-        statusLabel: 'Belum Scan Masuk',
+        student: s, statusLabel: 'Belum Scan Masuk',
       }));
     }
 
@@ -236,380 +202,165 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
     setShowStudentListModal(true);
   };
 
-  const getHealthBadge = (rate: number) => {
-    if (rate >= 90) {
-      return {
-        bg: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-        text: 'Kehadiran Sangat Baik (Optimal)',
-        dot: 'bg-emerald-500',
-      };
-    }
-    if (rate >= 75) {
-      return {
-        bg: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
-        text: 'Kehadiran Cukup Baik',
-        dot: 'bg-blue-500',
-      };
-    }
-    return {
-      bg: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
-      text: 'Perhatian Khusus / Rendah',
-      dot: 'bg-rose-500',
-    };
-  };
-
-  const health = getHealthBadge(attendanceRate);
+  useGSAP(() => {
+    gsap.from('.gsap-summary-item', {
+      y: 30,
+      opacity: 0,
+      duration: 0.8,
+      stagger: 0.1,
+      ease: 'back.out(1.2)'
+    });
+  }, { scope: containerRef });
 
   return (
-    <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 rounded-2xl p-4 sm:p-6 border border-slate-200/90 dark:border-slate-800 shadow-sm relative overflow-hidden">
-      {/* Decorative subtle ambient backdrop glow */}
-      <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Top Header & Real-time Live Badge */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-200/80 dark:border-slate-800 relative z-10">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-blue-600 text-white shadow-xs">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                  Ringkasan Presensi Harian (Live Summary)
-                </h3>
-                {isToday && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all ${
-                      isLivePulsing
-                        ? 'bg-emerald-500 text-white border-emerald-400 scale-105 shadow-sm'
-                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                    }`}
-                  >
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    Realtime Active
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Hitungan instan siswa hadir, terlambat, alpa & belum absen yang diperbarui secara otomatis tiap scan.
-              </p>
-            </div>
+    <div ref={containerRef} className="w-full">
+      {/* Action Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+            <TrendingUp className="w-6 h-6 text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-black text-white">Pemantauan Presensi</h2>
+            <p className="text-slate-400 font-medium text-sm md:text-base">{totalMasuk} / {totalActive} Siswa Terdata</p>
           </div>
         </div>
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2">
+        
+        <div className="flex flex-wrap items-center gap-4">
+          {isToday && (
+            <div className="px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] md:text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Real-time Aktif
+            </div>
+          )}
           {onOpenScanner && (
-            <button
-              type="button"
-              onClick={onOpenScanner}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>Buka Scanner QR</span>
+            <button onClick={onOpenScanner} className="px-5 py-2.5 bg-white text-black font-bold text-sm rounded-full flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer">
+              <QrCode className="w-4 h-4" /> Buka Pemindai
             </button>
           )}
-
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold ${health.bg}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${health.dot}`} />
-            <span>{attendanceRate}% Kehadiran</span>
-          </div>
         </div>
       </div>
 
-      {/* Main 4 Primary Metric Cards: Present, Late, Absent, Unchecked */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 relative z-10 mb-5">
-        {/* 1. HADIR TEPAT WAKTU */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.15 }}
+      {/* Gapless Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
+        
+        {/* Massive Card 1 - On Time */}
+        <div 
           onClick={() => openModalWithFilter('hadir')}
-          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs cursor-pointer hover:border-emerald-400 transition-all group relative overflow-hidden btn-press"
+          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 row-span-2 border border-white/10 bg-gradient-to-br from-emerald-500/10 to-transparent p-5 md:p-6 flex flex-col justify-between group cursor-pointer relative overflow-hidden min-h-[140px] rounded-[1.5rem]"
         >
-          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-bl-3xl pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Hadir Tepat</span>
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 tabular-nums">
-              {totalMasuk > 0 ? `${onTimeRate}%` : '0%'}
-            </span>
+          <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-3xl"></div>
+          <UserCheck className="w-6 h-6 text-emerald-400 mb-3 opacity-50 group-hover:scale-110 transition-transform duration-700" />
+          <div>
+            <div className="text-4xl md:text-5xl font-black text-white leading-none tracking-tighter tabular-nums">{hadirCount}</div>
+            <div className="flex items-center justify-between mt-3">
+              <div className="text-xs md:text-sm text-emerald-400 font-bold uppercase tracking-widest">Hadir Tepat</div>
+              <div className="text-sm md:text-base font-light text-slate-500">{onTimeRate}% Tepat Waktu</div>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 tabular-nums">
-              {hadirCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium tabular-nums">/ {totalActive} Siswa</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-medium pt-2 border-t border-emerald-100/60 dark:border-emerald-900/40">
-            <span>&le; 07:15 WIT</span>
-            <span className="text-[10px] text-slate-400 group-hover:text-emerald-600 transition-colors flex items-center gap-0.5">
-              Lihat nama <ArrowRight className="w-2.5 h-2.5" />
-            </span>
-          </div>
-        </motion.div>
+        </div>
 
-        {/* 2. TERLAMBAT */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.15 }}
+        {/* Metric Cell 2 - Late */}
+        <div 
           onClick={() => openModalWithFilter('terlambat')}
-          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-amber-200/90 dark:border-amber-800/60 shadow-xs cursor-pointer hover:border-amber-400 transition-all group relative overflow-hidden btn-press"
+          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 row-span-1 border border-white/10 bg-amber-500/5 p-4 md:p-5 flex items-center justify-between group cursor-pointer rounded-[1.5rem]"
         >
-          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-3xl pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Terlambat</span>
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 tabular-nums">
-              {totalMasuk > 0 ? `${Math.round((terlambatCount / totalMasuk) * 100)}%` : '0%'}
-            </span>
+          <div>
+            <div className="text-3xl md:text-4xl font-black text-amber-400 tabular-nums group-hover:scale-105 transition-transform origin-left">{terlambatCount}</div>
+            <div className="text-xs md:text-sm text-amber-600 mt-2 font-bold uppercase tracking-widest">Terlambat</div>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-amber-950 dark:text-amber-100 tabular-nums">
-              {terlambatCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Siswa Terlambat</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-amber-700 dark:text-amber-400 font-medium pt-2 border-t border-amber-100/60 dark:border-amber-900/40">
-            <span>&gt; 07:15 WIT</span>
-            <span className="text-[10px] text-slate-400 group-hover:text-amber-600 transition-colors flex items-center gap-0.5">
-              Lihat nama <ArrowRight className="w-2.5 h-2.5" />
-            </span>
-          </div>
-        </motion.div>
+          <Clock className="w-10 h-10 md:w-12 md:h-12 text-amber-500/20" />
+        </div>
 
-        {/* 3. BELUM ABSEN / PENDING SCAN */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.15 }}
+        {/* Metric Cell 3 - Pending */}
+        <div 
           onClick={() => openModalWithFilter('belum_absen')}
-          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-sky-200/90 dark:border-sky-800/60 shadow-xs cursor-pointer hover:border-sky-400 transition-all group relative overflow-hidden btn-press"
+          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-1 row-span-1 border border-white/10 bg-sky-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
         >
-          <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/5 rounded-bl-3xl pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Belum Scan</span>
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 tabular-nums">
-              {totalActive > 0 ? `${Math.round((belumAbsenCount / totalActive) * 100)}%` : '0%'}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-sky-950 dark:text-sky-100 tabular-nums">
-              {belumAbsenCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Belum Tercatat</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-sky-700 dark:text-sky-400 font-medium pt-2 border-t border-sky-100/60 dark:border-sky-900/40">
-            <span>Perlu Diingatkan</span>
-            <span className="text-[10px] text-slate-400 group-hover:text-sky-600 transition-colors flex items-center gap-0.5">
-              Lihat nama <ArrowRight className="w-2.5 h-2.5" />
-            </span>
-          </div>
-        </motion.div>
+          <div className="text-2xl md:text-3xl font-black text-sky-400 tabular-nums">{belumAbsenCount}</div>
+          <div className="text-[10px] md:text-xs text-sky-600 mt-1 font-bold uppercase tracking-widest">Belum Scan</div>
+        </div>
 
-        {/* 4. ALPA & IZIN / SAKIT */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.15 }}
+        {/* Metric Cell 4 - Excused/Sick */}
+        <div 
+          onClick={() => openModalWithFilter('izin_sakit')}
+          className="gsap-summary-item col-span-1 md:col-span-1 lg:col-span-1 row-span-1 border border-white/10 bg-blue-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
+        >
+          <div className="text-2xl md:text-3xl font-black text-blue-400 tabular-nums">{izinCount + sakitCount}</div>
+          <div className="text-[10px] md:text-xs text-blue-600 mt-1 font-bold uppercase tracking-widest">Izin/Sakit</div>
+        </div>
+
+        {/* Metric Cell 5 - Absent */}
+        <div 
           onClick={() => openModalWithFilter('alpa')}
-          className="card-premium bg-white dark:bg-slate-900/90 p-4 rounded-2xl border border-rose-200/90 dark:border-rose-800/60 shadow-xs cursor-pointer hover:border-rose-400 transition-all group relative overflow-hidden btn-press"
+          className="gsap-summary-item col-span-1 md:col-span-1 lg:col-span-1 row-span-1 border border-white/10 bg-rose-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
         >
-          <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 rounded-bl-3xl pointer-events-none" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1">
-              <XCircle className="w-3.5 h-3.5" />
-              <span>Alpa / Izin</span>
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 tabular-nums">
-              Alpa: {alpaCount}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-rose-950 dark:text-rose-100 tabular-nums">
-              {alpaCount + izinCount + sakitCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium tabular-nums">
-              (Izin: {izinCount}, Sakit: {sakitCount})
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-rose-700 dark:text-rose-400 font-medium pt-2 border-t border-rose-100/60 dark:border-rose-900/40">
-            <span>Tanpa Kehadiran</span>
-            <span className="text-[10px] text-slate-400 group-hover:text-rose-600 transition-colors flex items-center gap-0.5">
-              Lihat nama <ArrowRight className="w-2.5 h-2.5" />
-            </span>
-          </div>
-        </motion.div>
-      </div>
+          <div className="text-2xl md:text-3xl font-black text-rose-400 tabular-nums">{alpaCount}</div>
+          <div className="text-[10px] md:text-xs text-rose-600 mt-1 font-bold uppercase tracking-widest">Alpa</div>
+        </div>
 
-      {/* Progress Bar & Rate Overview */}
-      <div className="bg-white dark:bg-slate-900/90 rounded-xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-slate-800 mb-4 relative z-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 text-xs font-bold">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-700 dark:text-slate-200">
-              Tingkat Kehadiran Masuk: <strong className="text-blue-600 dark:text-blue-400">{attendanceRate}%</strong> ({totalMasuk}/{totalActive} Siswa)
-            </span>
+        {/* Progress Timeline Row */}
+        <div className="gsap-summary-item col-span-1 md:col-span-4 lg:col-span-6 border border-white/10 bg-black/20 p-4 md:px-6 md:py-5 rounded-[1.5rem]">
+          <div className="flex items-center justify-between text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3 md:mb-4">
+            <span className="text-slate-400">Progres Pemindaian Hari Ini</span>
+            <span className="text-white">{attendanceRate}% Terdata</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Hadir ({hadirCount})
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              Terlambat ({terlambatCount})
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              Izin/Sakit ({izinCount + sakitCount})
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-              Belum Scan ({belumAbsenCount})
-            </span>
+          <div className="w-full h-3 md:h-4 rounded-full bg-white/5 overflow-hidden flex gap-0.5 p-0.5">
+            <div style={{ width: `${totalActive > 0 ? (hadirCount / totalActive) * 100 : 0}%` }} className="h-full bg-emerald-500 rounded-l-full" />
+            <div style={{ width: `${totalActive > 0 ? (terlambatCount / totalActive) * 100 : 0}%` }} className="h-full bg-amber-500" />
+            <div style={{ width: `${totalActive > 0 ? ((izinCount + sakitCount) / totalActive) * 100 : 0}%` }} className="h-full bg-blue-500" />
+            <div style={{ width: `${totalActive > 0 ? (alpaCount / totalActive) * 100 : 0}%` }} className="h-full bg-rose-500" />
+            <div style={{ width: `${totalActive > 0 ? (belumAbsenCount / totalActive) * 100 : 0}%` }} className="h-full bg-white/10 rounded-r-full" />
           </div>
         </div>
 
-        {/* Visual Stacked Progress Bar */}
-        <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex gap-0.5 p-0.5">
-          <div
-            style={{ width: `${totalActive > 0 ? (hadirCount / totalActive) * 100 : 0}%` }}
-            className="h-full bg-emerald-500 rounded-l-full transition-all duration-500"
-            title={`Hadir Tepat: ${hadirCount} siswa`}
-          />
-          <div
-            style={{ width: `${totalActive > 0 ? (terlambatCount / totalActive) * 100 : 0}%` }}
-            className="h-full bg-amber-500 transition-all duration-500"
-            title={`Terlambat: ${terlambatCount} siswa`}
-          />
-          <div
-            style={{ width: `${totalActive > 0 ? ((izinCount + sakitCount) / totalActive) * 100 : 0}%` }}
-            className="h-full bg-blue-500 transition-all duration-500"
-            title={`Izin/Sakit: ${izinCount + sakitCount} siswa`}
-          />
-          <div
-            style={{ width: `${totalActive > 0 ? (alpaCount / totalActive) * 100 : 0}%` }}
-            className="h-full bg-rose-500 transition-all duration-500"
-            title={`Alpa: ${alpaCount} siswa`}
-          />
-          <div
-            style={{ width: `${totalActive > 0 ? (belumAbsenCount / totalActive) * 100 : 0}%` }}
-            className="h-full bg-slate-200 dark:bg-slate-700 rounded-r-full transition-all duration-500"
-            title={`Belum Absen: ${belumAbsenCount} siswa`}
-          />
-        </div>
-      </div>
-
-      {/* Live Recent Scans Stream & Class Breakdown pills */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10">
-        {/* Left: 5 Live Recent Scans */}
-        <div className="lg:col-span-6 bg-white dark:bg-slate-900/90 rounded-xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <Flame className="w-3.5 h-3.5 text-orange-500" />
-              <span>Aktivitas Scan Realtime Terbaru</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold">
-              {recentScans.length} Scan Terakhir
-            </span>
+        {/* Data Split: Recent Scans and Class Breakdown */}
+        <div className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 border border-white/10 p-5 md:p-6 rounded-[1.5rem] bg-white/[0.02]">
+          <div className="flex items-center justify-between mb-4 md:mb-5">
+             <h3 className="text-base md:text-lg font-black text-white">Pemindaian Terbaru</h3>
+             <Flame className="w-4 h-4 md:w-5 md:h-5 text-orange-500 animate-pulse" />
           </div>
-
           {recentScans.length === 0 ? (
-            <div className="py-6 text-center text-xs text-slate-400 font-medium">
-              Belum ada aktivitas scan pada tanggal ini.
-            </div>
+            <div className="text-slate-500 text-sm py-4">Belum ada pemindaian...</div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {recentScans.map((r, idx) => {
-                const timeStr = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
-                const isLate = r.status === 'Terlambat';
+                const timeStr = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
                 return (
-                  <motion.div
-                    key={`${r.id || r.nisn}-${r.timestamp}-${idx}`}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${isLate ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                      <div className="truncate">
-                        <div className="font-bold text-slate-800 dark:text-slate-100 truncate">
-                          {r.nama}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {r.kelas} &bull; NISN: {r.nisn}
-                        </div>
+                  <div key={idx} className="flex justify-between items-center group">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${r.status === 'Terlambat' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                      <div>
+                        <div className="text-white font-bold text-xs md:text-sm group-hover:text-blue-400 transition-colors">{r.nama}</div>
+                        <div className="text-slate-500 text-[10px] md:text-xs">{r.kelas} - {r.nisn}</div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                          isLate
-                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-400">{timeStr}</span>
-                    </div>
-                  </motion.div>
-                );
+                    <div className="font-mono text-slate-400 text-xs">{timeStr}</div>
+                  </div>
+                )
               })}
             </div>
           )}
         </div>
 
-        {/* Right: Quick Class Breakdown Pills */}
-        <div className="lg:col-span-6 bg-white dark:bg-slate-900/90 rounded-xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <Users className="w-3.5 h-3.5 text-blue-500" />
-              <span>Status Kehadiran per Kelas</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold">
-              {classBreakdown.length} Rombel
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+        <div className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 border border-white/10 p-5 md:p-6 bg-white/[0.01] rounded-[1.5rem]">
+          <h3 className="text-base md:text-lg font-black text-white mb-4 md:mb-5">Matriks Kelas</h3>
+          <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto no-scrollbar pr-2 md:pr-4">
             {classBreakdown.map((c) => (
-              <div
-                key={c.kelas}
-                className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs"
-              >
-                <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-100 mb-1">
-                  <span className="truncate">{c.kelas}</span>
-                  <span
-                    className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
-                      c.rate >= 90
-                        ? 'text-emerald-700 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300'
-                        : c.rate >= 70
-                        ? 'text-blue-700 bg-blue-100 dark:bg-blue-950 dark:text-blue-300'
-                        : 'text-rose-700 bg-rose-100 dark:bg-rose-950 dark:text-rose-300'
-                    }`}
-                  >
+              <div key={c.kelas} className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 border border-white/5 flex flex-col justify-between">
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <span className="font-bold text-slate-300 text-sm">{c.kelas}</span>
+                  <span className={`text-[9px] md:text-[10px] font-black px-2 py-1 rounded-sm ${
+                    c.rate >= 90 ? 'bg-emerald-500/20 text-emerald-400' : 
+                    c.rate >= 70 ? 'bg-blue-500/20 text-blue-400' : 
+                    'bg-rose-500/20 text-rose-400'
+                  }`}>
                     {c.rate}%
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                  <span>Masuk: {c.masuk}/{c.total}</span>
-                  {c.belumAbsen > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400 font-bold">
-                      -{c.belumAbsen}
-                    </span>
-                  )}
+                <div className="text-[10px] md:text-xs text-slate-500 flex justify-between flex-wrap gap-1">
+                  <span>{c.masuk} / {c.total}</span>
+                  {c.belumAbsen > 0 && <span className="text-amber-500">{c.belumAbsen} Belum</span>}
                 </div>
               </div>
             ))}
@@ -617,181 +368,92 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
         </div>
       </div>
 
-      {/* Modal: Interactive Student Drill-Down for Specific Daily Status */}
+      {/* Modal View for Lists */}
       <AnimatePresence>
         {showStudentListModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="bg-[#020617] rounded-[2rem] w-full max-w-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
             >
-              {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              {/* Cinematic Modal Header */}
+              <div className="p-6 md:p-8 border-b border-white/10 flex justify-between items-start bg-white/[0.02]">
                 <div>
-                  <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Daftar Siswa:</span>
-                    <span className="capitalize text-blue-600 dark:text-blue-400">
-                      {modalFilter === 'belum_absen'
-                        ? 'Belum Scan Hari Ini'
-                        : modalFilter === 'hadir'
-                        ? 'Hadir Tepat Waktu'
-                        : modalFilter === 'terlambat'
-                        ? 'Siswa Terlambat'
-                        : modalFilter === 'alpa'
-                        ? 'Siswa Alpa'
-                        : 'Siswa Izin / Sakit'}
-                    </span>
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Total: {modalStudentList.length} siswa ditemukan
-                  </p>
+                  <h3 className="text-2xl md:text-3xl font-black text-white capitalize">
+                      {modalFilter === 'belum_absen' ? 'Belum Scan' : 
+                       modalFilter === 'hadir' ? 'Hadir Tepat Waktu' : 
+                       modalFilter === 'terlambat' ? 'Terlambat' : 
+                       modalFilter === 'alpa' ? 'Alpa' : 'Sakit / Izin'}
+                  </h3>
+                  <p className="text-slate-400 mt-2 font-medium text-sm">Ditemukan {modalStudentList.length} siswa dalam kategori ini.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowStudentListModal(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg cursor-pointer"
-                >
-                  <XCircle className="w-5 h-5" />
+                <button onClick={() => setShowStudentListModal(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer shrink-0">
+                  <XCircle className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               </div>
 
-              {/* Filter Tabs in Modal */}
-              <div className="px-4 pt-3 flex flex-wrap gap-1.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setModalFilter('belum_absen')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
-                    modalFilter === 'belum_absen'
-                      ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-t border-x border-slate-200 dark:border-slate-800'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Belum Scan ({belumAbsenCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalFilter('hadir')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
-                    modalFilter === 'hadir'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border-t border-x border-slate-200 dark:border-slate-800'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Hadir ({hadirCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalFilter('terlambat')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
-                    modalFilter === 'terlambat'
-                      ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-t border-x border-slate-200 dark:border-slate-800'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Terlambat ({terlambatCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalFilter('alpa')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
-                    modalFilter === 'alpa'
-                      ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border-t border-x border-slate-200 dark:border-slate-800'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Alpa ({alpaCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalFilter('izin_sakit')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
-                    modalFilter === 'izin_sakit'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-t border-x border-slate-200 dark:border-slate-800'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Izin/Sakit ({izinCount + sakitCount})
-                </button>
+              {/* Filtering Array */}
+              <div className="px-6 md:px-8 py-4 bg-white/[0.01] border-b border-white/10 flex flex-wrap gap-2">
+                {[
+                  { key: 'belum_absen', label: 'Belum Scan' },
+                  { key: 'hadir', label: 'Hadir Tepat' },
+                  { key: 'terlambat', label: 'Terlambat' },
+                  { key: 'alpa', label: 'Alpa' },
+                  { key: 'izin_sakit', label: 'Sakit/Izin' }
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setModalFilter(f.key as any)}
+                    className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-bold transition-all uppercase tracking-widest ${
+                      modalFilter === f.key ? 'bg-white text-black' : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Search Bar in Modal */}
-              <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+              {/* Search Bar */}
+              <div className="px-6 md:px-8 py-3 md:py-4 bg-transparent border-b border-white/10">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Search className="w-4 h-4 md:w-5 md:h-5 text-slate-500 absolute left-4 top-3 md:top-3.5" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari nama siswa, NISN, atau kelas..."
-                    className="w-full pl-9 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    placeholder="Cari nama atau NISN..."
+                    className="w-full pl-10 md:pl-12 pr-4 py-2 md:py-3 bg-white/5 rounded-xl text-xs md:text-sm font-medium text-white focus:outline-none focus:bg-white/10 transition-colors border border-transparent focus:border-white/20"
                   />
                 </div>
               </div>
 
-              {/* Student List */}
-              <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              {/* The List */}
+              <div className="p-6 md:p-8 overflow-y-auto flex-1">
                 {modalStudentList.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400 font-medium">
-                    Tidak ada siswa pada kategori ini.
-                  </div>
+                  <div className="text-center py-12 md:py-20 text-slate-600 font-medium text-sm">Tidak ada data yang cocok.</div>
                 ) : (
-                  modalStudentList.map((item, idx) => (
-                    <div
-                      key={`${item.student.nisn}-${idx}`}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0">
-                          {item.student.nama.charAt(0).toUpperCase()}
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    {modalStudentList.map((item, idx) => (
+                      <div key={idx} className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/[0.03] border border-white/5 flex justify-between items-center group hover:bg-white/[0.06] transition-colors">
                         <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-white">
-                            {item.student.nama}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            Kelas: {item.student.kelas} &bull; NISN: {item.student.nisn}
-                          </div>
+                           <div className="text-white font-bold text-sm">{item.student.nama}</div>
+                           <div className="text-slate-500 text-[10px] md:text-xs mt-1">{item.student.kelas} - {item.student.nisn}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
+                            modalFilter === 'hadir' ? 'text-emerald-400' :
+                            modalFilter === 'terlambat' ? 'text-amber-400' :
+                            modalFilter === 'alpa' ? 'text-rose-400' :
+                            modalFilter === 'belum_absen' ? 'text-sky-400' : 'text-blue-400'
+                          }`}>{item.statusLabel}</div>
+                          {item.time && <div className="text-[10px] md:text-xs font-mono text-slate-600 mt-1">{new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>}
                         </div>
                       </div>
-
-                      <div className="text-right">
-                        <span
-                          className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-full ${
-                            modalFilter === 'hadir'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : modalFilter === 'terlambat'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                              : modalFilter === 'alpa'
-                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                              : modalFilter === 'belum_absen'
-                              ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                          }`}
-                        >
-                          {item.statusLabel}
-                        </span>
-                        {item.time && (
-                          <div className="text-[9px] font-mono text-slate-400 mt-0.5">
-                            {new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIT
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-right">
-                <button
-                  type="button"
-                  onClick={() => setShowStudentListModal(false)}
-                  className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Tutup
-                </button>
               </div>
             </motion.div>
           </div>

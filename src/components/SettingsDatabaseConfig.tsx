@@ -182,13 +182,13 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     <Database className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
                       <span>Pusat Arsitektur Database & Panduan Transisi Sistem</span>
                       <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-full text-[10px] font-bold">
                         Multi-Storage Ready
                       </span>
                     </h4>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       Pilih model penyimpanan: <b>Mandiri Cloud Run</b> (0 SaaS), <b>Self-Hosted PostgreSQL</b> (VPS/Docker), <b>Google Cloud SQL</b>, atau <b>Supabase Cloud</b>.
                     </p>
                   </div>
@@ -208,11 +208,11 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
               </div>
 
               {/* Clarification Callout */}
-              <div className="p-3.5 bg-white dark:bg-slate-900/90 rounded-xl border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+              <div className="p-3.5 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl/90 rounded-xl border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
                   <span className="font-bold text-emerald-700 dark:text-emerald-400">Apakah harus tetap menggunakan Supabase setelah deploy di Cloud Run? </span>
-                  <span className="font-bold text-slate-900 dark:text-white">TIDAK WAJIB! </span>
+                  <span className="font-bold text-white">TIDAK WAJIB! </span>
                   Aplikasi ini sudah berstatus <b>Self-Contained Full-Stack</b> dengan backend Express REST API dan penyimpanan lokal server. Anda bebas memilih tetap menggunakan Supabase, beralih ke Self-Hosted PostgreSQL di VPS sendiri, Cloud SQL di Google Cloud, atau berjalan 100% mandiri tanpa database eksternal.
                 </div>
               </div>
@@ -298,7 +298,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                         value={settings.supabaseUrl || ''}
                         onChange={(e) => setSettings({ ...settings, supabaseUrl: e.target.value })}
                         placeholder="https://xyzcompany.supabase.co"
-                        className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
+                        className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
                       />
                     </div>
 
@@ -311,7 +311,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                         value={settings.supabaseKey || ''}
                         onChange={(e) => setSettings({ ...settings, supabaseKey: e.target.value })}
                         placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
-                        className="w-full px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
+                        className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-600 font-mono"
                       />
                     </div>
                   </div>
@@ -355,7 +355,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                   )}
 
                   {/* Auto Sync Toggle & Sync Actions */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3.5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-3">
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -370,7 +370,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                         <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
                           Otomatis Sync ke Supabase saat Presensi & Data Berubah
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className="text-[11px] text-slate-400">
                           Setiap perubahan data siswa atau scan presensi langsung di-upsert ke tabel Supabase.
                         </div>
                       </div>
@@ -389,10 +389,10 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                   </div>
 
                   {/* Antrian Pengiriman / Queue Status Breakdown */}
-                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                  <div className="bg-white/5 backdrop-blur-xl/60 p-3.5 rounded-xl border border-white/10/80 space-y-2.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
                           <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                           <span>Status Antrian Pengiriman (Sync Queue):</span>
                         </span>
@@ -421,7 +421,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                           <button
                             type="button"
                             onClick={handleClearQueueOnly}
-                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-slate-700 dark:text-slate-200 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-slate-200 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
                             title="Kosongkan daftar antrian lokal jika tidak ingin dikirim"
                           >
                             Kosongkan Antrian
@@ -431,27 +431,27 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Presensi Siswa:</span>
+                      <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
+                        <span className="text-slate-400 block text-[10px]">Presensi Siswa:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.attendanceCount} item</span>
                       </div>
-                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Master Siswa:</span>
+                      <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
+                        <span className="text-slate-400 block text-[10px]">Master Siswa:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.studentCount} item</span>
                       </div>
-                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Data & Presensi Guru:</span>
+                      <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
+                        <span className="text-slate-400 block text-[10px]">Data & Presensi Guru:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.teacherCount} item</span>
                       </div>
-                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Log Aktivitas / Hapus:</span>
+                      <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
+                        <span className="text-slate-400 block text-[10px]">Log Aktivitas / Hapus:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.logCount + syncQueueInfo.deleteCount} item</span>
                       </div>
                     </div>
                   </div>
 
                   {settings.lastSupabaseSync && (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                    <p className="text-[11px] text-slate-400 italic">
                       Terakhir disinkronkan ke Supabase: {settings.lastSupabaseSync}
                     </p>
                   )}
@@ -460,14 +460,14 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
 
               {/* TAB 2: GOOGLE CLOUD SQL (GCP NATIVE) */}
               {activeDbTab === 'cloudsql' && (
-                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="space-y-4 pt-1 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-xl border border-white/10">
                   <div className="flex items-start gap-3">
                     <Server className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <h5 className="text-xs font-bold text-white">
                         Opsi 2: Google Cloud SQL (PostgreSQL di Ekosistem Google Cloud)
                       </h5>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Jika Anda ingin basis data kelas enterprise yang berada dalam 1 akun Google Cloud yang sama dengan Cloud Run (tanpa layanan SaaS pihak ketiga seperti Supabase), Anda dapat menghubungkan Cloud Run ke instance <b>Google Cloud SQL (PostgreSQL 15/16)</b>.
                       </p>
                     </div>
@@ -503,14 +503,14 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
 
               {/* TAB 3: SELF-HOSTED POSTGRESQL & DOCKER (ON-PREMISE / VPS) */}
               {activeDbTab === 'docker' && (
-                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="space-y-4 pt-1 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-xl border border-white/10">
                   <div className="flex items-start gap-3">
                     <Terminal className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <h5 className="text-xs font-bold text-white">
                         Opsi 3: Self-Hosted PostgreSQL (Docker / VPS Sekolah / Server Lokal)
                       </h5>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Cocok untuk sekolah yang memiliki server fisik sendiri (On-Premise) atau VPS murah (IDCloudHost, Niagahoster, Biznet Gio, DigitalOcean) untuk memotong ketergantungan SaaS 100%.
                       </p>
                     </div>
@@ -568,37 +568,37 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
 
               {/* TAB 4: CLOUD RUN NATIVE & STANDALONE (ZERO EXTERNAL SAAS) */}
               {activeDbTab === 'native' && (
-                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="space-y-4 pt-1 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-xl border border-white/10">
                   <div className="flex items-start gap-3">
                     <HardDrive className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <h5 className="text-xs font-bold text-white">
                         Opsi 4: Mode Mandiri (Cloud Run Native Server Storage)
                       </h5>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Aplikasi NEXA15 Anda <b>sudah dirancang mandiri</b> tanpa ketergantungan pada database eksternal apapun.
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
-                      <span className="font-bold text-slate-900 dark:text-white block">1. Express REST API Backend</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-1">
+                      <span className="font-bold text-white block">1. Express REST API Backend</span>
+                      <p className="text-[11px] text-slate-400">
                         Memiliki endpoint native <code>/api/attendance</code>, <code>/api/students</code>, <code>/api/teachers</code>, dan <code>/api/logs</code>.
                       </p>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
-                      <span className="font-bold text-slate-900 dark:text-white block">2. Server JSON Persistence</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-1">
+                      <span className="font-bold text-white block">2. Server JSON Persistence</span>
+                      <p className="text-[11px] text-slate-400">
                         Menyimpan snapshot data secara otomatis ke file <code>nexa15_server_db.json</code> di dalam container Cloud Run.
                       </p>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
-                      <span className="font-bold text-slate-900 dark:text-white block">3. Offline-First Browser Cache</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-1">
+                      <span className="font-bold text-white block">3. Offline-First Browser Cache</span>
+                      <p className="text-[11px] text-slate-400">
                         Scan QR Code dan absensi tetap berjalan secepat kilat meskipun jaringan internet sekolah terputus sementara.
                       </p>
                     </div>
@@ -608,65 +608,65 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
 
               {/* TAB 5: STEP-BY-STEP MIGRATION ROADMAP & SQL DUMP */}
               {activeDbTab === 'migration' && (
-                <div className="space-y-4 pt-1 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="space-y-4 pt-1 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-4 rounded-xl border border-white/10">
                   <div className="flex items-start gap-3">
                     <BookOpen className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <h5 className="text-xs font-bold text-white">
                         Panduan Langkah Demi Langkah Migrasi Database (Standard Migration Pattern)
                       </h5>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                         Ikuti 5 langkah standar di bawah ini untuk memindahkan data dari penyimpanan saat ini ke database PostgreSQL / Cloud SQL mandiri tanpa kehilangan rekaman absensi:
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/50 rounded-xl border border-white/10 flex gap-3 items-start">
                       <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
                       <div className="text-xs">
-                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 1: Unduh Backup Snapshot Data (SQL Dump)</span>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        <span className="font-bold text-white block">Langkah 1: Unduh Backup Snapshot Data (SQL Dump)</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           Klik tombol <b>"Unduh SQL Dump (.sql)"</b> di kanan atas atau tombol di bawah untuk membuat file SQL lengkap yang berisi perintah DDL pembuatan tabel dan seluruh <code>INSERT</code> data siswa, presensi, guru, dan log aktivitas saat ini.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/50 rounded-xl border border-white/10 flex gap-3 items-start">
                       <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
                       <div className="text-xs">
-                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 2: Siapkan Server Database Target</span>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        <span className="font-bold text-white block">Langkah 2: Siapkan Server Database Target</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           Jalankan instance PostgreSQL di VPS (menggunakan Docker Compose di Tab 3) atau buat instance Cloud SQL PostgreSQL di Google Cloud Console.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/50 rounded-xl border border-white/10 flex gap-3 items-start">
                       <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
                       <div className="text-xs">
-                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 3: Eksekusi File SQL Dump</span>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        <span className="font-bold text-white block">Langkah 3: Eksekusi File SQL Dump</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           Buka pgAdmin atau jalankan terminal: <code>psql -U nexa_admin -d nexa15_presensi -f nexa15_backup_dump.sql</code> untuk mengimpor seluruh tabel dan data sekaligus.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/50 rounded-xl border border-white/10 flex gap-3 items-start">
                       <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">4</span>
                       <div className="text-xs">
-                        <span className="font-bold text-slate-900 dark:text-white block">Langkah 4: Konfigurasikan Connection String</span>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        <span className="font-bold text-white block">Langkah 4: Konfigurasikan Connection String</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           Set environment variable <code>DATABASE_URL=postgresql://user:password@host:5432/dbname</code> pada service Cloud Run Anda.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl/50 rounded-xl border border-white/10 flex gap-3 items-start">
                       <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">5</span>
                       <div className="text-xs">
                         <span className="font-bold text-emerald-800 dark:text-emerald-300 block">Langkah 5: Verifikasi Integritas Data (Health Check)</span>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           Jalankan fitur <b>"Pemeriksaan Kesehatan Data (Data Health Check)"</b> di bawah untuk memastikan semua NISN dan relasi rekaman absensi terhubung sempurna tanpa selisih.
                         </p>
                       </div>

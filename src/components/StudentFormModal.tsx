@@ -93,7 +93,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden transition-colors">
+      <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl shadow-xl border border-white/10 max-w-lg w-full overflow-hidden transition-colors">
         <div className="bg-slate-900 p-4 text-white flex items-center justify-between">
           <h3 className="font-bold text-sm">
             {editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Baru'}
@@ -123,7 +123,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 type="text"
                 value={`69933068.${formData.nisn.trim()}.${formData.nama.trim()}`}
                 onChange={(e) => setFormData({ ...formData, id_qr: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono bg-slate-50 dark:bg-slate-900"
+                className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono bg-black/20 backdrop-blur-md"
                 placeholder="69933068.nisn.nama siswa"
                 readOnly
               />
@@ -143,7 +143,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     id_qr: `69933068.${newNisn.trim()}.${formData.nama.trim()}`
                   });
                 }}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
+                className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
                 placeholder="Contoh: 0081234567"
                 required
               />
@@ -165,7 +165,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 });
               }}
               placeholder="Contoh: DADANG BUAMONA"
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 uppercase"
+              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 uppercase"
               required
             />
           </div>
@@ -177,7 +177,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
               value={formData.kelas}
               onChange={(e) => setFormData({ ...formData, kelas: e.target.value })}
               placeholder="Contoh: X IPA 1, XI MIPA 2, XII IPS 3"
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
               required
             />
           </div>
@@ -221,7 +221,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
               value={formData.no_hp_ortu || ''}
               onChange={(e) => setFormData({ ...formData, no_hp_ortu: e.target.value })}
               placeholder="Contoh: 08123456789 atau 628123456789"
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
+              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
             />
             <p className="text-[10px] text-slate-400 mt-1">Digunakan untuk pengiriman notifikasi presensi langsung ke WhatsApp orang tua.</p>
           </div>
@@ -233,7 +233,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
               value={formData.foto || ''}
               onChange={(e) => setFormData({ ...formData, foto: e.target.value })}
               placeholder="https://..."
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
             />
           </div>
 
@@ -242,7 +242,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             <select
               value={formData.status || 'aktif'}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'aktif' | 'nonaktif' })}
-              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
             >
               <option value="aktif">Aktif (Bisa Absen)</option>
               <option value="nonaktif">Nonaktif (Ditolak Saat Absen)</option>
@@ -258,7 +258,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 rounded-lg"
             >
               Batal
             </button>

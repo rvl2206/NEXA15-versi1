@@ -153,12 +153,12 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
       {/* 1. POPUP MODAL KHUSUS PETUGAS PIKET */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/80 rounded-3xl max-w-xl w-full p-6 shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200">
+          <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border-2 border-rose-500/80 rounded-3xl max-w-xl w-full p-6 shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200">
             {/* Close button */}
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/10 transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -179,7 +179,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                         PENTING!
                       </span>
                     </div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 leading-snug">
+                    <h3 className="text-base sm:text-lg font-black text-white mt-1 leading-snug">
                       Ada {total} Data Presensi Belum Masuk ke Database Server!
                     </h3>
                   </div>
@@ -232,14 +232,14 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                 </div>
 
                 {/* Queue List Preview */}
-                <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 mb-5 scrollbar-thin">
+                <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 rounded-2xl bg-white/5 backdrop-blur-xl/60 border border-white/10 mb-5 scrollbar-thin">
                   {queueDetails.items.map((item, idx) => {
                     const info = getItemLabel(item);
                     const IconComponent = info.icon;
                     return (
                       <div
                         key={`${item.id}-${idx}`}
-                        className="flex items-center justify-between gap-3 p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-xs"
+                        className="flex items-center justify-between gap-3 p-2 rounded-xl bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl border border-white/10/80 text-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 flex-shrink-0">
@@ -249,7 +249,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                             <p className="font-bold text-slate-900 dark:text-slate-100 truncate">
                               {info.title}
                             </p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            <p className="text-[10px] text-slate-400 truncate">
                               {info.subtitle}
                             </p>
                           </div>
@@ -280,7 +280,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="w-full sm:w-auto px-4 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-3 rounded-2xl text-xs font-bold text-slate-300 bg-white/5 backdrop-blur-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                   >
                     Tutup Sementara
                   </button>
@@ -292,10 +292,10 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                 <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50 dark:ring-emerald-900/20">
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                <h3 className="text-lg font-black text-white">
                   STATUS DATABASE 100% AMAN!
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
                   Semua data presensi siswa dan guru telah berhasil tersimpan di Database Cloud/Server. Tidak ada data yang tersangkut di browser. Petugas piket dapat mematikan laptop atau logout dengan aman.
                 </p>
                 <div className="mt-6">
@@ -484,7 +484,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                     <Database className="w-3.5 h-3.5 text-amber-600" />
                     <span>Daftar {total} Data yang Belum Terkirim ke Server:</span>
                   </h4>
-                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-400">
                     Paling Baru di Atas
                   </span>
                 </div>
@@ -506,7 +506,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                             <p className="font-bold text-slate-900 dark:text-slate-100 truncate">
                               {info.title}
                             </p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            <p className="text-[10px] text-slate-400 truncate">
                               {info.subtitle}
                             </p>
                           </div>
