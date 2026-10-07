@@ -101,7 +101,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
     <>
       {/* Change Password Card for Admin */}
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-5 transition-colors">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
               <KeyRound className="w-4 h-4" />

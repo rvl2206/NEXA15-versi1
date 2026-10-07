@@ -185,7 +185,7 @@ export const StudentImportModal: React.FC<StudentImportModalProps> = ({
                       <th className="p-2">ID QR Auto-Generated</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-white/10">
                     {importPreview.map((item, idx) => (
                       <tr key={idx} className="hover:bg-white/5/40">
                         <td className="p-2 text-slate-400">{idx + 1}</td>

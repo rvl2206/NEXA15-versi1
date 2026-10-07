@@ -457,7 +457,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
       {/* Settings Form */}
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-6 transition-colors">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
             <School className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>Identitas Sekolah & Jam Masuk</span>
@@ -838,7 +838,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           </div>
 
           {/* Auto-Alpa 14:30 Section */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+          <div className="pt-4 border-t border-white/10 space-y-4">
             <div className="flex items-center justify-between bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-3xl border border-rose-200 dark:border-rose-800">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-rose-600 text-white rounded-2xl shadow-xs">
@@ -900,7 +900,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           </div>
 
           {/* WhatsApp Direct Section */}
-          <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
+          <div className="pt-5 border-t border-white/10 space-y-5">
             <div className="flex items-center justify-between bg-emerald-50/80 dark:bg-emerald-950/40 p-4 rounded-3xl border border-emerald-200 dark:border-emerald-800">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-600 text-white rounded-2xl shadow-sm">
@@ -1021,7 +1021,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
           </div>
 
           {/* RFID Card Reader & Contactless NFC Integration Hub */}
-          <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
+          <div className="pt-5 border-t border-white/10 space-y-5">
             <div className="flex items-center justify-between bg-sky-50/80 dark:bg-sky-950/40 p-4 rounded-3xl border border-sky-200 dark:border-sky-800">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-sky-600 text-white rounded-2xl shadow-sm">
@@ -1266,7 +1266,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           <SettingsDatabaseConfig settings={settings} setSettings={setSettings} />
 
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+          <div className="pt-3 border-t border-white/10 flex justify-end">
             <button
               type="submit"
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 border border-white/10 shadow-lg shadow-blue-500/20 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center gap-2"
@@ -1282,7 +1282,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
       {/* RFID & NFC Hardware Diagnostics Card */}
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-5 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-500/20">
               <CreditCard className="w-5 h-5" />
@@ -1412,7 +1412,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
       {/* Change Password Card for Admin */}
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-5 transition-colors">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-500/20">
               <KeyRound className="w-4 h-4" />

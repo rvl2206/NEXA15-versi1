@@ -381,7 +381,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
     }
     return {
       label: 'Belum Presensi Hari Ini',
-      color: 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10',
+      color: 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10',
       disabled: false,
     };
   };
@@ -410,7 +410,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
     }
     return {
       label: 'Belum Presensi Hari Ini',
-      color: 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10',
+      color: 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10',
       disabled: false,
     };
   };
@@ -421,7 +421,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 rounded-2xl backdrop-blur-md shadow-inner flex-shrink-0">
+            <div className="p-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl backdrop-blur-md shadow-inner flex-shrink-0">
               <CreditCard className="w-6 h-6 text-amber-100" />
             </div>
             <div>
@@ -429,7 +429,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                 <h2 className="text-base sm:text-lg font-black tracking-tight">
                   Presensi Lupa Kartu (Piket & Admin)
                 </h2>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/25 text-white px-2 py-0.5 rounded-full border border-white/30">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-white/5 backdrop-blur-xl border border-white/10 text-white px-2 py-0.5 rounded-full border border-white/30">
                   Manual Terverifikasi
                 </span>
               </div>
@@ -441,7 +441,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
             title="Tutup Dialog"
           >
             <X className="w-5 h-5" />
@@ -449,7 +449,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
         </div>
 
         {/* Navigation Tabs (Pencatatan vs Riwayat Hari Ini) */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 px-4 py-2 border-b border-white/10 flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-4 py-2 border-b border-white/10 flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setActiveTab('pencatatan')}
@@ -499,7 +499,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                 </span>
 
                 {/* Target Type Toggle */}
-                <div className="flex items-center gap-1 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl p-0.5 rounded-xl border border-white/10">
+                <div className="flex items-center gap-1 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl p-0.5 rounded-xl border border-white/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -542,7 +542,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                     <select
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(e.target.value)}
-                      className="w-full px-2.5 py-2 text-xs font-semibold rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-2.5 py-2 text-xs font-semibold rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
                     >
                       <option value="Semua">Semua Kelas</option>
                       {availableClasses.map((cls) => (
@@ -565,7 +565,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                         ? 'Ketik nama siswa atau NISN...'
                         : 'Ketik nama guru atau NIP...'
                     }
-                    className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
+                    className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
                     autoFocus
                   />
                   {searchQuery && (
@@ -580,7 +580,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
               </div>
 
               {/* Search Results List */}
-              <div className="border border-white/10 rounded-2xl p-2 bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10/50 dark:bg-slate-800/30 overflow-y-auto max-h-[340px] space-y-1.5">
+              <div className="border border-white/10 rounded-2xl p-2 bg-white/5 backdrop-blur-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/100 dark:bg-slate-800/30 overflow-y-auto max-h-[340px] space-y-1.5">
                 {targetType === 'siswa' ? (
                   filteredStudents.length > 0 ? (
                     filteredStudents.map((s) => {
@@ -594,7 +594,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                             isSelected
                               ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-100 shadow-sm ring-1 ring-amber-500'
-                              : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 border-white/10/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700'
+                              : 'bg-white/5 backdrop-blur-xl border border-white/10 border-white/10/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -651,7 +651,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                         className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                           isSelected
                             ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-100 shadow-sm ring-1 ring-amber-500'
-                            : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 border-white/10/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700'
+                            : 'bg-white/5 backdrop-blur-xl border border-white/10 border-white/10/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -706,10 +706,10 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
               </span>
 
               {selectedStudent || selectedTeacher ? (
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 p-4 rounded-2xl border border-white/10 space-y-4 flex-1 flex flex-col justify-between">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-4 rounded-2xl border border-white/10 space-y-4 flex-1 flex flex-col justify-between">
                   <div className="space-y-3.5">
                     {/* Selected Person Card */}
-                    <div className="p-3 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl rounded-xl border border-white/10 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="p-3 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl rounded-xl border border-white/10 flex items-center justify-between gap-3 shadow-xs">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white font-black text-sm flex items-center justify-center flex-shrink-0 shadow-sm">
                           {(selectedStudent?.nama || selectedTeacher?.nama || '??').slice(0, 2).toUpperCase()}
@@ -753,7 +753,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                             jenisPresensi === 'Masuk'
                               ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                              : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
+                              : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
                           }`}
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -766,7 +766,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                             jenisPresensi === 'Pulang'
                               ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                              : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
+                              : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
                           }`}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -806,7 +806,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                             statusPresensi === 'Hadir'
                               ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
+                              : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
                           }`}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -822,7 +822,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                             statusPresensi === 'Terlambat'
                               ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                              : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
+                              : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 dark:text-slate-300 border-white/10'
                           }`}
                         >
                           <Clock className="w-3.5 h-3.5" />
@@ -849,7 +849,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                                 alasan === r
                                   ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                                  : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10'
+                                  : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-white/10'
                               }`}
                             >
                               {r}
@@ -861,7 +861,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                               alasan === 'Lainnya'
                                 ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                                : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10'
+                                : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-white/10'
                             }`}
                           >
                             Alasan Lainnya...
@@ -874,7 +874,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                             value={customAlasan}
                             onChange={(e) => setCustomAlasan(e.target.value)}
                             placeholder="Tuliskan alasan spesifik (misal: kartu terselip di buku)..."
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-amber-400 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-amber-400 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
                             autoFocus
                           />
                         )}
@@ -891,7 +891,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                         value={catatanTambahan}
                         onChange={(e) => setCatatanTambahan(e.target.value)}
                         placeholder="Contoh: Sudah ditegur piket, orang tua sudah dikonfirmasi, dll..."
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-white focus:ring-2 focus:ring-amber-500"
                       />
                     </div>
 
@@ -915,7 +915,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                         setSelectedStudent(null);
                         setSelectedTeacher(null);
                       }}
-                      className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10 transition-colors cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       Batal
                     </button>
@@ -936,7 +936,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/40 border-2 border-dashed border-white/10 rounded-2xl p-8 flex-1 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 border-2 border-dashed border-white/10 rounded-2xl p-8 flex-1 flex flex-col items-center justify-center text-center">
                   <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
                     <UserCheck className="w-7 h-7" />
                   </div>
@@ -983,7 +983,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
             {todayLupaKartu.total > 0 ? (
               <div className="border border-white/10 rounded-2xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 text-slate-400 font-extrabold text-[11px] uppercase tracking-wider border-b border-white/10">
+                  <thead className="bg-white/5 backdrop-blur-xl border border-white/10 text-slate-400 font-extrabold text-[11px] uppercase tracking-wider border-b border-white/10">
                     <tr>
                       <th className="py-2.5 px-3">Waktu (WIT)</th>
                       <th className="py-2.5 px-3">Nama</th>
@@ -995,7 +995,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                   </thead>
                   <tbody className="divide-y divide-white/5 dark:divide-slate-800 text-slate-200 dark:text-slate-300">
                     {todayLupaKartu.students.map(({ record, student }) => (
-                      <tr key={record.id} className="hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5/40">
+                      <tr key={record.id} className="hover:bg-white/10/40">
                         <td className="py-2.5 px-3 font-mono font-bold text-white">
                           {store.formatRecordTimeWIT(record.timestamp)}
                         </td>
@@ -1006,7 +1006,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                           </span>
                         </td>
                         <td className="py-2.5 px-3 font-semibold">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 dark:text-slate-300 border border-white/10 font-bold">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 dark:text-slate-300 border border-white/10 font-bold">
                             {record.kelas}
                           </span>
                         </td>
@@ -1042,7 +1042,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
                     ))}
 
                     {todayLupaKartu.teachers.map(({ record, teacher }) => (
-                      <tr key={record.id} className="hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5/40">
+                      <tr key={record.id} className="hover:bg-white/10/40">
                         <td className="py-2.5 px-3 font-mono font-bold text-white">
                           {store.formatRecordTimeWIT(record.timestamp)}
                         </td>
@@ -1105,7 +1105,7 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
         )}
 
         {/* Modal Footer */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/80 px-4 py-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-4 py-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
             <span>Data otomatis tersinkronisasi dengan Database Supabase & Rekap Presensi</span>

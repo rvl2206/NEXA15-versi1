@@ -92,7 +92,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           </button>
 
           <div className="flex justify-center mb-2">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
               {scanResult.success ? (
                 <CheckCircle2 className="w-10 h-10 text-white" />
               ) : scanResult.isDuplicate ? (
@@ -103,7 +103,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/20 rounded-full text-xs font-extrabold uppercase tracking-wider mb-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-xs font-extrabold uppercase tracking-wider mb-1">
             {scanResult.success ? (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
@@ -198,7 +198,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </>
           ) : (
             <div className="space-y-3 text-left">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl/60 p-3.5 rounded-2xl border border-white/10 space-y-3">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3.5 rounded-2xl border border-white/10 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-white/10">
                   <span className="text-[11px] font-extrabold text-white dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     {scanResult.scanMethod === 'RFID' ? (

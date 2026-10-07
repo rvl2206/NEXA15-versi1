@@ -173,7 +173,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
   return (
     <>
           {/* Database Architecture & Storage Integration Hub */}
-          <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-5">
+          <div className="pt-5 border-t border-white/10 space-y-5">
             <div className="bg-gradient-to-r from-emerald-950/10 via-slate-950/10 to-teal-950/10 dark:from-slate-950 dark:to-emerald-950/30 p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-800/80 space-y-4">
               {/* Header Title & Clarification Banner */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -485,7 +485,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     </ul>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
                     <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                       Skema DDL Tabel PostgreSQL untuk Cloud SQL:
                     </span>
@@ -528,7 +528,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     </ol>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -673,7 +673,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
                     <button
                       type="button"
                       onClick={handleDownloadSqlDump}

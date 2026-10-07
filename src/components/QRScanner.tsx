@@ -1165,7 +1165,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   return (
     <div className="space-y-6">
       {/* Mode Switcher & Scan Configuration Banner */}
-      <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden space-y-4">
+      <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden space-y-4">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1226,7 +1226,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
                 scanTargetMode === 'siswa'
                   ? 'bg-indigo-500 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
               }`}
             >
               <GraduationCap className="w-4 h-4" />
@@ -1242,7 +1242,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
                 scanTargetMode === 'guru'
                   ? 'bg-sky-500 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
               }`}
             >
               <Briefcase className="w-4 h-4" />
@@ -1260,7 +1260,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <CreditCard className="w-4 h-4 text-amber-100" />
               <span>Lupa Kartu (Piket)</span>
               {todayLupaKartuCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/30 text-white text-[10px] font-black rounded-full border border-white/40">
+                <span className="ml-1 px-1.5 py-0.2 bg-white/5 backdrop-blur-xl border border-white/10 text-white text-[10px] font-black rounded-full border border-white/40">
                   {todayLupaKartuCount}
                 </span>
               )}
@@ -1294,7 +1294,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-unsynced-modal'))}
-                  className="px-3.5 py-2 text-xs font-black bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-slate-700 active:scale-95 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-black bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-slate-700 active:scale-95 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
                   <span>Buka Popup Petugas</span>
@@ -1396,7 +1396,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
                       : scheduleStatus.currentSession === 'Masuk'
                       ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                      : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-400'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-400'
                   }`}>
                     Sesi Aktif: {scheduleStatus.currentSession === 'Pulang' ? '🔔 Absen Pulang' : scheduleStatus.currentSession === 'Masuk' ? '⏰ Absen Masuk' : '🌴 Hari Libur'}
                   </span>
@@ -1422,7 +1422,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               <Clock className="w-3.5 h-3.5 text-blue-500" />
               <span>Sesi Presensi:</span>
             </span>
-            <div className="inline-flex rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl p-1 border border-white/10">
+            <div className="inline-flex rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl p-1 border border-white/10">
               <button
                 type="button"
                 onClick={() => setScanTypeMode('Auto')}
@@ -1494,7 +1494,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Camera & Scanner Panel */}
-        <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden flex flex-col items-center justify-between">
+        <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden flex flex-col items-center justify-between">
           {/* Header Controls */}
           <div className="w-full flex items-center justify-between pb-3 border-b border-white/5 dark:border-slate-800 mb-4 flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -1704,7 +1704,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
             {!isCameraActive && (
               <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-3 z-10 overflow-y-auto">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-cyan-400 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 text-cyan-400 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0">
                   {cameraError ? (
                     <CameraOff className="w-7 h-7 text-amber-400" />
                   ) : (
@@ -1764,7 +1764,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all flex items-center gap-1.5 border ${
                   soundEnabled
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-400 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-400 border-white/10 hover:bg-white/10'
                 }`}
                 title="Suara Bip/Nada Indikator Absensi"
               >
@@ -1781,7 +1781,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 )}
               </button>
 
-              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 px-2.5 py-1 rounded-xl border border-white/10">
+              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10 px-2.5 py-1 rounded-xl border border-white/10">
                 <Clock className="w-3 h-3 text-slate-400" />
                 <span className="font-medium text-slate-400">
                   Durasi Popup:
@@ -1799,7 +1799,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 </select>
               </div>
 
-              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 px-2.5 py-1 rounded-xl border border-white/10">
+              <div className="flex items-center gap-1 text-[11px] bg-white/5 backdrop-blur-xl border border-white/10 px-2.5 py-1 rounded-xl border border-white/10">
                 <ShieldAlert className="w-3 h-3 text-slate-400" />
                 <span className="font-medium text-slate-400">
                   Jeda Anti-Ganda:
@@ -1839,7 +1839,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all flex items-center gap-1.5 border btn-press ${
                   qrOnlyMode
                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-400 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-400 border-white/10 hover:bg-white/10'
                 }`}
                 title="Fokus decode hanya pada QR Code sehingga menghemat 70% beban CPU"
               >
@@ -1862,7 +1862,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                     className={`px-2 py-0.5 text-[10px] font-extrabold rounded-lg border transition-all btn-press ${
                       scanFps === fps
                         ? 'bg-blue-500 text-white border-blue-500 shadow-xs'
-                        : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 text-slate-300 border-white/10 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/10'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 border-white/10 hover:bg-white/10'
                     }`}
                     title={fps === 12 ? '12 FPS: Optimal tanpa lag antrean buffer' : `${fps} Frame Per Second`}
                   >
@@ -1903,7 +1903,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-sm btn-press ${
                   isSmallQrMode
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white ring-2 ring-amber-400/50 shadow-md'
-                    : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-200 border border-white/10 hover:border-amber-400'
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-200 border border-white/10 hover:border-amber-400'
                 }`}
               >
                 <ZoomIn className={`w-4 h-4 ${isSmallQrMode ? 'text-white' : 'text-amber-500'}`} />
@@ -1933,7 +1933,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       className={`px-2.5 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer btn-press ${
                         Math.abs(zoomLevel - z) < 0.05
                           ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                          : 'bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-amber-50 dark:hover:bg-slate-700'
+                          : 'bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-amber-50 dark:hover:bg-slate-700'
                       }`}
                     >
                       {z.toFixed(1)}x
@@ -1956,7 +1956,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                       setScanResolution(newRes);
                       if (isCameraActive) startCamera(undefined);
                     }}
-                    className="px-2 py-0.5 text-[11px] font-extrabold rounded-md border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl dark:text-white"
+                    className="px-2 py-0.5 text-[11px] font-extrabold rounded-md border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl dark:text-white"
                   >
                     <option value="fast">Instan 800x600 (Paling Ringan & Cepat)</option>
                     <option value="hd">HD 720p (Standar)</option>
@@ -2087,7 +2087,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         {/* Realtime Output Panel & Session Stream */}
         <div className="lg:col-span-5 space-y-4">
           {/* Latest Scan Result Card */}
-          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden">
             <h3 className="text-xs font-extrabold text-white uppercase tracking-wider mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <UserCheck className="w-4 h-4 text-emerald-400" />
@@ -2096,7 +2096,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                 </span>
               </span>
               {scanResult && (
-                <span className="text-[10px] font-mono bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono bg-white/5 backdrop-blur-xl border border-white/10 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded">
                   {scanResult.timestamp}
                 </span>
               )}
@@ -2192,7 +2192,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                               className={`font-extrabold text-[9px] px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 border ${
                                 scanResult.scanMethod === 'RFID'
                                   ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-                                  : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
+                                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
                               }`}
                             >
                               {scanResult.scanMethod === 'RFID' ? (
@@ -2275,7 +2275,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                                   ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
                                   : scanResult.scanMethod === 'Manual'
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                                  : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
+                                  : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-200 dark:bg-slate-800 dark:text-slate-300 border-white/10'
                               }`}
                             >
                               {scanResult.scanMethod === 'RFID' ? (
@@ -2367,7 +2367,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           </div>
 
           {/* Session Stream / Live Feed List */}
-          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+          <div className="backdrop-blur-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden">
             <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/10">
               <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5 text-blue-400" />

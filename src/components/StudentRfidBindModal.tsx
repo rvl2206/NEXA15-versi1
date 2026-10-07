@@ -193,7 +193,7 @@ export function StudentRfidBindModal({
           )}
 
           {/* Action Buttons */}
-          <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10">
             {rfidBindStudent.rfid_uid ? (
               <button
                 type="button"

@@ -874,7 +874,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
         </div>
 
         {/* Filter Dropdowns Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-white/10/80">
           {/* 1. Grade Level (Tingkat Kelas) */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
@@ -1051,7 +1051,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                 <th className="p-3.5 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-200">
+            <tbody className="divide-y divide-white/10 text-slate-200">
               {paginatedStudents.length > 0 ? (
                 paginatedStudents.map((s, index) => {
                   const isSelected = selectedIds.includes(s.id);
@@ -1066,7 +1066,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                       className={`transition-colors ${
                         isSelected
                           ? 'bg-blue-50/70 dark:bg-blue-950/50'
-                          : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                          : 'hover:bg-white/10'
                       }`}
                     >
                       <td className="p-3.5 text-center">

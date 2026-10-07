@@ -106,7 +106,7 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
 
   return (
     <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl border border-white/10 shadow-sm overflow-hidden transition-colors">
-      <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="p-4 border-b border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
           <h3 className="font-extrabold text-sm text-white">
             Rekap Pasangan Waktu Masuk & Pulang Siswa ({formatIndoDate(filterTanggal)})
@@ -191,10 +191,10 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
               <th className="p-3.5 text-center">Aksi / Koreksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-200">
+          <tbody className="divide-y divide-white/10 text-slate-200">
             {pairedDailyRecords.length > 0 ? (
               paginateList<any>(pairedDailyRecords, currentPage, pageSize).map((item, index) => (
-                <tr key={item.student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                <tr key={item.student.id} className="hover:bg-white/10 transition-colors">
                   <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
                     {pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                   </td>

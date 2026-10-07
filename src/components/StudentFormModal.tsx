@@ -254,7 +254,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             <p>Siswa baru yang ditambahkan bisa langsung dipindai menggunakan <strong>ID QR</strong>, <strong>NISN</strong>, atau <strong>Nama Lengkap</strong> pada scanner piket.</p>
           </div>
 
-          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-2 flex justify-end gap-2 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}

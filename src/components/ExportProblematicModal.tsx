@@ -419,7 +419,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl">
+              <div className="max-h-60 overflow-y-auto divide-y divide-white/10 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl">
                 {filteredStudents.slice(0, 50).map((item, idx) => {
                   const isHighRisk = item.riskLevel === 'Tinggi';
                   const isMediumRisk = item.riskLevel === 'Sedang';
@@ -510,7 +510,7 @@ export const ExportProblematicModal: React.FC<ExportProblematicModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border border-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              className="px-4 py-2.5 border border-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-white/10 dark:hover:bg-slate-700 transition-all"
             >
               Tutup
             </button>

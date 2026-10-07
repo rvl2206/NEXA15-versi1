@@ -231,7 +231,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
     const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize) || 1;
 
     return (
-      <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10/50 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+      <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
         <div className="flex flex-wrap items-center gap-3">
           <div>
             Menampilkan{' '}
@@ -270,7 +270,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
             >
               Sebelumnya
             </button>
@@ -281,7 +281,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 border border-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
             >
               Berikutnya
             </button>
@@ -1295,14 +1295,14 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10/80 p-1.5 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           <button
             onClick={() => setRecapMode('harian')}
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'harian'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/60'
             }`}
           >
             <CalendarDays className="w-4 h-4" />
@@ -1314,7 +1314,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'bulanan'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/60'
             }`}
           >
             <CalendarRange className="w-4 h-4" />
@@ -1326,7 +1326,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`w-full sm:w-auto sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'analisis_terlambat'
                 ? 'bg-red-600 text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/60'
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
@@ -1338,7 +1338,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               recapMode === 'semua'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/60 dark:hover:bg-slate-700/60'
+                : 'text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/60'
             }`}
           >
             <Calendar className="w-4 h-4" />
@@ -1347,7 +1347,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
         </div>
 
         {/* Status Indicator */}
-        <div className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10/80 dark:bg-slate-900/80 rounded-xl border border-white/10/60 dark:border-slate-700 text-[11px] font-semibold text-slate-300 hidden md:flex items-center gap-2">
+        <div className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 dark:bg-slate-900/80 rounded-xl border border-white/10/60 dark:border-slate-700 text-[11px] font-semibold text-slate-300 hidden md:flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
           <span>
             {recapMode === 'harian' && `Menampilkan Data Hari: ${formatIndoDate(filterTanggal)}`}
@@ -1761,7 +1761,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5">No</th>
                   <th className="p-3.5">Nama Siswa</th>
@@ -1945,7 +1945,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                           className={`p-1.5 rounded-lg transition-colors inline-flex items-center justify-center ${
                             item.student.no_hp_ortu
                               ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
-                              : 'text-slate-400 dark:text-slate-400 hover:bg-white/5 backdrop-blur-xl border border-white/10/10'
+                              : 'text-slate-400 dark:text-slate-400 hover:bg-white/10'
                           }`}
                           title={item.student.no_hp_ortu ? `Kirim Notifikasi WA (${item.student.no_hp_ortu})` : 'Input No HP & Kirim WA'}
                         >
@@ -2009,7 +2009,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
             {/* Discipline Stat Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-red-800/50 text-xs">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
                 <div className="text-red-200 text-[10px] uppercase font-bold">Total Siswa Indisiplin</div>
                 <div className="text-lg font-black text-white mt-0.5">{latenessAnalysisData.length} Siswa</div>
               </div>
@@ -2095,7 +2095,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
+                <thead className="bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                   <tr>
                     <th className="p-3.5">No</th>
                     <th className="p-3.5">Nama Siswa</th>
@@ -2242,7 +2242,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5">No</th>
                   <th className="p-3.5">Nama Siswa</th>
@@ -2367,7 +2367,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white/5 backdrop-blur-xl border border-white/10/80 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
+              <thead className="bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 border-b border-white/10 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-3.5 w-10 text-center">
                     <input

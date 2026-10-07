@@ -39,7 +39,7 @@ export const SettingsHealthCheck: React.FC = () => {
 
   return (
       <div id="data-health-check" className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-sm space-y-5 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
               <Activity className="w-5 h-5" />

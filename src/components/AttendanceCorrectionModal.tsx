@@ -632,7 +632,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                     className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-all border ${
                       jamScan === timeStr
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-slate-100'
+                        : 'bg-white/5 backdrop-blur-xl text-slate-300 border-white/10 hover:bg-white/10'
                     }`}
                   >
                     {timeStr}
@@ -716,7 +716,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           </div>
 
           {/* Submit & Cancel Buttons */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}

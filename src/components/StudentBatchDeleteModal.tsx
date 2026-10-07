@@ -37,7 +37,7 @@ export function StudentBatchDeleteModal({
             </p>
           </div>
 
-          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-2 flex justify-end gap-2 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}

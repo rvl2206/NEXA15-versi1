@@ -647,7 +647,7 @@ export const ActivityLogs: React.FC = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Sebelumnya
                 </button>
@@ -658,7 +658,7 @@ export const ActivityLogs: React.FC = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-3 py-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg disabled:opacity-50 font-bold hover:bg-white/10 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Berikutnya
                 </button>

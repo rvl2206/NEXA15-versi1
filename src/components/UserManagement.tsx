@@ -494,7 +494,7 @@ export const UserManagement: React.FC = () => {
                 <th className="px-5 py-3.5 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-white/10/60">
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
@@ -509,7 +509,7 @@ export const UserManagement: React.FC = () => {
                   const isProtectedAdmin = u.uid === 'usr-admin';
 
                   return (
-                    <tr key={u.uid} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                    <tr key={u.uid} className="hover:bg-white/5/70 dark:hover:bg-slate-800/30 transition-colors">
                       {/* Name & Avatar */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -648,7 +648,7 @@ export const UserManagement: React.FC = () => {
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl">
                   <UserPlus className="w-5 h-5" />
@@ -879,7 +879,7 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
@@ -904,7 +904,7 @@ export const UserManagement: React.FC = () => {
       {isEditModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl">
                   <Edit2 className="w-5 h-5" />
@@ -1088,7 +1088,7 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
@@ -1113,7 +1113,7 @@ export const UserManagement: React.FC = () => {
       {isResetPassModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
                   <KeyRound className="w-5 h-5" />
@@ -1169,7 +1169,7 @@ export const UserManagement: React.FC = () => {
                 </p>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsResetPassModalOpen(false)}

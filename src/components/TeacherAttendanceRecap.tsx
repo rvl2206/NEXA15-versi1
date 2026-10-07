@@ -365,7 +365,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Strip */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-sm border border-white/10">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-sm border border-white/10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="p-2.5 bg-sky-100 text-sky-800 rounded-xl">
@@ -411,7 +411,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-white/5">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 rounded-xl p-3 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-3 border border-white/5">
             <span className="text-[11px] text-slate-400 font-medium">Total Rekaman</span>
             <p className="text-xl font-bold text-white mt-0.5">{stats.total}</p>
           </div>
@@ -435,7 +435,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       </div>
 
       {/* Filter Control Bar */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-sm border border-white/10 space-y-3">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-sm border border-white/10 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           {/* Search Box */}
           <div className="relative md:col-span-2">
@@ -470,7 +470,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 if (e.target.value) setFilterMonth('');
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
             <button
               type="button"
@@ -491,7 +491,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Status</option>
               <option value="Hadir">Hadir</option>
@@ -511,7 +511,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterJenis(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Jenis (Masuk/Pulang)</option>
               <option value="Masuk">Masuk Saja</option>
@@ -530,7 +530,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 setFilterJabatan(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-1.5 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="px-3 py-1.5 text-xs rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               <option value="Semua">Semua Jabatan</option>
               {uniqueJabatanList.map((j) => (
@@ -604,10 +604,10 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       </div>
 
       {/* Attendance Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border-b border-white/10 text-slate-300 font-semibold">
+            <thead className="bg-white/5 backdrop-blur-xl border border-white/10 border-b border-white/10 text-slate-300 font-semibold">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
@@ -654,7 +654,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                       : record.timestamp;
                   }
 
-                  let statusBadgeClass = 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-white border-white/10';
+                  let statusBadgeClass = 'bg-white/5 backdrop-blur-xl border border-white/10 text-white border-white/10';
                   if (record.status === 'Hadir') {
                     statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
                   } else if (record.status === 'Terlambat') {
@@ -670,7 +670,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                   return (
                     <tr
                       key={record.id}
-                      className={`hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10/70 transition-colors ${
+                      className={`hover:bg-white/10 bg-white/5 backdrop-blur-xl border border-white/10 transition-colors ${
                         isSelected ? 'bg-sky-50/40' : ''
                       }`}
                     >
@@ -698,7 +698,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         {record.nama}
                       </td>
                       <td className="p-3.5 text-slate-200">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-white text-[11px] font-medium">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 backdrop-blur-xl border border-white/10 text-white text-[11px] font-medium">
                           {record.jabatan}
                         </span>
                       </td>
@@ -780,7 +780,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -790,7 +790,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -801,7 +801,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: MANUAL ATTENDANCE FOR TEACHER */}
       {showManualModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 text-sky-800 rounded-xl">
@@ -833,7 +833,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                   required
                   value={manualForm.nip}
                   onChange={(e) => handleTeacherSelectForManual(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white/5 backdrop-blur-xl border border-white/10"
                 >
                   <option value="">-- Pilih Guru Berdasarkan NIP & Nama --</option>
                   {teachers.map((t) => (
@@ -845,7 +845,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               </div>
 
               {manualForm.nama && (
-                <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border border-white/10 text-xs space-y-1">
+                <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 text-xs space-y-1">
                   <p>
                     <strong>Nama:</strong> {manualForm.nama}
                   </p>
@@ -896,7 +896,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       manualForm.jamScan === t
                         ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
                     }`}
                   >
                     {t}
@@ -914,7 +914,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     onChange={(e) =>
                       setManualForm({ ...manualForm, jenis: e.target.value as AttendanceType })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Masuk">Masuk</option>
                     <option value="Pulang">Pulang</option>
@@ -935,7 +935,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         status: e.target.value as TeacherAttendanceStatus,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Hadir">Hadir</option>
                     <option value="Terlambat">Terlambat</option>
@@ -981,7 +981,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/10 rounded-xl transition"
                 >
                   Batal
                 </button>
@@ -1000,7 +1000,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: EDIT ATTENDANCE RECORD */}
       {showEditModal && currentRecord && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl border border-white/10">
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span className="p-2 bg-sky-100 text-sky-800 rounded-xl">
@@ -1020,7 +1020,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 mt-4">
-              <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10/5 border border-white/10 border border-white/10 text-xs space-y-1">
+              <div className="p-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 text-xs space-y-1">
                 <p>
                   <strong>NIP:</strong> {currentRecord.nip}
                 </p>
@@ -1070,7 +1070,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       editJamScan === t
                         ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
+                        : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-200 border-white/10'
                     }`}
                   >
                     {t}
@@ -1088,7 +1088,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                     onChange={(e) =>
                       setCurrentRecord({ ...currentRecord, jenis: e.target.value as AttendanceType })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Masuk">Masuk</option>
                     <option value="Pulang">Pulang</option>
@@ -1107,7 +1107,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                         status: e.target.value as TeacherAttendanceStatus,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-white/5 backdrop-blur-xl border border-white/10"
                   >
                     <option value="Hadir">Hadir</option>
                     <option value="Terlambat">Terlambat</option>
@@ -1150,7 +1150,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/10 rounded-xl transition"
                 >
                   Batal
                 </button>
@@ -1169,7 +1169,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: DELETE SINGLE RECORD CONFIRMATION */}
       {deletingRecord && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-white/5">
               <span className="p-2.5 bg-rose-100 text-rose-600 rounded-xl">
                 <AlertTriangle className="w-5 h-5" />
@@ -1197,7 +1197,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               <button
                 type="button"
                 onClick={() => setDeletingRecord(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>
@@ -1216,7 +1216,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
       {/* MODAL: BATCH DELETE ATTENDANCE CONFIRMATION */}
       {isBatchDeleteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 pb-4 border-b border-white/5">
               <span className="p-2.5 bg-rose-100 text-rose-600 rounded-xl">
                 <Trash2 className="w-5 h-5" />
@@ -1241,7 +1241,7 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBatchDeleteModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5 backdrop-blur-xl border border-white/10/10 border border-white/10 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/10 rounded-xl transition cursor-pointer"
               >
                 Batal
               </button>
