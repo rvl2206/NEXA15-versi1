@@ -1,3 +1,12 @@
+import localforage from 'localforage';
+
+localforage.config({
+  name: 'NEXA_APP',
+  storeName: 'nexa_data'
+});
+
+import { teacherOps } from './storeModules/teacherOps';
+import { studentOps } from './storeModules/studentOps';
 import {
   Student,
   AttendanceRecord,
@@ -161,13 +170,13 @@ export interface HealthCheckResult {
 
 class AppStore {
   private users: User[] = [];
-  private students: Student[] = [];
+  public students: Student[] = [];
   private attendance: AttendanceRecord[] = [];
-  private teachers: Teacher[] = [];
+  public teachers: Teacher[] = [];
   private teacherAttendance: TeacherAttendanceRecord[] = [];
-  private logs: ActivityLog[] = [];
+  public logs: ActivityLog[] = [];
   private dispatches: ProblematicStudentDispatch[] = [];
-  private settings: SchoolSettings = DEFAULT_SETTINGS;
+  public settings: SchoolSettings = DEFAULT_SETTINGS;
   private passwords: Record<string, string> = {
     'usr-admin': 'admin',
     'usr-kepsek': 'kepsek',
@@ -175,7 +184,7 @@ class AppStore {
   };
   private currentUser: User | null = null;
   private listeners: Array<() => void> = [];
-  private syncQueue: SyncQueueItem[] = [];
+  public syncQueue: SyncQueueItem[] = [];
   private isSyncingQueue = false;
 
   constructor() {
@@ -197,7 +206,13 @@ class AppStore {
       if (savedUser) {
         this.currentUser = JSON.parse(savedUser);
       }
-      const savedUsersList = localStorage.getItem(STORAGE_KEYS.USERS);
+      let savedUsersList = await localforage.getItem<string>(STORAGE_KEYS.USERS);
+      if (!savedUsersList) {
+        savedUsersList = localStorage.getItem(STORAGE_KEYS.USERS);
+        if (savedUsersList) {
+          await localforage.setItem(STORAGE_KEYS.USERS, savedUsersList);
+        }
+      }
       if (savedUsersList) {
         try {
           const parsed = JSON.parse(savedUsersList);
@@ -231,24 +246,48 @@ class AppStore {
       });
 
       if (needsMigration) {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
+        await localforage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
         localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
       }
-      const savedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+      let savedStudents = await localforage.getItem<string>(STORAGE_KEYS.STUDENTS);
+      if (!savedStudents) {
+        savedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+        if (savedStudents) {
+          await localforage.setItem(STORAGE_KEYS.STUDENTS, savedStudents);
+        }
+      }
       if (savedStudents) {
         this.students = JSON.parse(savedStudents);
       }
-      const savedAttendance = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+      let savedAttendance = await localforage.getItem<string>(STORAGE_KEYS.ATTENDANCE);
+      if (!savedAttendance) {
+        savedAttendance = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+        if (savedAttendance) {
+          await localforage.setItem(STORAGE_KEYS.ATTENDANCE, savedAttendance);
+        }
+      }
       if (savedAttendance) {
         this.attendance = JSON.parse(savedAttendance);
       }
-      const savedTeachers = localStorage.getItem(STORAGE_KEYS.TEACHERS);
+      let savedTeachers = await localforage.getItem<string>(STORAGE_KEYS.TEACHERS);
+      if (!savedTeachers) {
+        savedTeachers = localStorage.getItem(STORAGE_KEYS.TEACHERS);
+        if (savedTeachers) {
+          await localforage.setItem(STORAGE_KEYS.TEACHERS, savedTeachers);
+        }
+      }
       if (savedTeachers) {
         this.teachers = JSON.parse(savedTeachers);
       } else {
         this.teachers = [...INITIAL_TEACHERS];
       }
-      const savedTeacherAttendance = localStorage.getItem(STORAGE_KEYS.TEACHER_ATTENDANCE);
+      let savedTeacherAttendance = await localforage.getItem<string>(STORAGE_KEYS.TEACHER_ATTENDANCE);
+      if (!savedTeacherAttendance) {
+        savedTeacherAttendance = localStorage.getItem(STORAGE_KEYS.TEACHER_ATTENDANCE);
+        if (savedTeacherAttendance) {
+          await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, savedTeacherAttendance);
+        }
+      }
       if (savedTeacherAttendance) {
         this.teacherAttendance = JSON.parse(savedTeacherAttendance);
       }
@@ -257,23 +296,41 @@ class AppStore {
       const hadSatAlpa = this.attendance.some((a) => isSaturdayAlpaRecord(a));
       if (hadSatAlpa) {
         this.attendance = this.attendance.filter((a) => !isSaturdayAlpaRecord(a));
-        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
+        await localforage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
       }
 
       const hadSatTeacherAlpa = this.teacherAttendance.some((ta) => isSaturdayAlpaRecord(ta));
       if (hadSatTeacherAlpa) {
         this.teacherAttendance = this.teacherAttendance.filter((ta) => !isSaturdayAlpaRecord(ta));
-        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
+        await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
       }
-      const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
+      let savedLogs = await localforage.getItem<string>(STORAGE_KEYS.LOGS);
+      if (!savedLogs) {
+        savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
+        if (savedLogs) {
+          await localforage.setItem(STORAGE_KEYS.LOGS, savedLogs);
+        }
+      }
       if (savedLogs) {
         this.logs = JSON.parse(savedLogs);
       }
-      const savedQueue = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
+      let savedQueue = await localforage.getItem<string>(STORAGE_KEYS.SYNC_QUEUE);
+      if (!savedQueue) {
+        savedQueue = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
+        if (savedQueue) {
+          await localforage.setItem(STORAGE_KEYS.SYNC_QUEUE, savedQueue);
+        }
+      }
       if (savedQueue) {
         this.syncQueue = JSON.parse(savedQueue);
       }
-      const savedDispatches = localStorage.getItem(STORAGE_KEYS.DISPATCHES);
+      let savedDispatches = await localforage.getItem<string>(STORAGE_KEYS.DISPATCHES);
+      if (!savedDispatches) {
+        savedDispatches = localStorage.getItem(STORAGE_KEYS.DISPATCHES);
+        if (savedDispatches) {
+          await localforage.setItem(STORAGE_KEYS.DISPATCHES, savedDispatches);
+        }
+      }
       if (savedDispatches) {
         this.dispatches = JSON.parse(savedDispatches);
       }
@@ -424,10 +481,10 @@ class AppStore {
   private saveTimeout: any = null;
 
   private saveLocalData(immediate = false) {
-    const doSave = () => {
+    const doSave = async () => {
       try {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
-        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
+        await localforage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
+        await localforage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
         
         // Prevent LocalStorage from crashing when data gets huge (Max 5MB quota)
         // Only keep the most recent 2000 attendance records in local cache
@@ -435,19 +492,19 @@ class AppStore {
         if (attendanceToSave.length > 2000) {
           attendanceToSave = [...attendanceToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
         }
-        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceToSave));
+        await localforage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceToSave));
         
-        localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
+        await localforage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
         
         let teacherAttToSave = this.teacherAttendance;
         if (teacherAttToSave.length > 2000) {
           teacherAttToSave = [...teacherAttToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
         }
-        localStorage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(teacherAttToSave));
+        await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(teacherAttToSave));
         
-        localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
-        localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
-        localStorage.setItem(STORAGE_KEYS.DISPATCHES, JSON.stringify(this.dispatches));
+        await localforage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
+        await localforage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
+        await localforage.setItem(STORAGE_KEYS.DISPATCHES, JSON.stringify(this.dispatches));
       } catch (e) {
         console.warn('LocalStorage save error:', e);
       }
@@ -740,10 +797,10 @@ class AppStore {
     return [...this.syncQueue];
   }
 
-  public clearSyncQueue(): void {
+  public async clearSyncQueue(): Promise<void> {
     this.syncQueue = [];
     try {
-      localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+      await localforage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
     } catch {}
     this.saveLocalData(true);
     this.notify();
@@ -782,7 +839,7 @@ class AppStore {
     };
   }
 
-  private notify() {
+  public notify() {
     this.saveLocalData();
     this.listeners.forEach((listener) => {
       try {
@@ -1707,649 +1764,114 @@ class AppStore {
   }
 
   public async addStudent(studentData: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
-    // Check if student with same NISN already exists to prevent duplicate entry
-    const existingIndex = this.students.findIndex((s) => s.nisn && s.nisn === studentData.nisn);
-    if (existingIndex !== -1) {
-      const existing = this.students[existingIndex];
-      const updated: Student = {
-        ...existing,
-        ...studentData,
-      };
-      this.students[existingIndex] = updated;
-      this.notify();
-      this.enqueueSync({ id: updated.id, type: 'student', action: 'upsert', data: updated });
-      this.addLog('EDIT_SISWA', `Memperbarui data siswa (mencegah duplikasi NISN): ${updated.nama} (${updated.kelas})`);
-      return updated;
-    }
-
-    const newId = `std-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-    const newStudent: Student = {
-      ...studentData,
-      id: newId,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.students.unshift(newStudent);
-    this.notify();
-
-    this.enqueueSync({ id: newStudent.id, type: 'student', action: 'upsert', data: newStudent });
-    this.addLog('TAMBAH_SISWA', `Menambahkan siswa baru: ${newStudent.nama} (${newStudent.kelas}) - NISN: ${newStudent.nisn}`);
-
-    return newStudent;
+    return studentOps.addStudent(this, studentData);
   }
 
   public async updateStudent(id: string, studentData: Partial<Student>): Promise<boolean> {
-    const idx = this.students.findIndex((s) => s.id === id);
-    if (idx === -1) return false;
-
-    const updated = { ...this.students[idx], ...studentData };
-    this.students[idx] = updated;
-    this.notify();
-
-    this.enqueueSync({ id: updated.id, type: 'student', action: 'upsert', data: updated });
-    this.addLog('EDIT_SISWA', `Memperbarui data siswa: ${updated.nama} (${updated.kelas})`);
-
-    return true;
+    return studentOps.updateStudent(this, id, studentData);
   }
 
   public async deleteStudent(id: string): Promise<boolean> {
-    const idx = this.students.findIndex((s) => s.id === id);
-    if (idx === -1) return false;
-
-    // Penghapusan Halus (Soft Delete): Hanya ubah status menjadi nonaktif
-    const target = this.students[idx];
-    const updated = { ...target, status: 'nonaktif' as const };
-    this.students[idx] = updated;
-
-    this.notify();
-
-    this.enqueueSync({ id: target.id || id, type: 'student', action: 'upsert', data: updated });
-    this.addLog('NONAKTIF_SISWA', `Menonaktifkan siswa: ${target.nama} (${target.kelas}) (Soft Delete).`);
-    return true;
+    return studentOps.deleteStudent(this, id);
   }
 
   public async deleteMultipleStudents(ids: string[]): Promise<boolean> {
-    const idSet = new Set(ids);
-    let count = 0;
-
-    this.students = this.students.map((s) => {
-      if (idSet.has(s.id)) {
-        count++;
-        const updated = { ...s, status: 'nonaktif' as const };
-        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
-        return updated;
-      }
-      return s;
-    });
-
-    this.notify();
-    this.addLog('NONAKTIF_MASSAL_SISWA', `Menonaktifkan ${count} siswa terpilih (Soft Delete).`);
-    return true;
+    return studentOps.deleteMultipleStudents(this, ids);
   }
 
   public async updateMultipleStudents(ids: string[], updates: Partial<Student>): Promise<boolean> {
-    const idSet = new Set(ids);
-    let count = 0;
-
-    this.students = this.students.map((s) => {
-      if (idSet.has(s.id)) {
-        count++;
-        const updated = { ...s, ...updates };
-        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
-        return updated;
-      }
-      return s;
-    });
-
-    this.notify();
-    this.addLog('UPDATE_MASSAL_SISWA', `Memperbarui data ${count} siswa (Contoh Update: ${JSON.stringify(updates)}).`);
-    return true;
+    return studentOps.updateMultipleStudents(this, ids, updates);
   }
 
   public async deleteAllStudents(): Promise<boolean> {
-    const count = this.students.length;
-
-    this.students = this.students.map((s) => {
-      const updated = { ...s, status: 'nonaktif' as const };
-      this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: updated });
-      return updated;
-    });
-
-    this.notify();
-    this.addLog('RESET_SISWA', `Menonaktifkan seluruh ${count} data siswa (Soft Delete).`);
-    return true;
+    return studentOps.deleteAllStudents(this);
   }
 
   public async importStudents(
     importList: Omit<Student, 'id' | 'createdAt'>[],
     mode: 'append' | 'replace' = 'append'
   ): Promise<boolean> {
-    // Eliminasi data ganda di dalam file impor berdasarkan NISN
-    const uniqueImportMap = new Map<string, Omit<Student, 'id' | 'createdAt'>>();
-    importList.forEach((item) => {
-      if (item.nisn) {
-        uniqueImportMap.set(item.nisn, item);
-      }
-    });
-
-    const formatted: Student[] = Array.from(uniqueImportMap.values()).map((s, idx) => ({
-      ...s,
-      id: `std-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-      createdAt: new Date().toISOString(),
-    }));
-
-    if (mode === 'replace') {
-      const oldIds = this.students.map((s) => s.id);
-      this.students = formatted;
-      this.notify();
-      oldIds.forEach((id) => {
-        this.enqueueSync({ id, type: 'student', action: 'delete' });
-      });
-      formatted.forEach((s) => {
-        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: s });
-      });
-    } else {
-      // Append mode: gabungkan & perbarui NISN yang sama tanpa menduplikasi
-      const map = new Map<string, Student>();
-      this.students.forEach((s) => map.set(s.nisn, s));
-      formatted.forEach((s) => {
-        const existing = map.get(s.nisn);
-        if (existing) {
-          map.set(s.nisn, { ...existing, ...s, id: existing.id });
-        } else {
-          map.set(s.nisn, s);
-        }
-      });
-      this.students = Array.from(map.values());
-      this.notify();
-      this.students.forEach((s) => {
-        this.enqueueSync({ id: s.id, type: 'student', action: 'upsert', data: s });
-      });
-    }
-
-    this.addLog('IMPORT_SISWA', `Berhasil mengimpor ${formatted.length} data siswa tanpa duplikasi.`);
-    return true;
+    return studentOps.importStudents(this, importList, mode);
   }
 
   public getStudentById(id: string): Student | undefined {
-    if (!id) return undefined;
-    const cleanId = String(id).trim();
-    return this.students.find((s) => s.id === cleanId);
+    return studentOps.getStudentById(this, id);
   }
 
   public getStudentByNisn(nisn: string): Student | undefined {
-    if (!nisn) return undefined;
-    const cleanNisn = String(nisn).trim();
-    return this.students.find((s) => s.nisn && s.nisn.trim() === cleanNisn);
+    return studentOps.getStudentByNisn(this, nisn);
   }
 
   public getStudentByRfidUid(rfidUid: string): Student | undefined {
-    if (!rfidUid) return undefined;
-    return this.students.find((s) => s.rfid_uid && isMatchingRfidUid(s.rfid_uid, rfidUid));
+    return studentOps.getStudentByRfidUid(this, rfidUid);
   }
 
   public assignRfidToStudent(studentId: string, rfidUid: string): boolean {
-    const student = this.getStudentById(studentId);
-    if (!student) return false;
-    const cleanUid = String(rfidUid).trim().toUpperCase();
-
-    // Check if another student has this RFID UID
-    const existing = this.getStudentByRfidUid(cleanUid);
-    if (existing && existing.id !== studentId) {
-      existing.rfid_uid = undefined;
-      this.enqueueSync({ id: existing.id, type: 'student', action: 'upsert', data: existing });
-    }
-
-    student.rfid_uid = cleanUid;
-    this.notify();
-    this.enqueueSync({ id: student.id, type: 'student', action: 'upsert', data: student });
-    this.addLog('ASSIGN_RFID_SISWA', `Menetapkan Kartu RFID [${cleanUid}] ke siswa: ${student.nama} (${student.kelas})`);
-    return true;
+    return studentOps.assignRfidToStudent(this, studentId, rfidUid);
   }
 
-  /**
-   * Pengenalan Akurat & Bebas Tabrakan Identitas Siswa dari Hasil Pindai QR / Barcode / Kartu RFID.
-   * Menggunakan pencarian hierarkis berbasis kecocokan eksak (Exact Match) pada RFID UID, NISN, dan ID_QR,
-   * serta mem-parsing format terstruktur (NPSN.NISN.NAMA atau JSON) tanpa substring matching longgar
-   * sehingga tidak akan ada 2 siswa berbeda yang dianggap orang yang sama.
-   */
   public findStudentByScannedCode(scannedText: string): Student | undefined {
-    if (!scannedText) return undefined;
-    const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
-    if (!cleanText) return undefined;
-
-    // 0. Exact Match pada UID Kartu RFID / NFC
-    const exactRfid = this.students.find(
-      (s) => s.rfid_uid && isMatchingRfidUid(s.rfid_uid, cleanText)
-    );
-    if (exactRfid) return exactRfid;
-
-    // 1. Exact Match pada ID_QR (case-insensitive & trimmed), HANYA jika bukan generic placeholder (misal: "69933068")
-    if (!isGenericQrCode(cleanText)) {
-      const exactQr = this.students.find(
-        (s) => s.id_qr && !isGenericQrCode(s.id_qr) && s.id_qr.trim().toLowerCase() === cleanText.toLowerCase()
-      );
-      if (exactQr) return exactQr;
-    }
-
-    // 2. Exact Match / Digit-Normalized Match pada NISN
-    const exactNisn = this.students.find(
-      (s) => isMatchingNisn(s.nisn, cleanText)
-    );
-    if (exactNisn) return exactNisn;
-
-    // 3. Exact Match pada Document ID
-    const exactId = this.students.find((s) => s.id === cleanText);
-    if (exactId) return exactId;
-
-    // 4. Parsing Format Terstruktur Berpemisah Titik (Contoh: "69933068.3080370790.DADANG BUAMONA" atau "69933068.3080370790")
-    if (cleanText.includes('.')) {
-      const parts = cleanText.split('.').map((p) => p.trim()).filter(Boolean);
-      const schoolNpsn = (this.settings.schoolNPSN || '69933068').trim();
-
-      // Format 3 Bagian atau lebih: NPSN.NISN.NAMA (Contoh: "69933068.3080370790.DADANG BUAMONA")
-      if (parts.length >= 3) {
-        const potentialNisn = parts[1];
-        const parsedName = parts.slice(2).join('.').trim().toLowerCase();
-
-        // 4A. Match by NISN in parts[1] (Prioritas Tertinggi & Akurat)
-        if (potentialNisn) {
-          const matchByNisn = this.students.find((s) => isMatchingNisn(s.nisn, potentialNisn));
-          if (matchByNisn) return matchByNisn;
-        }
-
-        // 4B. Match by Name in parts[2...] HANYA jika cocok eksak nama
-        if (parsedName) {
-          const matchByName = this.students.find((s) => s.nama && s.nama.trim().toLowerCase() === parsedName);
-          if (matchByName) return matchByName;
-        }
-      } else if (parts.length === 2) {
-        // Format 2 Bagian: Bisa [NPSN, NISN] atau [NISN, NAMA]
-        const isPart0Npsn = parts[0] === schoolNpsn || parts[0] === '69933068';
-
-        if (isPart0Npsn) {
-          // parts[0] adalah NPSN -> parts[1] adalah NISN
-          const matchByPart1 = this.students.find((s) => isMatchingNisn(s.nisn, parts[1]));
-          if (matchByPart1) return matchByPart1;
-        } else {
-          // parts[0] bukan NPSN -> periksa parts[0] sebagai NISN
-          const matchByPart0 = this.students.find((s) => isMatchingNisn(s.nisn, parts[0]));
-          if (matchByPart0) return matchByPart0;
-
-          const matchByPart1 = this.students.find((s) => isMatchingNisn(s.nisn, parts[1]));
-          if (matchByPart1) return matchByPart1;
-
-          const matchByName1 = this.students.find((s) => s.nama && s.nama.trim().toLowerCase() === parts[1].toLowerCase());
-          if (matchByName1) return matchByName1;
-        }
-      }
-    }
-
-    // 5. Parsing Format JSON (Contoh: {"nisn": "3080370790", "id_qr": "..."})
-    if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(cleanText);
-        if (parsed.nisn) {
-          const s = this.students.find((st) => isMatchingNisn(st.nisn, String(parsed.nisn)));
-          if (s) return s;
-        }
-        if (parsed.id_qr && !isGenericQrCode(String(parsed.id_qr))) {
-          const s = this.students.find((st) => st.id_qr && st.id_qr.trim().toLowerCase() === String(parsed.id_qr).trim().toLowerCase());
-          if (s) return s;
-        }
-        if (parsed.id) {
-          const s = this.students.find((st) => st.id === String(parsed.id).trim());
-          if (s) return s;
-        }
-      } catch {}
-    }
-
-    // 6. Parsing URL Search Params jika format berupa tautan
-    if (cleanText.includes('?') || cleanText.includes('&')) {
-      try {
-        const queryIdx = cleanText.indexOf('?');
-        const queryStr = queryIdx !== -1 ? cleanText.substring(queryIdx + 1) : cleanText;
-        const params = new URLSearchParams(queryStr);
-        const qNisn = params.get('nisn');
-        const qIdQr = params.get('id_qr');
-        if (qNisn) {
-          const matchQuery = this.students.find((s) => isMatchingNisn(s.nisn, qNisn));
-          if (matchQuery) return matchQuery;
-        }
-        if (qIdQr && !isGenericQrCode(qIdQr)) {
-          const matchQuery = this.students.find((s) => s.id_qr && s.id_qr.trim().toLowerCase() === qIdQr.trim().toLowerCase());
-          if (matchQuery) return matchQuery;
-        }
-      } catch {}
-    }
-
-    // 7. Pencocokan Eksak Nama Lengkap Siswa (Strict Full Exact Match)
-    const exactNameMatch = this.students.find(
-      (s) => s.nama && s.nama.trim().toLowerCase() === cleanText.toLowerCase()
-    );
-    if (exactNameMatch) return exactNameMatch;
-
-    return undefined;
+    return studentOps.findStudentByScannedCode(this, scannedText);
   }
-
-  // Teacher data management
 
   public getTeachers(): Teacher[] {
-    return [...this.teachers];
+    return teacherOps.getTeachers(this);
   }
 
   public getTeacherByNip(nip: string): Teacher | undefined {
-    if (!nip) return undefined;
-    const clean = String(nip).trim();
-    return this.teachers.find((t) => isMatchingNip(t.nip, clean));
+    return teacherOps.getTeacherByNip(this, nip);
   }
 
   public getTeacherById(id: string): Teacher | undefined {
-    if (!id) return undefined;
-    const cleanId = String(id).trim();
-    return this.teachers.find((t) => t.id === cleanId);
+    return teacherOps.getTeacherById(this, id);
   }
 
   public getTeacherByRfidUid(rfidUid: string): Teacher | undefined {
-    if (!rfidUid) return undefined;
-    return this.teachers.find((t) => t.rfid_uid && isMatchingRfidUid(t.rfid_uid, rfidUid));
+    return teacherOps.getTeacherByRfidUid(this, rfidUid);
   }
 
   public assignRfidToTeacher(teacherId: string, rfidUid: string): boolean {
-    const teacher = this.getTeacherById(teacherId);
-    if (!teacher) return false;
-    const cleanUid = String(rfidUid).trim().toUpperCase();
-
-    const existing = this.getTeacherByRfidUid(cleanUid);
-    if (existing && existing.id !== teacherId) {
-      existing.rfid_uid = undefined;
-      this.enqueueSync({ id: existing.id, type: 'teacher', action: 'upsert', data: existing });
-    }
-
-    teacher.rfid_uid = cleanUid;
-    this.notify();
-    this.enqueueSync({ id: teacher.id, type: 'teacher', action: 'upsert', data: teacher });
-    this.addLog('ASSIGN_RFID_GURU', `Menetapkan Kartu RFID [${cleanUid}] ke Guru: ${teacher.nama} (${teacher.jabatan})`);
-    return true;
+    return teacherOps.assignRfidToTeacher(this, teacherId, rfidUid);
   }
 
-  public findByRfidUid(rfidUid: string): {
-    type: 'siswa' | 'guru';
-    student?: Student;
-    teacher?: Teacher;
-  } | undefined {
-    if (!rfidUid) return undefined;
-    const clean = String(rfidUid).trim();
-    const student = this.getStudentByRfidUid(clean);
-    if (student) return { type: 'siswa', student };
-    const teacher = this.getTeacherByRfidUid(clean);
-    if (teacher) return { type: 'guru', teacher };
-    return undefined;
+  public findByRfidUid(rfidUid: string): { type: 'siswa' | 'guru'; student?: Student; teacher?: Teacher } | undefined {
+    return teacherOps.findByRfidUid(this, rfidUid);
   }
 
-  public findPersonByRfidOrCode(codeOrUid: string): {
-    type: 'siswa' | 'guru';
-    student?: Student;
-    teacher?: Teacher;
-  } | undefined {
-    if (!codeOrUid) return undefined;
-    const student = this.findStudentByScannedCode(codeOrUid);
-    if (student) return { type: 'siswa', student };
-    const teacher = this.findTeacherByScannedCode(codeOrUid);
-    if (teacher) return { type: 'guru', teacher };
-    return undefined;
+  public findPersonByRfidOrCode(codeOrUid: string): { type: 'siswa' | 'guru'; student?: Student; teacher?: Teacher } | undefined {
+    return teacherOps.findPersonByRfidOrCode(this, codeOrUid);
   }
 
-  /**
-   * Pengenalan Akurat Guru & Staf dari Hasil Pindai QR / Barcode / Kartu RFID
-   */
   public findTeacherByScannedCode(scannedText: string): Teacher | undefined {
-    if (!scannedText) return undefined;
-    const cleanText = String(scannedText).replace(/[\r\n\t]+/g, '').trim();
-    if (!cleanText) return undefined;
-
-    // 0. Exact Match pada UID Kartu RFID / NFC
-    const exactRfid = this.teachers.find(
-      (t) => t.rfid_uid && isMatchingRfidUid(t.rfid_uid, cleanText)
-    );
-    if (exactRfid) return exactRfid;
-
-    // 1. Exact Match pada ID_QR (Hanya jika bukan generic placeholder)
-    if (!isGenericQrCode(cleanText)) {
-      const exactQr = this.teachers.find(
-        (t) => t.id_qr && !isGenericQrCode(t.id_qr) && t.id_qr.trim().toLowerCase() === cleanText.toLowerCase()
-      );
-      if (exactQr) return exactQr;
-    }
-
-    // 2. Exact Match pada NIP
-    const exactNip = this.teachers.find(
-      (t) => isMatchingNip(t.nip, cleanText)
-    );
-    if (exactNip) return exactNip;
-
-    // 3. Exact Match pada Document ID
-    const exactId = this.teachers.find((t) => t.id === cleanText);
-    if (exactId) return exactId;
-
-    // 4. Parsing Format Terstruktur Titik (Contoh: "69933068.198501012010011001" atau "69933068.198501012010011001.NAMA")
-    if (cleanText.includes('.')) {
-      const parts = cleanText.split('.').map((p) => p.trim()).filter(Boolean);
-      const schoolNpsn = (this.settings.schoolNPSN || '69933068').trim();
-
-      if (parts.length >= 3) {
-        const potentialNip = parts[1];
-        const parsedName = parts.slice(2).join('.').trim().toLowerCase();
-
-        if (potentialNip) {
-          const matchByNip = this.teachers.find((t) => isMatchingNip(t.nip, potentialNip));
-          if (matchByNip) return matchByNip;
-        }
-
-        if (parsedName) {
-          const matchByName = this.teachers.find((t) => t.nama && t.nama.trim().toLowerCase() === parsedName);
-          if (matchByName) return matchByName;
-        }
-      } else if (parts.length === 2) {
-        const isPart0Npsn = parts[0] === schoolNpsn || parts[0] === '69933068';
-        if (isPart0Npsn) {
-          const matchByPart1 = this.teachers.find((t) => isMatchingNip(t.nip, parts[1]));
-          if (matchByPart1) return matchByPart1;
-        } else {
-          const matchByPart0 = this.teachers.find((t) => isMatchingNip(t.nip, parts[0]));
-          if (matchByPart0) return matchByPart0;
-
-          const matchByPart1 = this.teachers.find((t) => isMatchingNip(t.nip, parts[1]));
-          if (matchByPart1) return matchByPart1;
-
-          const matchByName = this.teachers.find((t) => t.nama && t.nama.trim().toLowerCase() === parts[1].toLowerCase());
-          if (matchByName) return matchByName;
-        }
-      }
-    }
-
-    // 5. Parsing Format JSON
-    if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(cleanText);
-        if (parsed.nip) {
-          const t = this.teachers.find((th) => isMatchingNip(th.nip, String(parsed.nip)));
-          if (t) return t;
-        }
-        if (parsed.id_qr && !isGenericQrCode(String(parsed.id_qr))) {
-          const t = this.teachers.find((th) => th.id_qr && th.id_qr.trim().toLowerCase() === String(parsed.id_qr).trim().toLowerCase());
-          if (t) return t;
-        }
-        if (parsed.id) {
-          const t = this.teachers.find((th) => th.id === String(parsed.id).trim());
-          if (t) return t;
-        }
-      } catch {}
-    }
-
-    // 6. Strict Exact Full Name Match
-    const exactNameMatch = this.teachers.find(
-      (t) => t.nama && t.nama.trim().toLowerCase() === cleanText.toLowerCase()
-    );
-    if (exactNameMatch) return exactNameMatch;
-
-    return undefined;
+    return teacherOps.findTeacherByScannedCode(this, scannedText);
   }
 
   public async addTeacher(teacherData: Omit<Teacher, 'id' | 'createdAt'>): Promise<Teacher> {
-    const cleanNip = String(teacherData.nip || '').trim();
-    const existingIndex = this.teachers.findIndex((t) => t.nip && t.nip === cleanNip);
-    
-    if (existingIndex !== -1) {
-      const existing = this.teachers[existingIndex];
-      const updated: Teacher = {
-        ...existing,
-        ...teacherData,
-        nip: cleanNip,
-        id_qr: teacherData.id_qr || `69933068.${cleanNip}`,
-      };
-      this.teachers[existingIndex] = updated;
-      this.notify();
-      this.enqueueSync({ id: updated.id, type: 'teacher', action: 'upsert', data: updated });
-      this.addLog('EDIT_GURU', `Memperbarui data guru (mencegah duplikasi NIP): ${updated.nama} - NIP: ${updated.nip}`);
-      return updated;
-    }
-
-    const newId = `tch-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-    const newTeacher: Teacher = {
-      ...teacherData,
-      id: newId,
-      nip: cleanNip,
-      id_qr: teacherData.id_qr || `69933068.${cleanNip}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.teachers.unshift(newTeacher);
-    this.notify();
-    this.enqueueSync({ id: newTeacher.id, type: 'teacher', action: 'upsert', data: newTeacher });
-    this.addLog('TAMBAH_GURU', `Menambahkan guru baru: ${newTeacher.nama} (${newTeacher.jabatan}) - NIP: ${newTeacher.nip}`);
-    return newTeacher;
+    return teacherOps.addTeacher(this, teacherData);
   }
 
   public async updateTeacher(id: string, teacherData: Partial<Teacher>): Promise<boolean> {
-    const idx = this.teachers.findIndex((t) => t.id === id);
-    if (idx === -1) return false;
-
-    const updated = { ...this.teachers[idx], ...teacherData };
-    if (teacherData.nip && !teacherData.id_qr) {
-      updated.id_qr = `69933068.${teacherData.nip.trim()}`;
-    }
-    this.teachers[idx] = updated;
-    this.notify();
-    this.enqueueSync({ id: updated.id, type: 'teacher', action: 'upsert', data: updated });
-    this.addLog('EDIT_GURU', `Memperbarui data guru: ${updated.nama} (${updated.jabatan})`);
-    return true;
+    return teacherOps.updateTeacher(this, id, teacherData);
   }
 
   public async deleteTeacher(id: string): Promise<boolean> {
-    const idx = this.teachers.findIndex((t) => t.id === id);
-    if (idx === -1) return false;
-
-    // Penghapusan Halus (Soft Delete): Hanya ubah status menjadi Nonaktif
-    const target = this.teachers[idx];
-    const updated = { ...target, status_kepegawaian: 'Nonaktif' as const };
-    this.teachers[idx] = updated;
-
-    this.notify();
-
-    this.enqueueSync({ id: target.id || id, type: 'teacher', action: 'upsert', data: updated });
-    this.addLog('NONAKTIF_GURU', `Menonaktifkan guru: ${target.nama} (${target.jabatan}) NIP: ${target.nip} (Soft Delete)`);
-    return true;
+    return teacherOps.deleteTeacher(this, id);
   }
 
   public async deleteMultipleTeachers(ids: string[]): Promise<boolean> {
-    const idSet = new Set(ids);
-    let count = 0;
-
-    this.teachers = this.teachers.map((t) => {
-      if (idSet.has(t.id)) {
-        count++;
-        const updated = { ...t, status_kepegawaian: 'Nonaktif' as const };
-        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: updated });
-        return updated;
-      }
-      return t;
-    });
-
-    this.notify();
-    this.addLog('NONAKTIF_MASSAL_GURU', `Menonaktifkan ${count} data guru terpilih (Soft Delete).`);
-    return true;
+    return teacherOps.deleteMultipleTeachers(this, ids);
   }
 
   public async deleteAllTeachers(): Promise<boolean> {
-    const count = this.teachers.length;
-
-    this.teachers = this.teachers.map((t) => {
-      const updated = { ...t, status_kepegawaian: 'Nonaktif' as const };
-      this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: updated });
-      return updated;
-    });
-
-    this.notify();
-    this.addLog('RESET_GURU', `Menonaktifkan seluruh ${count} data guru (Soft Delete).`);
-    return true;
+    return teacherOps.deleteAllTeachers(this);
   }
 
   public async importTeachers(
     importList: Omit<Teacher, 'id' | 'createdAt'>[],
     mode: 'append' | 'replace' = 'append'
   ): Promise<boolean> {
-    const uniqueImportMap = new Map<string, Omit<Teacher, 'id' | 'createdAt'>>();
-    importList.forEach((item) => {
-      const cleanNip = String(item.nip || '').trim();
-      if (cleanNip) {
-        uniqueImportMap.set(cleanNip, {
-          ...item,
-          nip: cleanNip,
-          id_qr: item.id_qr || `69933068.${cleanNip}`,
-        });
-      }
-    });
-
-    const formatted: Teacher[] = Array.from(uniqueImportMap.values()).map((t, idx) => ({
-      ...t,
-      id: `tch-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-      createdAt: new Date().toISOString(),
-    }));
-
-    if (mode === 'replace') {
-      const oldIds = this.teachers.map((t) => t.id);
-      this.teachers = formatted;
-      this.notify();
-      oldIds.forEach((id) => {
-        this.enqueueSync({ id, type: 'teacher', action: 'delete' });
-      });
-      formatted.forEach((t) => {
-        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: t });
-      });
-    } else {
-      const map = new Map<string, Teacher>();
-      this.teachers.forEach((t) => map.set(t.nip, t));
-      formatted.forEach((t) => {
-        const existing = map.get(t.nip);
-        if (existing) {
-          map.set(t.nip, { ...existing, ...t, id: existing.id });
-        } else {
-          map.set(t.nip, t);
-        }
-      });
-      this.teachers = Array.from(map.values());
-      this.notify();
-      this.teachers.forEach((t) => {
-        this.enqueueSync({ id: t.id, type: 'teacher', action: 'upsert', data: t });
-      });
-    }
-
-    this.addLog('IMPORT_GURU', `Berhasil mengimpor ${formatted.length} data guru tanpa duplikasi.`);
-    return true;
+    return teacherOps.importTeachers(this, importList, mode);
   }
-
-  // Teacher attendance management
 
   public getTeacherAttendance(): TeacherAttendanceRecord[] {
     return [...this.teacherAttendance];
@@ -4145,7 +3667,7 @@ class AppStore {
     this.logs = [];
     this.syncQueue = [];
     try {
-      localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+      await localforage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
     } catch {}
     this.saveLocalData(true);
     this.notify();

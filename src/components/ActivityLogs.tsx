@@ -24,6 +24,58 @@ import {
   Zap,
 } from 'lucide-react';
 
+
+interface LogTableRowProps {
+  log: any; // Using any or specific Log interface if exported
+  isSelected: boolean;
+  handleToggleSelectLog: (id: string) => void;
+  handleDeleteLog: (id: string) => void;
+}
+
+const LogTableRow = React.memo(({ log, isSelected, handleToggleSelectLog, handleDeleteLog }: LogTableRowProps) => {
+  return (
+    <tr
+      className={`hover:bg-white/10 transition-colors ${
+        isSelected ? 'bg-sky-50/60 dark:bg-sky-950/30' : ''
+      }`}
+    >
+      <td className="p-3.5 text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => handleToggleSelectLog(log.id)}
+          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        />
+      </td>
+      <td className="p-3.5 font-mono text-slate-400 whitespace-nowrap">
+        {new Date(log.timestamp).toLocaleString('id-ID', {
+          dateStyle: 'short',
+          timeStyle: 'medium',
+          timeZone: 'Asia/Jayapura',
+        })} WIT
+      </td>
+      <td className="p-3.5">
+        <div className="font-bold text-white">{log.user}</div>
+        <span className="text-[10px] bg-white/5 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded font-semibold">
+          {log.role}
+        </span>
+      </td>
+      <td className="p-3.5 font-bold text-blue-700 dark:text-blue-400">{log.action}</td>
+      <td className="p-3.5 text-slate-300">{log.details}</td>
+      <td className="p-3.5 text-right whitespace-nowrap">
+        <button
+          type="button"
+          onClick={() => handleDeleteLog(log.id)}
+          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors cursor-pointer"
+          title="Hapus baris log ini"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </td>
+    </tr>
+  );
+});
+
 export const ActivityLogs: React.FC = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -545,56 +597,25 @@ export const ActivityLogs: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-white/10 text-slate-200">
               {paginatedLogs.length > 0 ? (
+
                 paginatedLogs.map((log) => {
                   const isSelected = selectedLogIds.includes(log.id);
                   return (
-                    <tr
+                    <LogTableRow
                       key={log.id}
-                      className={`hover:bg-white/10 transition-colors ${
-                        isSelected ? 'bg-sky-50/60 dark:bg-sky-950/30' : ''
-                      }`}
-                    >
-                      <td className="p-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleSelectLog(log.id)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                      </td>
-                      <td className="p-3.5 font-mono text-slate-400 whitespace-nowrap">
-                        {new Date(log.timestamp).toLocaleString('id-ID', {
-                          dateStyle: 'short',
-                          timeStyle: 'medium',
-                          timeZone: 'Asia/Jayapura',
-                        })} WIT
-                      </td>
-                      <td className="p-3.5">
-                        <div className="font-bold text-white">{log.user}</div>
-                        <span className="text-[10px] bg-white/5 backdrop-blur-xl text-slate-300 px-2 py-0.5 rounded font-semibold">
-                          {log.role}
-                        </span>
-                      </td>
-                      <td className="p-3.5 font-bold text-blue-700 dark:text-blue-400">{log.action}</td>
-                      <td className="p-3.5 text-slate-300">{log.details}</td>
-                      <td className="p-3.5 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            store.deleteSelectedLogs([log.id]);
-                            setSelectedLogIds((prev) => prev.filter((id) => id !== log.id));
-                            refreshData();
-                            toast.success('Log Dihapus', 'Baris riwayat aktivitas berhasil dihapus.');
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors cursor-pointer"
-                          title="Hapus baris log ini"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
+                      log={log}
+                      isSelected={isSelected}
+                      handleToggleSelectLog={handleToggleSelectLog}
+                      handleDeleteLog={(id) => {
+                        store.deleteSelectedLogs([id]);
+                        setSelectedLogIds((prev) => prev.filter((prevId) => prevId !== id));
+                        refreshData();
+                        toast.success('Log Dihapus', 'Baris riwayat aktivitas berhasil dihapus.');
+                      }}
+                    />
                   );
                 })
+
               ) : (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500 text-xs">

@@ -107,8 +107,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   // Scan Feed / History for current session
   const [scanFeed, setScanFeed] = useState<ScanOutcome[]>([]);
 
-  // Performance & Queue Options - Mode Scan Massal starts DISABLED so popup info shows for 3 seconds
-  const [rapidQueueMode, setRapidQueueMode] = useState<boolean>(false); // Mode Antrean Cepat (false by default)
+  // Performance & Queue Options - Mode Scan Massal starts ENABLED so popup info does not block the scanner
+  const [rapidQueueMode, setRapidQueueMode] = useState<boolean>(true); // Mode Antrean Cepat (true by default)
   const [debounceSeconds, setDebounceSeconds] = useState<number>(3); // 3 seconds debounce per same QR
   const [scanFps, setScanFps] = useState<number>(12); // 12 FPS: Optimal Sweet Spot (Zero frame queue latency, instantaneous response)
   const [qrOnlyMode, setQrOnlyMode] = useState<boolean>(true); // Mode QR Murni: 4x lebih cepat karena tidak membebani CPU dengan barcode 1D
@@ -463,7 +463,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   };
 
   const playVoiceFeedback = (name: string, status: string, isSuccess: boolean) => {
-    if (!soundEnabled) return;
+    if (!soundEnabled || rapidQueueMode) return; // Nonaktifkan suara TTS robot jika Mode Antrean Cepat menyala
     // Asynchronous non-blocking TTS to avoid main thread camera stutter
     setTimeout(() => {
       try {
@@ -502,7 +502,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     // 1. Same-QR debounce check
     const lastTime = recentScanTimesRef.current.get(raw);
     if (lastTime && now - lastTime < debounceSeconds * 1000) {
-      toast.warning('Terlalu Cepat!', 'Data ini baru saja dipindai beberapa detik yang lalu. Mohon tunggu sesaat.');
+      // toast dihapus agar tidak mengganggu layar jika ada kartu nempel kelamaan
       return;
     }
 
@@ -524,9 +524,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
       const currentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
 
-      // Visual flash effect
-      setScanFlash(true);
-      setTimeout(() => setScanFlash(false), 200);
+      // Efek kilat flash visual dinonaktifkan agar mata petugas tidak cepat lelah saat jam sibuk
 
       const timeStr =
         new Date().toLocaleTimeString('id-ID', {

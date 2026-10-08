@@ -72,7 +72,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
       ease: 'power3.out',
     }, '-=1.2');
 
-  }, { scope: container });
+  }, { scope: container, dependencies: [] });
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();

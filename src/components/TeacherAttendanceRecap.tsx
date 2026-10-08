@@ -308,35 +308,47 @@ export const TeacherAttendanceRecap: React.FC<TeacherAttendanceRecapProps> = ({
     const normTanggal = store.normalizeToYyyyMmDd(editTanggal) || currentRecord.tanggal;
     const finalTimestamp = store.buildIsoTimestamp(normTanggal, editJamScan || '07:00');
 
-    await store.updateTeacherAttendanceRecord(currentRecord.id, {
-      tanggal: normTanggal,
-      timestamp: finalTimestamp,
-      status: currentRecord.status,
-      jenis: currentRecord.jenis,
-      catatan: currentRecord.catatan,
-      terlambatMenit: Number(currentRecord.terlambatMenit) || 0,
-    });
+    try {
+      await store.updateTeacherAttendanceRecord(currentRecord.id, {
+        tanggal: normTanggal,
+        timestamp: finalTimestamp,
+        status: currentRecord.status,
+        jenis: currentRecord.jenis,
+        catatan: currentRecord.catatan,
+        terlambatMenit: Number(currentRecord.terlambatMenit) || 0,
+      });
 
-    setShowEditModal(false);
-    toast.success('Presensi Diperbarui', `Rekaman presensi ${currentRecord.nama} berhasil diperbarui (${editJamScan} WIT).`);
+      setShowEditModal(false);
+      toast.success('Presensi Diperbarui', `Rekaman presensi ${currentRecord.nama} berhasil diperbarui (${editJamScan} WIT).`);
+    } catch (error: any) {
+      toast.error('Gagal Diperbarui', error?.message || 'Terjadi kesalahan saat memperbarui presensi guru.');
+    }
   };
 
   const handleConfirmDeleteSingle = async () => {
     if (!deletingRecord) return;
     const name = deletingRecord.nama;
-    await store.deleteTeacherAttendanceRecord(deletingRecord.id);
-    setSelectedIds((prev) => prev.filter((i) => i !== deletingRecord.id));
-    setDeletingRecord(null);
-    toast.success('Rekaman Dihapus', `Data presensi ${name} berhasil dihapus.`);
+    try {
+      await store.deleteTeacherAttendanceRecord(deletingRecord.id);
+      setSelectedIds((prev) => prev.filter((i) => i !== deletingRecord.id));
+      setDeletingRecord(null);
+      toast.success('Rekaman Dihapus', `Data presensi ${name} berhasil dihapus.`);
+    } catch (error: any) {
+      toast.error('Gagal Dihapus', error?.message || 'Terjadi kesalahan saat menghapus data.');
+    }
   };
 
   const handleConfirmBatchDelete = async () => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
-    await store.deleteMultipleTeacherAttendance(selectedIds);
-    setSelectedIds([]);
-    setIsBatchDeleteModalOpen(false);
-    toast.success('Hapus Massal Selesai', `${count} rekaman presensi guru berhasil dihapus.`);
+    try {
+      await store.deleteMultipleTeacherAttendance(selectedIds);
+      setSelectedIds([]);
+      setIsBatchDeleteModalOpen(false);
+      toast.success('Hapus Massal Selesai', `${count} rekaman presensi guru berhasil dihapus.`);
+    } catch (error: any) {
+      toast.error('Gagal Hapus Massal', error?.message || 'Terjadi kesalahan saat menghapus beberapa data.');
+    }
   };
 
   const handleExportExcel = () => {

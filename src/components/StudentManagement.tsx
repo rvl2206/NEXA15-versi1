@@ -73,6 +73,246 @@ interface StudentManagementProps {
   userRole?: UserRole;
 }
 
+interface StudentTableRowProps {
+  s: Student;
+  itemNumber: number;
+  isSelected: boolean;
+  todayRec?: AttendanceRecord;
+  isToday: boolean;
+  handleSelectStudent: (id: string) => void;
+  handleOpenBindRfid: (s: Student) => void;
+  setQrModalStudent: (s: Student) => void;
+  handleDeleteClick: (s: Student) => void;
+  handleOpenEdit: (s: Student) => void;
+}
+
+const StudentTableRow = React.memo(({
+  s,
+  itemNumber,
+  isSelected,
+  todayRec,
+  isToday,
+  handleSelectStudent,
+  handleOpenBindRfid,
+  setQrModalStudent,
+  handleDeleteClick,
+  handleOpenEdit
+}: StudentTableRowProps) => {
+  return (
+    <tr
+      key={s.id}
+      className={`transition-colors ${
+        isSelected
+          ? 'bg-blue-50/70 dark:bg-blue-950/50'
+          : 'hover:bg-white/10'
+      }`}
+    >
+      <td className="p-3.5 text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => handleSelectStudent(s.id)}
+          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+        />
+      </td>
+      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
+        {itemNumber}
+      </td>
+      <td className="p-3.5">
+        <div className="flex items-center gap-3">
+          <img
+            src={
+              s.foto ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
+            }
+            alt={s.nama}
+            className="w-9 h-9 rounded-full object-cover border border-white/10"
+          />
+          <div>
+            <p className="font-bold text-white">{s.nama}</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              QR: 69933068.{s.nisn}.{s.nama}
+            </p>
+          </div>
+        </div>
+      </td>
+      <td className="p-3.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
+        <div>{s.nisn}</div>
+        {s.rfid_uid ? (
+          <button
+            type="button"
+            onClick={() => handleOpenBindRfid(s)}
+            className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 mt-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
+            title={`UID Kartu: ${s.rfid_uid} (Klik untuk ubah / kelola tautan kartu RFID)`}
+          >
+            <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" />{' '}
+            {s.rfid_uid}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handleOpenBindRfid(s)}
+            className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 mt-1 hover:underline cursor-pointer"
+            title={`Tautkan Kartu RFID Fisik untuk ${s.nama}`}
+          >
+            <CreditCard className="w-2.5 h-2.5" /> +Taut RFID
+          </button>
+        )}
+      </td>
+      <td className="p-3.5 font-mono text-blue-700 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-950/40 px-2 py-1 rounded w-max">
+        {s.id_qr}
+      </td>
+      <td className="p-3.5 font-medium">
+        <span className="bg-white/5 backdrop-blur-xl text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded font-semibold">
+          {s.kelas}
+        </span>
+      </td>
+      <td className="p-3.5">
+        {(() => {
+          if (!isToday || !todayRec) {
+            return (
+              <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
+                <Clock className="w-3 h-3 text-slate-400" /> Belum Absen
+              </span>
+            );
+          }
+          switch (todayRec.status) {
+            case 'Hadir':
+              return (
+                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />{' '}
+                  Hadir ({todayRec.jenis})
+                </span>
+              );
+            case 'Terlambat':
+              return (
+                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />{' '}
+                  Terlambat
+                </span>
+              );
+            case 'Izin':
+              return (
+                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                  <FileCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />{' '}
+                  Izin
+                </span>
+              );
+            case 'Sakit':
+              return (
+                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                  <Stethoscope className="w-3 h-3 text-purple-600 dark:text-purple-400" />{' '}
+                  Sakit
+                </span>
+              );
+            case 'Alpa':
+              return (
+                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                  <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />{' '}
+                  Alpa
+                </span>
+              );
+            default:
+              return (
+                <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
+                  <Clock className="w-3 h-3" /> {todayRec.status}
+                </span>
+              );
+          }
+        })()}
+      </td>
+      <td className="p-3.5">
+        {s.status === 'aktif' ? (
+          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle className="w-3 h-3" /> Aktif
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/10">
+            <XCircle className="w-3 h-3" /> Nonaktif
+          </span>
+        )}
+      </td>
+      <td className="p-3.5 text-center">
+        <div className="flex items-center justify-center gap-1.5">
+          {/* Bind RFID Card Button */}
+          <button
+            onClick={() => handleOpenBindRfid(s)}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              s.rfid_uid
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800'
+                : 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50'
+            }`}
+            title={
+              s.rfid_uid
+                ? `Kartu RFID Tertaut: ${s.rfid_uid} (Klik untuk kelola/ganti kartu)`
+                : `Tautkan Kartu Fisik RFID untuk ${s.nama}`
+            }
+          >
+            <Radio className={`w-4 h-4 ${s.rfid_uid ? 'animate-pulse' : ''}`} />
+          </button>
+          <button
+            onClick={() => setQrModalStudent(s)}
+            className="p-1.5 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 rounded-lg transition-colors"
+            title="Lihat Kartu QR Siswa"
+          >
+            <QrCode className="w-4 h-4" />
+          </button>
+          {/* WhatsApp Parent Notification Button */}
+          <button
+            onClick={() => {
+              if (s.no_hp_ortu) {
+                const waMsg = generateWhatsAppMessage(s, todayRec);
+                const waUrl = getWhatsAppLink(s.no_hp_ortu, waMsg);
+                window.open(waUrl, '_blank');
+              } else {
+                const phone = prompt(
+                  `Masukkan No WhatsApp Orang Tua untuk ${s.nama}:`,
+                  '08123456789',
+                );
+                if (phone && phone.trim()) {
+                  store.updateStudent(s.id, { no_hp_ortu: phone.trim() });
+                  const waMsg = generateWhatsAppMessage(
+                    { ...s, no_hp_ortu: phone.trim() },
+                    todayRec,
+                  );
+                  const waUrl = getWhatsAppLink(phone.trim(), waMsg);
+                  window.open(waUrl, '_blank');
+                }
+              }
+            }}
+            className={`p-1.5 rounded-lg transition-colors ${
+              s.no_hp_ortu
+                ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
+                : 'text-slate-400 dark:text-slate-500 hover:bg-white/10'
+            }`}
+            title={
+              s.no_hp_ortu
+                ? `Kirim Notifikasi WA ke Ortu (${s.no_hp_ortu})`
+                : 'Tambah No WA Ortu & Kirim Pesan'
+            }
+          >
+            <MessageCircle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleOpenEdit(s)}
+            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors"
+            title="Edit Data Siswa"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteClick(s)}
+            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+            title="Hapus Data Siswa"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole = 'Admin' }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -1053,7 +1293,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
             </thead>
             <tbody className="divide-y divide-white/10 text-slate-200">
               {paginatedStudents.length > 0 ? (
-                paginatedStudents.map((s, index) => {
+paginatedStudents.map((s, index) => {
                   const isSelected = selectedIds.includes(s.id);
                   const todayRec = getStudentTodayAttendance(s);
                   const isToday = todayRec ? store.isRecordForToday(todayRec) : false;
@@ -1061,219 +1301,22 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
                     pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1;
 
                   return (
-                    <tr
+                    <StudentTableRow
                       key={s.id}
-                      className={`transition-colors ${
-                        isSelected
-                          ? 'bg-blue-50/70 dark:bg-blue-950/50'
-                          : 'hover:bg-white/10'
-                      }`}
-                    >
-                      <td className="p-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectStudent(s.id)}
-                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                        />
-                      </td>
-                      <td className="p-3.5 font-medium text-slate-400 dark:text-slate-500">
-                        {itemNumber}
-                      </td>
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              s.foto ||
-                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
-                            }
-                            alt={s.nama}
-                            className="w-9 h-9 rounded-full object-cover border border-white/10"
-                          />
-                          <div>
-                            <p className="font-bold text-white">{s.nama}</p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                              QR: 69933068.{s.nisn}.{s.nama}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
-                        <div>{s.nisn}</div>
-                        {s.rfid_uid ? (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenBindRfid(s)}
-                            className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 mt-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
-                            title={`UID Kartu: ${s.rfid_uid} (Klik untuk ubah / kelola tautan kartu RFID)`}
-                          >
-                            <Radio className="w-2.5 h-2.5 text-indigo-500 animate-pulse" />{' '}
-                            {s.rfid_uid}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenBindRfid(s)}
-                            className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 hover:text-indigo-600 dark:text-slate-500 dark:hover:text-indigo-400 mt-1 hover:underline cursor-pointer"
-                            title={`Tautkan Kartu RFID Fisik untuk ${s.nama}`}
-                          >
-                            <CreditCard className="w-2.5 h-2.5" /> +Taut RFID
-                          </button>
-                        )}
-                      </td>
-                      <td className="p-3.5 font-mono text-blue-700 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-950/40 px-2 py-1 rounded w-max">
-                        {s.id_qr}
-                      </td>
-                      <td className="p-3.5 font-medium">
-                        <span className="bg-white/5 backdrop-blur-xl text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded font-semibold">
-                          {s.kelas}
-                        </span>
-                      </td>
-                      <td className="p-3.5">
-                        {(() => {
-                          if (!isToday || !todayRec) {
-                            return (
-                              <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
-                                <Clock className="w-3 h-3 text-slate-400" /> Belum Absen
-                              </span>
-                            );
-                          }
-                          switch (todayRec.status) {
-                            case 'Hadir':
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />{' '}
-                                  Hadir ({todayRec.jenis})
-                                </span>
-                              );
-                            case 'Terlambat':
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />{' '}
-                                  Terlambat
-                                </span>
-                              );
-                            case 'Izin':
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                                  <FileCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />{' '}
-                                  Izin
-                                </span>
-                              );
-                            case 'Sakit':
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
-                                  <Stethoscope className="w-3 h-3 text-purple-600 dark:text-purple-400" />{' '}
-                                  Sakit
-                                </span>
-                              );
-                            case 'Alpa':
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
-                                  <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />{' '}
-                                  Alpa
-                                </span>
-                              );
-                            default:
-                              return (
-                                <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10">
-                                  <Clock className="w-3 h-3" /> {todayRec.status}
-                                </span>
-                              );
-                          }
-                        })()}
-                      </td>
-                      <td className="p-3.5">
-                        {s.status === 'aktif' ? (
-                          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            <CheckCircle className="w-3 h-3" /> Aktif
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-white/5 backdrop-blur-xl text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/10">
-                            <XCircle className="w-3 h-3" /> Nonaktif
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Bind RFID Card Button */}
-                          <button
-                            onClick={() => handleOpenBindRfid(s)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              s.rfid_uid
-                                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800'
-                                : 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50'
-                            }`}
-                            title={
-                              s.rfid_uid
-                                ? `Kartu RFID Tertaut: ${s.rfid_uid} (Klik untuk kelola/ganti kartu)`
-                                : `Tautkan Kartu Fisik RFID untuk ${s.nama}`
-                            }
-                          >
-                            <Radio className={`w-4 h-4 ${s.rfid_uid ? 'animate-pulse' : ''}`} />
-                          </button>
-                          <button
-                            onClick={() => setQrModalStudent(s)}
-                            className="p-1.5 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 rounded-lg transition-colors"
-                            title="Lihat Kartu QR Siswa"
-                          >
-                            <QrCode className="w-4 h-4" />
-                          </button>
-                          {/* WhatsApp Parent Notification Button */}
-                          <button
-                            onClick={() => {
-                              if (s.no_hp_ortu) {
-                                const waMsg = generateWhatsAppMessage(s, todayRec);
-                                const waUrl = getWhatsAppLink(s.no_hp_ortu, waMsg);
-                                window.open(waUrl, '_blank');
-                              } else {
-                                const phone = prompt(
-                                  `Masukkan No WhatsApp Orang Tua untuk ${s.nama}:`,
-                                  '08123456789',
-                                );
-                                if (phone && phone.trim()) {
-                                  store.updateStudent(s.id, { no_hp_ortu: phone.trim() });
-                                  const waMsg = generateWhatsAppMessage(
-                                    { ...s, no_hp_ortu: phone.trim() },
-                                    todayRec,
-                                  );
-                                  const waUrl = getWhatsAppLink(phone.trim(), waMsg);
-                                  window.open(waUrl, '_blank');
-                                }
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              s.no_hp_ortu
-                                ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
-                                : 'text-slate-400 dark:text-slate-500 hover:bg-white/10'
-                            }`}
-                            title={
-                              s.no_hp_ortu
-                                ? `Kirim Notifikasi WA ke Ortu (${s.no_hp_ortu})`
-                                : 'Tambah No WA Ortu & Kirim Pesan'
-                            }
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(s)}
-                            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors"
-                            title="Edit Data Siswa"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(s)}
-                            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
-                            title="Hapus Data Siswa"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      s={s}
+                      itemNumber={itemNumber}
+                      isSelected={isSelected}
+                      todayRec={todayRec}
+                      isToday={isToday}
+                      handleSelectStudent={handleSelectStudent}
+                      handleOpenBindRfid={handleOpenBindRfid}
+                      setQrModalStudent={setQrModalStudent}
+                      handleDeleteClick={handleDeleteClick}
+                      handleOpenEdit={handleOpenEdit}
+                    />
                   );
                 })
+
               ) : (
                 <tr>
                   <td colSpan={9} className="p-10 text-center text-slate-400 text-xs">

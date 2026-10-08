@@ -275,7 +275,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
         start: 'top 85%'
       }
     });
-  }, { scope: containerRef });
+  }, { scope: containerRef, dependencies: [] });
 
   return (
     <div ref={containerRef} className="pb-24 space-y-12 bg-[#020617]">

@@ -210,7 +210,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
       stagger: 0.1,
       ease: 'back.out(1.2)'
     });
-  }, { scope: containerRef });
+  }, { scope: containerRef, dependencies: [] });
 
   return (
     <div ref={containerRef} className="w-full">
