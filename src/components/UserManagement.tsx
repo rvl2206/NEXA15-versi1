@@ -432,8 +432,8 @@ export const UserManagement: React.FC = () => {
   const handleResetPassSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    if (!newPassword.trim() || newPassword.trim().length < 3) {
-      toast.warning('Validasi', 'Kata sandi baru minimal 3 karakter.');
+    if (!newPassword.trim() || newPassword.trim().length < 6) {
+      toast.warning('Validasi', 'Kata sandi baru minimal 6 karakter demi keamanan akun.');
       return;
     }
 

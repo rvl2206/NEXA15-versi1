@@ -18,17 +18,19 @@ export interface User {
   updatedAt?: string;
   lastLoginAt?: string;
   notes?: string;
+  mustChangePassword?: boolean; // Mewajibkan perubahan kata sandi bawaan pada login pertama
 }
 
 export interface Student {
   id: string; // Document ID
-  id_qr: string; // e.g. "69933068"
+  id_qr?: string; // e.g. "69933068"
   rfid_uid?: string; // UID Kartu RFID / NFC (e.g. "04A1B2C3D4", "1234567890")
   nisn: string; // e.g. "3080370790"
   nama: string; // e.g. "DADANG BUAMONA"
   kelas: string; // e.g. "XI IPA 1"
+  jenis_kelamin?: 'L' | 'P' | string; // Jenis Kelamin Siswa
   no_hp_ortu?: string; // No. WA / HP Orang Tua (e.g. 08123456789)
-  foto: string;
+  foto?: string;
   status: 'aktif' | 'nonaktif';
   createdAt?: string;
 }

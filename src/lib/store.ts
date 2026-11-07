@@ -1312,10 +1312,14 @@ class AppStore {
 
     this.users[idx] = updatedUser;
 
-    // If current logged-in user is updated, sync session
+    // If current logged-in user is updated, sync session or revoke if deactivated
     if (this.currentUser && this.currentUser.uid === uid) {
-      this.currentUser = { ...this.currentUser, ...updatedUser };
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+      if (updatedUser.status === 'nonaktif') {
+        this.setCurrentUser(null);
+      } else {
+        this.currentUser = { ...this.currentUser, ...updatedUser };
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+      }
     }
 
     this.saveLocalData(true);
@@ -1359,10 +1363,43 @@ class AppStore {
     return { success: true, message: `Akun ${target.name} berhasil dihapus dari database.` };
   }
 
+  private failedLoginAttempts: Record<string, { count: number; lockedUntil: number }> = {};
+
+  public getLoginLockoutTime(identifier: string): number {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const entry = this.failedLoginAttempts[cleanId];
+    if (!entry) return 0;
+    const remainingMs = entry.lockedUntil - Date.now();
+    return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+  }
+
+  public recordFailedLoginAttempt(identifier: string): { locked: boolean; remainingSeconds: number; attempts: number } {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const entry = this.failedLoginAttempts[cleanId] || { count: 0, lockedUntil: 0 };
+    entry.count += 1;
+    if (entry.count >= 5) {
+      // Bekukan selama 60 detik jika salah 5 kali
+      entry.lockedUntil = Date.now() + 60000;
+      this.failedLoginAttempts[cleanId] = entry;
+      this.addLog(
+        'SECURITY_ALERT',
+        `Peringatan Keamanan: Terdeteksi 5 kali kegagalan login berturut-turut untuk akun '${cleanId}'. Akses dibekukan sementara selama 60 detik.`
+      );
+      return { locked: true, remainingSeconds: 60, attempts: entry.count };
+    }
+    this.failedLoginAttempts[cleanId] = entry;
+    return { locked: false, remainingSeconds: 0, attempts: entry.count };
+  }
+
+  public clearFailedLoginAttempts(identifier: string): void {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    delete this.failedLoginAttempts[cleanId];
+  }
+
   public async resetUserPassword(uid: string, newPass: string): Promise<{ success: boolean; message: string }> {
     const cleanPass = (newPass || '').trim();
-    if (!cleanPass || cleanPass.length < 3) {
-      return { success: false, message: 'Kata sandi baru minimal 3 karakter.' };
+    if (!cleanPass || cleanPass.length < 6) {
+      return { success: false, message: 'Kata sandi baru minimal 6 karakter demi keamanan akun.' };
     }
 
     const user = this.users.find((u) => u.uid === uid);
@@ -1373,6 +1410,7 @@ class AppStore {
     // Safely hash the new password using bcrypt
     const hashedPassword = await hashPassword(cleanPass);
     user.password = hashedPassword;
+    user.mustChangePassword = false;
     user.updatedAt = new Date().toISOString();
 
     if (uid === 'usr-admin') {
@@ -1380,14 +1418,26 @@ class AppStore {
       localStorage.setItem(STORAGE_KEYS.PASSWORDS, JSON.stringify(this.passwords));
     }
 
+    if (this.currentUser && this.currentUser.uid === uid) {
+      this.currentUser = { ...user };
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+    }
+
     this.saveLocalData(true);
     this.notify();
 
     saveUserToSupabase(user, this.getSupabaseConfig()).catch(() => {});
 
-    this.addLog('RESET_PASSWORD_PENGGUNA', `Administrator mereset kata sandi untuk akun: ${user.name} (@${user.username}) dengan enkripsi bcrypt.`);
+    this.addLog('RESET_PASSWORD_PENGGUNA', `Kata sandi untuk akun: ${user.name} (@${user.username}) berhasil diperbarui dengan enkripsi bcrypt.`);
 
     return { success: true, message: `Kata sandi untuk ${user.name} berhasil diperbarui dan dienkripsi dengan aman.` };
+  }
+
+  public async changeMyPassword(newPass: string): Promise<{ success: boolean; message: string }> {
+    if (!this.currentUser) {
+      return { success: false, message: 'Tidak ada sesi pengguna aktif.' };
+    }
+    return this.resetUserPassword(this.currentUser.uid, newPass);
   }
 
   public async loginWithCredentials(
@@ -1399,6 +1449,15 @@ class AppStore {
 
     if (!cleanId || !cleanPass) {
       return { success: false, message: 'Silakan masukkan Username / Email dan Kata Sandi.' };
+    }
+
+    // 0. Periksa apakah akun sedang dibekukan sementara karena brute-force
+    const lockoutSec = this.getLoginLockoutTime(cleanId);
+    if (lockoutSec > 0) {
+      return {
+        success: false,
+        message: `Percobaan masuk gagal terlalu sering. Silakan tunggu ${lockoutSec} detik sebelum mencoba kembali demi keamanan akun.`,
+      };
     }
 
     // Refresh from local cache or find user
@@ -1416,9 +1475,22 @@ class AppStore {
     }
 
     if (!user) {
+      // Jika akun belum ada di memori lokal, sinkronkan pengguna terbaru dari Supabase
+      const config = this.getSupabaseConfig();
+      if (isSupabaseConfigured(config)) {
+        try {
+          await this.syncUsersWithSupabase();
+          user = this.getUserByUsernameOrEmail(cleanId);
+        } catch {
+          // Abaikan kesalahan jaringan saat offline
+        }
+      }
+    }
+
+    if (!user) {
       return {
         success: false,
-        message: 'Akun tidak ditemukan. Pastikan Username atau Email sudah terdaftar oleh Admin di database.',
+        message: 'Akun tidak ditemukan. Pastikan Username, Email, atau NIP sudah terdaftar oleh Admin di database.',
       };
     }
 
@@ -1430,17 +1502,33 @@ class AppStore {
     }
 
     // Check password using bcrypt comparison
-    const userPass = user.password || (user.uid === 'usr-admin' ? this.getAdminPassword() : hashPasswordSync('admin'));
-    const isDirectMatch = await comparePassword(cleanPass, userPass);
-    const isAdminFallbackMatch = user.role === 'Admin' && (await comparePassword(cleanPass, this.getAdminPassword()));
-    const isMatch = isDirectMatch || isAdminFallbackMatch;
-
-    if (!isMatch) {
+    const userPass = user.password || (user.uid === 'usr-admin' ? this.getAdminPassword() : this.passwords[user.uid]);
+    if (!userPass) {
       return {
         success: false,
-        message: 'Kata sandi tidak sesuai. Periksa kembali huruf besar/kecil Anda.',
+        message: 'Kata sandi untuk akun ini belum diatur. Silakan hubungi Administrator sekolah.',
       };
     }
+
+    const isMatch = await comparePassword(cleanPass, userPass);
+
+    if (!isMatch) {
+      const lockRes = this.recordFailedLoginAttempt(cleanId);
+      if (lockRes.locked) {
+        return {
+          success: false,
+          message: 'Akun dibekukan sementara selama 60 detik karena 5 kali salah memasukkan kata sandi berturut-turut.',
+        };
+      }
+      const sisa = Math.max(0, 5 - lockRes.attempts);
+      return {
+        success: false,
+        message: `Kata sandi tidak sesuai. Sisa kesempatan sebelum dibekukan: ${sisa} kali.`,
+      };
+    }
+
+    // Login berhasil: Bersihkan catatan kegagalan percobaan
+    this.clearFailedLoginAttempts(cleanId);
 
     // If stored password was plain text from legacy data, upgrade to bcrypt on login
     if (!isHashedPassword(user.password)) {
@@ -1472,15 +1560,7 @@ class AppStore {
     const email = (googleUser.email || '').toLowerCase().trim();
     let existing = this.users.find((u) => (u.email && u.email.toLowerCase() === email) || u.uid === googleUser.uid);
 
-    const isSuperAdminEmail =
-      email === 'ryugadirgantara9@gmail.com' ||
-      email.includes('admin@sman15') ||
-      email.startsWith('admin');
-
     if (existing) {
-      if (isSuperAdminEmail && existing.role !== 'Admin') {
-        existing.role = 'Admin';
-      }
       existing.lastLoginAt = new Date().toISOString();
       if (googleUser.photoURL && !existing.avatar) {
         existing.avatar = googleUser.photoURL;
@@ -1492,21 +1572,21 @@ class AppStore {
       return { success: true, user: existing, message: `Selamat datang, ${existing.name}!` };
     }
 
-    // Create new user from Google
+    // Buat akun baru via Google dengan peran dasar 'Guru' (tidak boleh eskalasi ke Admin secara otomatis)
     const username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
     const newUser: User = {
       uid: googleUser.uid || `usr-g-${Date.now()}`,
       username: username,
       email: email,
       name: googleUser.displayName || email.split('@')[0],
-      role: isSuperAdminEmail ? 'Admin' : 'Guru',
-      subRole: isSuperAdminEmail ? 'Super Admin' : 'Guru Piket',
+      role: 'Guru',
+      subRole: 'Guru Piket',
       assignedClass: '',
       status: 'aktif',
       avatar: googleUser.photoURL || '',
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      notes: 'Terdaftar otomatis via Login Google',
+      notes: 'Terdaftar via Login Google (Peran dikelola oleh Administrator)',
     };
 
     this.users.push(newUser);

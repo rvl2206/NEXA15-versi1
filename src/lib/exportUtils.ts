@@ -164,7 +164,10 @@ export function printElement(
   window.print();
 }
 
-export function calculateLateMinutes(record: AttendanceRecord, cutoffTime = '07:15'): number {
+/**
+ * Calculates late duration in minutes for an individual attendance record.
+ */
+export function calculateRecordLateMinutes(record: AttendanceRecord, cutoffTime = '07:15'): number {
   if (record.terlambatMenit !== undefined && record.terlambatMenit > 0) {
     return record.terlambatMenit;
   }
@@ -188,6 +191,9 @@ export function calculateLateMinutes(record: AttendanceRecord, cutoffTime = '07:
   }
   return 0;
 }
+
+/** Backward compatibility alias for calculateRecordLateMinutes */
+export const calculateLateMinutes = calculateRecordLateMinutes;
 
 export function formatPetugasRole(petugas?: string): string {
   if (!petugas) return 'Petugas Piket';

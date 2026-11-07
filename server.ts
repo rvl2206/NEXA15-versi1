@@ -30,13 +30,19 @@ app.use("/api", (req, res, next) => {
     return next();
   }
 
-  // If API_SECRET is configured, strictly enforce Bearer token
+  // Strictly enforce Bearer token if configured
   if (API_SECRET) {
     const authHeader = req.headers.authorization;
     if (!authHeader || authHeader !== `Bearer ${API_SECRET}`) {
       res.status(401).json({ error: "Unauthorized: Invalid or missing API secret" });
       return;
     }
+  } else if (process.env.NODE_ENV === "production") {
+    // In production, strictly reject mutating API endpoints when API_SECRET is unset
+    res.status(403).json({
+      error: "Forbidden: API_SECRET must be configured in environment variables to allow mutating operations in production."
+    });
+    return;
   }
   next();
 });

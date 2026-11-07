@@ -1113,6 +1113,49 @@ export async function signInWithGoogle(customConfig?: SupabaseConfig): Promise<a
   return data;
 }
 
+export function onSupabaseAuthStateChange(callback: (user: any) => void, customConfig?: SupabaseConfig): () => void {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return () => {};
+
+  // Check active session on boot (e.g. returning from OAuth redirect)
+  client.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user && session.user.email) {
+      callback({
+        uid: session.user.id,
+        email: session.user.email,
+        displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0],
+        photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
+      });
+    }
+  }).catch(() => {});
+
+  const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user && session.user.email) {
+      callback({
+        uid: session.user.id,
+        email: session.user.email,
+        displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0],
+        photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
+      });
+    }
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}
+
+export async function signOutSupabase(customConfig?: SupabaseConfig): Promise<void> {
+  try {
+    const client = getSupabaseClient(customConfig);
+    if (client) {
+      await client.auth.signOut();
+    }
+  } catch (err) {
+    console.warn('Supabase signOut error:', err);
+  }
+}
+
 export async function sendPasswordResetLink(
   email: string,
   customConfig?: SupabaseConfig

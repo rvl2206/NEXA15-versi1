@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { User, SchoolSettings, UserRole } from './types';
 import { store } from './lib/store';
 import { toast } from './lib/toast';
+import { onSupabaseAuthStateChange, signOutSupabase } from './lib/supabase';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
@@ -13,6 +14,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { UnsyncedDataWarning } from './components/UnsyncedDataWarning';
 import { ExitUnsyncedDataModal } from './components/ExitUnsyncedDataModal';
 import { GuidedTour } from './components/GuidedTour';
+import { ForceChangePasswordModal } from './components/ForceChangePasswordModal';
 
 // Lazy-loaded heavy modules for optimized bundle splitting & faster initial load
 const StudentManagement = lazy(() => import('./components/StudentManagement').then((m) => ({ default: m.StudentManagement })));
@@ -95,7 +97,29 @@ export function App() {
       setSettings(store.getSettings());
       setCurrentUser(store.getCurrentUser());
     });
-    return () => unsubscribe();
+
+    // Listen to Google OAuth return & Supabase session
+    const unsubAuth = onSupabaseAuthStateChange(async (gUser) => {
+      if (gUser && gUser.email) {
+        const current = store.getCurrentUser();
+        if (!current) {
+          try {
+            const res = await store.loginWithGoogleUser(gUser);
+            if (res.success && res.user) {
+              setCurrentUser(res.user);
+              toast.success('Login Berhasil', res.message);
+            }
+          } catch (e) {
+            console.warn('Auto login with Google session error:', e);
+          }
+        }
+      }
+    }, store.getSupabaseConfig());
+
+    return () => {
+      unsubscribe();
+      unsubAuth();
+    };
   }, []);
 
   useEffect(() => {
@@ -130,7 +154,9 @@ export function App() {
           'Anda telah dikeluarkan secara otomatis karena tidak ada aktivitas selama 30 menit.',
           8000
         );
+        store.setCurrentUser(null);
         setCurrentUser(null);
+        signOutSupabase(store.getSupabaseConfig()).catch(() => {});
       }, INACTIVITY_TIMEOUT_MS);
     };
 
@@ -198,12 +224,14 @@ export function App() {
     // Jika data sudah bersih / terkirim semua, keluar langsung dengan aman
     store.setCurrentUser(null);
     setCurrentUser(null);
+    signOutSupabase(store.getSupabaseConfig()).catch(() => {});
   };
 
   const handleForceConfirmExit = () => {
     setShowExitModal(false);
     store.setCurrentUser(null);
     setCurrentUser(null);
+    signOutSupabase(store.getSupabaseConfig()).catch(() => {});
   };
 
   const handleLoginSuccess = (user: User) => {
@@ -272,6 +300,15 @@ export function App() {
         onClose={() => setShowExitModal(false)}
         onConfirmExit={handleForceConfirmExit}
       />
+      {currentUser.mustChangePassword && (
+        <ForceChangePasswordModal
+          user={currentUser}
+          onSuccess={() => {
+            const updated = store.getCurrentUser();
+            setCurrentUser(updated);
+          }}
+        />
+      )}
       {/* Top Navbar */}
       <Navbar
         currentUser={currentUser}

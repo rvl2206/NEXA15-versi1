@@ -107,16 +107,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
     setIsGoogleLoading(true);
 
     try {
-      const gUser = await signInWithGoogle(store.getSupabaseConfig());
-      const result = await store.loginWithGoogleUser(gUser);
-      if (result.success && result.user) {
-        onLogin(result.user);
-      } else {
-        setError(result.message || 'Gagal masuk dengan Google.');
+      const data = await signInWithGoogle(store.getSupabaseConfig());
+      if (data?.url) {
+        window.location.href = data.url;
       }
     } catch (err: any) {
-      setError(err?.message || 'Gagal autentikasi Google. Silakan gunakan Username & Password.');
-    } finally {
+      setError(err?.message || 'Gagal memulai autentikasi Google. Silakan gunakan Username & Kata Sandi.');
       setIsGoogleLoading(false);
     }
   };
@@ -168,15 +164,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
       <div className="gsap-bg-orb absolute top-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-blue-600/15 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
       <div className="gsap-bg-orb absolute bottom-[-20%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-600/10 blur-[100px] rounded-full pointer-events-none mix-blend-screen" />
 
-      {/* Hero Section (Artistic Asymmetry) */}
+      {/* Hero Section */}
       <div className="hidden lg:flex flex-col justify-center relative z-10 w-1/2 pr-12">
         <SchoolLogo className="w-24 h-24 mb-12 opacity-80" />
-        <h1 className="gsap-hero-title max-w-4xl text-white font-black text-[clamp(3rem,5vw,5.5rem)] leading-[1.05] tracking-tight">
-          Digital Discipline.<br />
-          Evolved.
+        <h1 className="gsap-hero-title max-w-4xl text-white font-black text-[clamp(2.5rem,4.5vw,5rem)] leading-[1.1] tracking-tight">
+          Presensi Digital Modern.<br />
+          SMAN 15 Ambon.
         </h1>
         <p className="gsap-hero-text text-slate-400 mt-8 max-w-md text-lg leading-relaxed font-light">
-          Experience the next generation of academic attendance and management. Clean, precise, and uncompromisingly fast.
+          Sistem manajemen kehadiran presisi tinggi dengan QR Code, Kartu RFID/NFC, dan sinkronisasi data Cloud real-time.
         </p>
       </div>
 
@@ -187,11 +183,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
           <div className="lg:hidden mb-10 text-center flex flex-col items-center">
             <SchoolLogo className="w-16 h-16 mb-6 opacity-90" />
             <h2 className="text-3xl font-black text-white tracking-tight">NEXA15</h2>
+            <p className="text-xs text-slate-400 mt-1">SMA Negeri 15 Ambon</p>
           </div>
 
           <div className="mb-10 hidden lg:block">
-            <h2 className="text-3xl font-bold text-white tracking-tight">Secure Access</h2>
-            <p className="text-sm text-slate-400 mt-2">Authenticate to continue.</p>
+            <h2 className="text-3xl font-bold text-white tracking-tight">Masuk ke Sistem</h2>
+            <p className="text-sm text-slate-400 mt-2">Gunakan kredensial akun petugas atau guru Anda.</p>
           </div>
 
           {error && (
@@ -211,7 +208,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Identifier"
+                  placeholder="Username / Email / NIP"
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="none"
@@ -230,7 +227,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Passphrase"
+                  placeholder="Kata Sandi"
                   autoComplete="new-password"
                   autoCorrect="off"
                   autoCapitalize="none"
@@ -253,7 +250,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                 onClick={() => setIsForgotModalOpen(true)}
                 className="text-sm font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
-                Recovery?
+                Lupa Kata Sandi?
               </button>
             </div>
 
@@ -265,11 +262,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                  <span>Authenticating...</span>
+                  <span>Memverifikasi...</span>
                 </>
               ) : (
                 <>
-                  <span className="group-hover:scale-105 transition-transform duration-700 ease-out">Initialize Session</span>
+                  <span className="group-hover:scale-105 transition-transform duration-700 ease-out">Masuk ke Sistem</span>
                   <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-700 ease-out" />
                 </>
               )}
@@ -278,7 +275,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
 
           <div className="mt-8 mb-8 border-t border-white/5 relative">
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0d0d0d] px-4 text-xs font-bold text-slate-600 tracking-widest uppercase rounded-full">
-               System Interface
+               ATAU
              </div>
           </div>
 
@@ -291,7 +288,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
             {isGoogleLoading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                <span>Connecting SSO...</span>
+                <span>Menghubungkan ke Google...</span>
               </>
             ) : (
               <>
@@ -302,11 +299,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   <path fill="none" d="M1 1h22v22H1z" />
                 </svg>
-                <span>Google Workspace</span>
+                <span>Masuk dengan Akun Google</span>
               </>
             )}
           </button>
-
         </div>
       </div>
 
@@ -315,14 +311,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
           <div className="bg-[#111] border border-white/10 rounded-[2rem] w-full max-w-md overflow-hidden text-white shadow-2xl">
             <div className="flex items-center justify-between p-8 pb-4">
-              <h3 className="font-bold text-2xl">Recovery</h3>
+              <h3 className="font-bold text-2xl">Pemulihan Akun</h3>
               <button onClick={() => setIsForgotModalOpen(false)} className="text-slate-500 hover:text-white transition-colors cursor-pointer p-2 bg-white/5 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-8 pt-0 space-y-6">
-              <p className="text-slate-400 text-sm">Enter your designated identifier to initialize the recovery sequence.</p>
+              <p className="text-slate-400 text-sm">Masukkan Username, Email, atau NIP Anda untuk mendapatkan petunjuk pemulihan kata sandi.</p>
               
               <form onSubmit={handleForgotPasswordSubmit} autoComplete="off" className="space-y-6">
                 <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/5 focus-within:border-white/30 transition-colors duration-500">
@@ -332,7 +328,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                     required
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="Identifier"
+                    placeholder="Username / Email / NIP"
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="none"
@@ -358,7 +354,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
                   ) : (
                     <>
                       <Send className="w-5 h-5" />
-                      <span>Transmit Request</span>
+                      <span>Kirim Permintaan Reset</span>
                     </>
                   )}
                 </button>
@@ -367,10 +363,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
               <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2 text-sm text-slate-400">
                 <p className="font-bold text-white flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4" />
-                  Manual Override
+                  Bantuan Administrator Sekolah
                 </p>
                 <p className="leading-relaxed">
-                  Local database accounts require a system administrator to execute a manual password reset via the core management console.
+                  Jika Anda lupa kata sandi akun lokal sekolah, hubungi Administrator atau Staf TU untuk melakukan reset kata sandi langsung dari menu Manajemen Pengguna.
                 </p>
               </div>
             </div>

@@ -102,9 +102,24 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
     }
   }, [isOpen, initialTarget]);
 
-  // Load students & teachers
-  const allStudents = useMemo(() => store.getStudents().filter((s) => s.status === 'aktif'), []);
-  const allTeachers = useMemo(() => store.getTeachers().filter((t) => t.status === 'aktif'), []);
+  // Load students & teachers dynamically with store subscription
+  const [allStudents, setAllStudents] = useState<Student[]>(() =>
+    store.getStudents().filter((s) => s.status === 'aktif')
+  );
+  const [allTeachers, setAllTeachers] = useState<Teacher[]>(() =>
+    store.getTeachers().filter((t) => t.status === 'aktif')
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const refreshData = () => {
+      setAllStudents(store.getStudents().filter((s) => s.status === 'aktif'));
+      setAllTeachers(store.getTeachers().filter((t) => t.status === 'aktif'));
+    };
+    refreshData();
+    const unsub = store.subscribe(refreshData);
+    return () => unsub();
+  }, [isOpen]);
 
   // Unique Classes
   const availableClasses = useMemo(() => {

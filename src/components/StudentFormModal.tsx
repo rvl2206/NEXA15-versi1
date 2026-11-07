@@ -82,11 +82,12 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       }
     }
 
+    const currentNpsn = store.getSettings()?.schoolNPSN?.trim() || '69933068';
     const formattedData = {
       ...formData,
       nama: formData.nama.trim(),
       nisn: formData.nisn.trim(),
-      id_qr: `69933068.${formData.nisn.trim()}.${formData.nama.trim()}`,
+      id_qr: `${currentNpsn}.${formData.nisn.trim()}.${formData.nama.trim()}`,
       rfid_uid: cleanRfid || undefined,
     };
 
