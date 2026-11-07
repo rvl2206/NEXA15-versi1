@@ -21,6 +21,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Protect mutating API endpoints against unauthorized calls / CSRF
+const API_SECRET = process.env.API_SECRET || process.env.ADMIN_KEY;
+
+app.use("/api", (req, res, next) => {
+  // Allow read operations and health/status checks
+  if (req.method === "GET" || req.method === "OPTIONS") {
+    return next();
+  }
+
+  // If API_SECRET is configured, strictly enforce Bearer token
+  if (API_SECRET) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${API_SECRET}`) {
+      res.status(401).json({ error: "Unauthorized: Invalid or missing API secret" });
+      return;
+    }
+  }
+  next();
+});
+
 const DB_FILE = path.join(process.cwd(), "nexa15_server_db.json");
 
 interface ServerDatabase {
@@ -306,8 +326,16 @@ app.post("/api/teacher-attendance/clear", (_req, res) => {
   res.json({ success: true });
 });
 
-// Clear All Database
-app.post("/api/database/clear-all", (_req, res) => {
+// Clear All Database (Requires explicit administrative confirmation header)
+app.post("/api/database/clear-all", (req, res) => {
+  const confirmHeader = req.headers["x-confirm-database-wipe"];
+  if (confirmHeader !== "CONFIRM_PERMANENT_WIPE") {
+    res.status(403).json({
+      error: "Tindakan ditolak: Diperlukan header 'x-confirm-database-wipe: CONFIRM_PERMANENT_WIPE' untuk mengosongkan seluruh database.",
+    });
+    return;
+  }
+
   serverData = {
     students: [],
     attendance: [],
@@ -318,7 +346,7 @@ app.post("/api/database/clear-all", (_req, res) => {
     passwords: null,
   };
   saveServerData();
-  res.json({ success: true });
+  res.json({ success: true, message: "Database server berhasil dikosongkan secara terkonfirmasi." });
 });
 
 // Logs API

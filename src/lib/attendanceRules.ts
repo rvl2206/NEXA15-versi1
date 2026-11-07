@@ -33,9 +33,11 @@ export function calculateLateMinutes(
   currentMinuteWIT: number,
   cutoffTimeStr = '07:15'
 ): LateCalculationResult {
-  const [cutoffHour, cutoffMin] = (cutoffTimeStr || '07:15').split(':').map(Number);
+  const [rawHour, rawMin] = (cutoffTimeStr || '07:15').split(':').map(Number);
+  const cutoffHour = Number.isFinite(rawHour) ? rawHour : 7;
+  const cutoffMin = Number.isFinite(rawMin) ? rawMin : 15;
   const nowMinutes = currentHourWIT * 60 + currentMinuteWIT;
-  const cutoffMinutes = (cutoffHour || 7) * 60 + (cutoffMin || 15);
+  const cutoffMinutes = cutoffHour * 60 + cutoffMin;
 
   if (nowMinutes > cutoffMinutes) {
     return {

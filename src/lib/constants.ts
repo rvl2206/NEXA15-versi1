@@ -172,17 +172,23 @@ export function isMatchingRfidUid(uidA?: string, uidB?: string): boolean {
   if (!cleanA || !cleanB) return false;
   if (cleanA === cleanB) return true;
 
-  // Check if one is 10-digit decimal representation of 8-character hex UID (standard Wiegand-26 / Wiegand-34 / HID conversion)
-  if (/^\d{8,12}$/.test(cleanA) && /^[0-9A-F]{6,16}$/i.test(cleanB)) {
+  // Check if one is decimal representation of hex UID (standard Wiegand-26 / Wiegand-34 / HID / Mifare conversion)
+  if (/^\d{6,20}$/.test(cleanA) && /^[0-9A-F]{6,16}$/i.test(cleanB)) {
     try {
-      const decB = parseInt(cleanB, 16);
-      if (!isNaN(decB) && (String(decB) === cleanA || String(decB).padStart(10, '0') === cleanA)) return true;
+      const bigB = BigInt('0x' + cleanB);
+      const strBigB = bigB.toString();
+      if (strBigB === cleanA || strBigB.padStart(10, '0') === cleanA || strBigB.padStart(cleanA.length, '0') === cleanA) {
+        return true;
+      }
     } catch {}
   }
-  if (/^\d{8,12}$/.test(cleanB) && /^[0-9A-F]{6,16}$/i.test(cleanA)) {
+  if (/^\d{6,20}$/.test(cleanB) && /^[0-9A-F]{6,16}$/i.test(cleanA)) {
     try {
-      const decA = parseInt(cleanA, 16);
-      if (!isNaN(decA) && (String(decA) === cleanB || String(decA).padStart(10, '0') === cleanB)) return true;
+      const bigA = BigInt('0x' + cleanA);
+      const strBigA = bigA.toString();
+      if (strBigA === cleanB || strBigA.padStart(10, '0') === cleanB || strBigA.padStart(cleanB.length, '0') === cleanB) {
+        return true;
+      }
     } catch {}
   }
   return false;

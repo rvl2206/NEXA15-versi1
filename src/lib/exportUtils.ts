@@ -173,9 +173,11 @@ export function calculateLateMinutes(record: AttendanceRecord, cutoffTime = '07:
   }
   try {
     const scanDate = new Date(record.timestamp);
-    const [cutoffHour, cutoffMin] = cutoffTime.split(':').map(Number);
+    const [rawHour, rawMin] = (cutoffTime || '07:15').split(':').map(Number);
+    const cutoffHour = Number.isFinite(rawHour) ? rawHour : 7;
+    const cutoffMin = Number.isFinite(rawMin) ? rawMin : 15;
     const cutoffDate = new Date(scanDate);
-    cutoffDate.setHours(cutoffHour || 7, cutoffMin || 15, 0, 0);
+    cutoffDate.setHours(cutoffHour, cutoffMin, 0, 0);
 
     if (scanDate > cutoffDate) {
       const diffMs = scanDate.getTime() - cutoffDate.getTime();

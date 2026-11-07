@@ -132,9 +132,11 @@ export const LupaKartuModal: React.FC<LupaKartuModalProps> = ({
       // Fallback
     }
     const cutoff = store.getSettings().cutoffTime || '07:15';
-    const [cHour, cMin] = cutoff.split(':').map(Number);
+    const [rawCHour, rawCMin] = cutoff.split(':').map(Number);
+    const cHour = Number.isFinite(rawCHour) ? rawCHour : 7;
+    const cMin = Number.isFinite(rawCMin) ? rawCMin : 15;
     const nowMins = hour * 60 + minute;
-    const cutoffMins = (cHour || 7) * 60 + (cMin || 15);
+    const cutoffMins = cHour * 60 + cMin;
     const isLate = nowMins > cutoffMins;
     const lateMinutes = isLate ? nowMins - cutoffMins : 0;
     const timeFormatted = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} WIT`;

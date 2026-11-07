@@ -47,6 +47,16 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   lastScannedQR
 }) => {
   const [countdown, setCountdown] = useState(modalDuration);
+  const [bindMode, setBindMode] = useState<'RFID' | 'QR'>('QR');
+
+  // Synchronize bindMode when a new scan result arrives
+  useEffect(() => {
+    if (scanResult?.scanMethod === 'RFID') {
+      setBindMode('RFID');
+    } else {
+      setBindMode('QR');
+    }
+  }, [scanResult?.scanMethod, isOpen]);
 
   // Auto-close and countdown logic
   useEffect(() => {
@@ -199,21 +209,39 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           ) : (
             <div className="space-y-3 text-left">
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3.5 rounded-2xl border border-white/10 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                  <span className="text-[11px] font-extrabold text-white dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    {scanResult.scanMethod === 'RFID' ? (
-                      <>
-                        <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        <span>Daftarkan Kartu RFID</span>
-                      </>
-                    ) : (
-                      <>
-                        <QrCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span>Hubungkan Kode QR</span>
-                      </>
-                    )}
-                  </span>
-                  <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-200 dark:text-slate-300 font-bold">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold text-white dark:text-slate-200 uppercase tracking-wider">
+                      Mode Tautan:
+                    </span>
+                    <div className="flex items-center gap-1 bg-white/5 border border-white/10 p-0.5 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setBindMode('RFID')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                          bindMode === 'RFID'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <CreditCard className="w-3 h-3" />
+                        Kartu RFID
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBindMode('QR')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                          bindMode === 'QR'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <QrCode className="w-3 h-3" />
+                        Kode QR
+                      </button>
+                    </div>
+                  </div>
+                  <span className="font-mono text-[10px] bg-slate-800 border border-white/10 px-2 py-0.5 rounded text-indigo-300 font-bold">
                     {scanResult.scannedCode || lastScannedQR}
                   </span>
                 </div>
@@ -222,7 +250,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 {(scanTargetMode === 'auto' || scanTargetMode === 'siswa') && (
                   <div className="space-y-1.5 pt-1">
                     <label className="block text-[11px] font-bold text-slate-200 dark:text-slate-300">
-                      1. Hubungkan ke Siswa
+                      1. Tautkan ke Siswa ({bindMode === 'RFID' ? 'Kartu Fisik RFID' : 'Kode QR'})
                     </label>
                     <div className="flex gap-2">
                       <select
@@ -241,7 +269,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                         disabled={!selectedStudentForQR}
                         onClick={() => {
                           const code = scanResult.scannedCode || lastScannedQR;
-                          if (scanResult.scanMethod === 'RFID') {
+                          if (bindMode === 'RFID') {
                             handleAssignRfidToStudent(code, selectedStudentForQR);
                           } else {
                             handleConnectQRToStudent(code, selectedStudentForQR);
@@ -249,7 +277,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                         }}
                         className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
                       >
-                        Hubungkan Siswa
+                        {bindMode === 'RFID' ? 'Tautkan RFID Siswa' : 'Hubungkan QR Siswa'}
                       </button>
                     </div>
                   </div>
@@ -258,7 +286,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 {(scanTargetMode === 'auto' || scanTargetMode === 'guru') && (
                   <div className="space-y-1.5 pt-2 border-t border-white/10">
                     <label className="block text-[11px] font-bold text-slate-200 dark:text-slate-300">
-                      2. Hubungkan ke Guru / Tenaga Pendidik
+                      2. Tautkan ke Guru / Tenaga Pendidik ({bindMode === 'RFID' ? 'Kartu Fisik RFID' : 'Kode QR'})
                     </label>
                     <div className="flex gap-2">
                       <select
@@ -277,7 +305,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                         disabled={!selectedTeacherForQR}
                         onClick={() => {
                           const code = scanResult.scannedCode || lastScannedQR;
-                          if (scanResult.scanMethod === 'RFID') {
+                          if (bindMode === 'RFID') {
                             handleAssignRfidToTeacher(code, selectedTeacherForQR);
                           } else {
                             handleConnectQRToTeacher(code, selectedTeacherForQR);
@@ -285,7 +313,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                         }}
                         className="px-3.5 py-2 bg-sky-700 hover:bg-sky-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-extrabold text-xs rounded-xl shadow whitespace-nowrap cursor-pointer"
                       >
-                        Hubungkan Guru
+                        {bindMode === 'RFID' ? 'Tautkan RFID Guru' : 'Hubungkan QR Guru'}
                       </button>
                     </div>
                   </div>

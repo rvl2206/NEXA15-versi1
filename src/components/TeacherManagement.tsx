@@ -359,12 +359,16 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     }
 
     if (cleanRfid) {
-      const duplicateRfid = teachers.find(
-        (t) => t.rfid_uid && t.rfid_uid.trim().toUpperCase() === cleanRfid
-      );
-      if (duplicateRfid) {
-        setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh guru ${duplicateRfid.nama}.`);
-        return;
+      const match = store.findByRfidUid(cleanRfid);
+      if (match) {
+        if (match.type === 'guru') {
+          setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh Guru ${match.teacher?.nama}.`);
+          return;
+        }
+        if (match.type === 'siswa') {
+          setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh Siswa ${match.student?.nama} (${match.student?.kelas}).`);
+          return;
+        }
       }
     }
 
@@ -404,12 +408,16 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     }
 
     if (cleanRfid) {
-      const duplicateRfid = teachers.find(
-        (t) => t.id !== currentTeacher.id && t.rfid_uid && t.rfid_uid.trim().toUpperCase() === cleanRfid
-      );
-      if (duplicateRfid) {
-        setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh guru ${duplicateRfid.nama}.`);
-        return;
+      const match = store.findByRfidUid(cleanRfid);
+      if (match) {
+        if (match.type === 'guru' && match.teacher?.id !== currentTeacher.id) {
+          setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh Guru ${match.teacher?.nama}.`);
+          return;
+        }
+        if (match.type === 'siswa') {
+          setFormError(`Kartu RFID [${cleanRfid}] sudah digunakan oleh Siswa ${match.student?.nama} (${match.student?.kelas}).`);
+          return;
+        }
       }
     }
 

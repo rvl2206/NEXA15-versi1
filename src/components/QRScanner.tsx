@@ -15,6 +15,7 @@ import {
   getWhatsAppLink,
   generateWhatsAppMessage,
 } from '../lib/exportUtils';
+import { isMatchingRfidUid } from '../lib/constants';
 import {
   QrCode,
   Calendar,
@@ -295,7 +296,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         const serialNumber = event.serialNumber;
         if (serialNumber) {
           const cleanSerial = serialNumber.replace(/[\s:-]+/g, '').toUpperCase();
-          processScannedCode(cleanSerial);
+          processScannedCode(cleanSerial, 'NFC');
         }
       });
 
@@ -338,7 +339,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
 
       if (e.key === 'Enter') {
         if (buffer.trim().length >= 3) {
-          processScannedCode(buffer.trim());
+          processScannedCode(buffer.trim(), 'RFID');
           buffer = '';
         }
       } else if (e.key.length === 1) {
@@ -493,7 +494,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }, 20);
   };
 
-  const processScannedCode = (decodedText: string) => {
+  const processScannedCode = (decodedText: string, explicitMethod?: 'RFID' | 'NFC' | 'QR') => {
     if (!decodedText || !decodedText.trim()) return;
 
     const raw = decodedText.trim();
@@ -573,7 +574,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           playVoiceFeedback('', '', false);
         }
 
-        const isRfid = result.record?.scan_method === 'RFID' || (result.teacher?.rfid_uid && raw.toUpperCase().includes(result.teacher.rfid_uid.toUpperCase()));
+        const isRfid =
+          explicitMethod === 'RFID' ||
+          explicitMethod === 'NFC' ||
+          result.record?.scan_method === 'RFID' ||
+          (result.teacher?.rfid_uid && isMatchingRfidUid(result.teacher.rfid_uid, raw)) ||
+          (!raw.includes('.') && /^[0-9A-Fa-f]{6,16}$/.test(raw) && explicitMethod !== 'QR');
 
         const outcome: ScanOutcome = {
           success: result.success,
@@ -608,7 +614,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           playVoiceFeedback('', '', false);
         }
 
-        const isRfid = result.record?.scan_method === 'RFID' || (result.student?.rfid_uid && raw.toUpperCase().includes(result.student.rfid_uid.toUpperCase()));
+        const isRfid =
+          explicitMethod === 'RFID' ||
+          explicitMethod === 'NFC' ||
+          result.record?.scan_method === 'RFID' ||
+          (result.student?.rfid_uid && isMatchingRfidUid(result.student.rfid_uid, raw)) ||
+          (!raw.includes('.') && /^[0-9A-Fa-f]{6,16}$/.test(raw) && explicitMethod !== 'QR');
 
         const outcome: ScanOutcome = {
           success: result.success,
@@ -644,8 +655,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     if (!rfidUid || !studentId) return;
     const success = store.assignRfidToStudent(studentId, rfidUid);
     if (success) {
-      toast.success('Kartu RFID Ditaungkan', 'Kartu RFID berhasil ditautkan ke siswa. Memproses absensi...');
-      processScannedCode(rfidUid);
+      toast.success('Kartu RFID Ditautkan', 'Kartu RFID berhasil ditautkan ke siswa. Memproses absensi...');
+      processScannedCode(rfidUid, 'RFID');
     }
   };
 
@@ -654,7 +665,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     const success = store.assignRfidToTeacher(teacherId, rfidUid);
     if (success) {
       toast.success('Kartu RFID Ditautkan', 'Kartu RFID berhasil ditautkan ke guru. Memproses absensi...');
-      processScannedCode(rfidUid);
+      processScannedCode(rfidUid, 'RFID');
     }
   };
 
@@ -952,7 +963,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           await html5QrCode.start(
             targetCamId,
             config,
-            (decodedText) => processScannedCode(decodedText),
+            (decodedText) => processScannedCode(decodedText, 'QR'),
             () => {}
           );
           started = true;
@@ -969,7 +980,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           await html5QrCode.start(
             { facingMode: 'environment' },
             config,
-            (decodedText) => processScannedCode(decodedText),
+            (decodedText) => processScannedCode(decodedText, 'QR'),
             () => {}
           );
           started = true;
@@ -985,7 +996,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           await html5QrCode.start(
             { facingMode: 'user' },
             config,
-            (decodedText) => processScannedCode(decodedText),
+            (decodedText) => processScannedCode(decodedText, 'QR'),
             () => {}
           );
           started = true;
@@ -1001,7 +1012,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
           await html5QrCode.start(
             currentDevices[0].id,
             config,
-            (decodedText) => processScannedCode(decodedText),
+            (decodedText) => processScannedCode(decodedText, 'QR'),
             () => {}
           );
           started = true;
@@ -1125,7 +1136,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       }
       const decodedText = await html5QrCode.scanFile(file, true);
       if (decodedText) {
-        processScannedCode(decodedText);
+        processScannedCode(decodedText, 'QR');
         toast.success('QR Code Berhasil Terbaca!', `Kode: ${decodedText}`);
       }
     } catch (err: any) {

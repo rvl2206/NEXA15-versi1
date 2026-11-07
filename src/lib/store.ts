@@ -944,13 +944,29 @@ class AppStore {
     const todayYyyyMmDd = this.getTodayYyyyMmDd();
     const checkDate = targetDateYyyyMmDd ? this.normalizeToYyyyMmDd(targetDateYyyyMmDd) : todayYyyyMmDd;
 
-    // If checking for today, ensure current local time is >= autoAlpaCutoffTime (default 14:30)
+    // If checking for today, ensure current WIT time is >= autoAlpaCutoffTime (default 14:30)
     if (checkDate === todayYyyyMmDd) {
       const now = new Date();
+      let currentHourWIT = now.getHours();
+      let currentMinuteWIT = now.getMinutes();
+      try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Jayapura',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).formatToParts(now);
+        const h = parts.find((p) => p.type === 'hour');
+        const m = parts.find((p) => p.type === 'minute');
+        if (h) currentHourWIT = parseInt(h.value, 10);
+        if (m) currentMinuteWIT = parseInt(m.value, 10);
+      } catch {
+        // Fallback
+      }
       const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
       const [cutoffH, cutoffM] = cutoffStr.split(':').map((n) => parseInt(n, 10) || 0);
       const cutoffMinutes = cutoffH * 60 + cutoffM;
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentMinutes = currentHourWIT * 60 + currentMinuteWIT;
 
       if (currentMinutes < cutoffMinutes) {
         // Current time is before cutoff
@@ -970,8 +986,6 @@ class AppStore {
 
     const newRecords: AttendanceRecord[] = [];
     const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
-    const parts = checkDate.split('-');
-    const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : checkDate;
 
     activeStudents.forEach((student) => {
       // Check if student has any existing attendance record for checkDate
@@ -979,8 +993,8 @@ class AppStore {
       if (!existing) {
         const newRecord: AttendanceRecord = {
           id: generateDeterministicAutoAlpaId(student.nisn, checkDate),
-          tanggal: formattedDate,
-          timestamp: `${checkDate}T${cutoffStr}:00.000Z`,
+          tanggal: checkDate,
+          timestamp: `${checkDate}T${cutoffStr}:00+09:00`,
           nisn: student.nisn,
           nama: student.nama,
           kelas: student.kelas,
@@ -1393,7 +1407,7 @@ class AppStore {
     // Fallback check for admin
     if (!user && (cleanId.toLowerCase() === 'admin' || cleanId.toLowerCase() === 'superadmin')) {
       const adminPass = this.getAdminPassword();
-      const isDefaultMatch = await comparePassword(cleanPass, adminPass) || cleanPass === 'admin' || cleanPass === 'admin123';
+      const isDefaultMatch = await comparePassword(cleanPass, adminPass);
       if (isDefaultMatch) {
         user = { ...INITIAL_USERS[0], password: await hashPassword(cleanPass) };
         this.users.unshift(user);
@@ -3693,6 +3707,12 @@ class AppStore {
 
   public async resetToSeedData(): Promise<void> {
     await this.clearAllDatabase();
+    this.teachers = [...INITIAL_TEACHERS];
+    this.users = [...INITIAL_USERS];
+    this.saveLocalData(true);
+    this.notify();
+    this.addLog('RESET_SEED_DATA', 'Database direset ke data contoh awal (guru dan akun sistem).');
+    toast.success('Database Direset', 'Database berhasil direset dan diisi data contoh guru dan pengguna sistem.');
   }
 
   public getOfflineQueueCount(): number {

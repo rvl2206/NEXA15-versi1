@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { User, SchoolSettings, UserRole } from './types';
 import { store } from './lib/store';
@@ -9,19 +9,31 @@ import { BottomNav } from './components/BottomNav';
 import { LoginModal } from './components/LoginModal';
 import { Dashboard } from './components/Dashboard';
 import { QRScanner } from './components/QRScanner';
-import { StudentManagement } from './components/StudentManagement';
-import { DigitalCardTemplate } from './components/DigitalCardTemplate';
-import { AttendanceRecap } from './components/AttendanceRecap';
-import { TeacherManagement } from './components/TeacherManagement';
-import { TeacherAttendanceRecap } from './components/TeacherAttendanceRecap';
-import { WaliKelasDispatch } from './components/WaliKelasDispatch';
-import { ActivityLogs } from './components/ActivityLogs';
-import { SettingsPage } from './components/SettingsPage';
-import { UserManagement } from './components/UserManagement';
 import { ToastContainer } from './components/ToastContainer';
 import { UnsyncedDataWarning } from './components/UnsyncedDataWarning';
 import { ExitUnsyncedDataModal } from './components/ExitUnsyncedDataModal';
 import { GuidedTour } from './components/GuidedTour';
+
+// Lazy-loaded heavy modules for optimized bundle splitting & faster initial load
+const StudentManagement = lazy(() => import('./components/StudentManagement').then((m) => ({ default: m.StudentManagement })));
+const DigitalCardTemplate = lazy(() => import('./components/DigitalCardTemplate').then((m) => ({ default: m.DigitalCardTemplate })));
+const AttendanceRecap = lazy(() => import('./components/AttendanceRecap').then((m) => ({ default: m.AttendanceRecap })));
+const TeacherManagement = lazy(() => import('./components/TeacherManagement').then((m) => ({ default: m.TeacherManagement })));
+const TeacherAttendanceRecap = lazy(() => import('./components/TeacherAttendanceRecap').then((m) => ({ default: m.TeacherAttendanceRecap })));
+const WaliKelasDispatch = lazy(() => import('./components/WaliKelasDispatch').then((m) => ({ default: m.WaliKelasDispatch })));
+const ActivityLogs = lazy(() => import('./components/ActivityLogs').then((m) => ({ default: m.ActivityLogs })));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const UserManagement = lazy(() => import('./components/UserManagement').then((m) => ({ default: m.UserManagement })));
+
+function TabLoadingFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[350px] p-8 text-center">
+      <div className="w-10 h-10 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4" />
+      <p className="text-sm font-medium text-slate-300">Memuat modul...</p>
+      <p className="text-xs text-slate-500 mt-1">Mengoptimalkan tampilan data</p>
+    </div>
+  );
+}
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -297,7 +309,9 @@ export function App() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="w-full"
             >
-              {renderActiveTabContent()}
+              <Suspense fallback={<TabLoadingFallback />}>
+                {renderActiveTabContent()}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </main>

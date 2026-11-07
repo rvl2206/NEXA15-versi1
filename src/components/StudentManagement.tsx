@@ -1449,7 +1449,7 @@ paginatedStudents.map((s, index) => {
           setRfidInputVal('');
         }}
         rfidInputVal={rfidInputVal}
-        setRfidInputVal={setRfidInputVal}
+        setRfidInputVal={handleRfidInputChange}
         isNfcActive={isNfcActive}
         handleStartNfcScan={handleStartNfcScan}
         hexFormatted={hexFormatted}

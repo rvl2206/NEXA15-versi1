@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Radio, CreditCard } from 'lucide-react';
 import { Student } from '../types';
 import { toast } from '../lib/toast';
+import { store } from '../lib/store';
 
 interface StudentFormModalProps {
   isOpen: boolean;
@@ -66,14 +67,18 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
 
     const cleanRfid = formData.rfid_uid?.trim().toUpperCase() || '';
 
-    // Check if another student already uses this RFID UID
+    // Check if another student or teacher already uses this RFID UID
     if (cleanRfid) {
-      const existingWithRfid = students.find(
-        (s) => s.rfid_uid && s.rfid_uid.trim().toUpperCase() === cleanRfid && s.id !== editingStudent?.id
-      );
-      if (existingWithRfid) {
-        toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh ${existingWithRfid.nama} (${existingWithRfid.kelas}).`);
-        return;
+      const match = store.findByRfidUid(cleanRfid);
+      if (match) {
+        if (match.type === 'siswa' && match.student?.id !== editingStudent?.id) {
+          toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh Siswa ${match.student?.nama} (${match.student?.kelas}).`);
+          return;
+        }
+        if (match.type === 'guru') {
+          toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh Guru ${match.teacher?.nama} (${match.teacher?.jabatan}).`);
+          return;
+        }
       }
     }
 
