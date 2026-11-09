@@ -129,9 +129,16 @@ const StudentTableRow = React.memo(({
           />
           <div>
             <p className="font-bold text-white">{s.nama}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              QR: 69933068.{s.nisn}.{s.nama}
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px] text-slate-400">
+              {s.nik ? (
+                <span className="text-cyan-400 font-mono">NIK: {s.nik}</span>
+              ) : (
+                <span>QR: 69933068.{s.nisn}.{s.nama}</span>
+              )}
+              {s.tempat_lahir && (
+                <span className="text-slate-400 hidden sm:inline">• {s.tempat_lahir}</span>
+              )}
+            </div>
           </div>
         </div>
       </td>

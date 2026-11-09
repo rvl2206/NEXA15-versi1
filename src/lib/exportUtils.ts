@@ -669,6 +669,15 @@ export function parseStudentImportFile(file: File): Promise<{
             normalizedRow['uid'] ||
             '';
 
+          const nik = normalizedRow['nik'] || normalizedRow['nomorindukkependudukan'] || '';
+          const tempat_lahir = normalizedRow['tempatlahir'] || normalizedRow['tempat'] || '';
+          const tanggal_lahir = normalizedRow['tanggallahir'] || normalizedRow['tgllahir'] || normalizedRow['tgl'] || '';
+          const jkRaw = normalizedRow['jk'] || normalizedRow['jeniskelamin'] || normalizedRow['gender'] || '';
+          const jenis_kelamin = jkRaw.toUpperCase().startsWith('P') ? 'P' : jkRaw.toUpperCase().startsWith('L') ? 'L' : jkRaw || undefined;
+          const agama = normalizedRow['agama'] || 'Islam';
+          const alamat = normalizedRow['alamat'] || normalizedRow['alamatinggal'] || '';
+          const nis = normalizedRow['nis'] || nisn;
+
           const statusRaw = (
             normalizedRow['status'] || 'aktif'
           ).toLowerCase();
@@ -691,8 +700,15 @@ export function parseStudentImportFile(file: File): Promise<{
           parsedData.push({
             id_qr: finalQR,
             nisn: finalNISN,
+            nis: nis || finalNISN,
+            nik: nik || undefined,
             nama: finalNama,
             kelas: kelas || 'X 1',
+            tempat_lahir: tempat_lahir || undefined,
+            tanggal_lahir: tanggal_lahir || undefined,
+            jenis_kelamin: jenis_kelamin || undefined,
+            agama: agama || undefined,
+            alamat: alamat || undefined,
             no_hp_ortu: no_hp_ortu,
             rfid_uid: rfid_uid ? rfid_uid.trim().toUpperCase() : undefined,
             foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',

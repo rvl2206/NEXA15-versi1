@@ -27,6 +27,7 @@ export interface Student {
   rfid_uid?: string; // UID Kartu RFID / NFC (e.g. "04A1B2C3D4", "1234567890")
   nisn: string; // e.g. "3080370790"
   nis?: string; // Nomor Induk Siswa lokal sekolah
+  nik?: string; // Nomor Induk Kependudukan (NIK 16 digit)
   nama: string; // e.g. "DADANG BUAMONA"
   kelas: string; // e.g. "XI IPA 1"
   tempat_lahir?: string; // e.g. "Ambon"

@@ -75,7 +75,7 @@ export const StudentImportModal: React.FC<StudentImportModalProps> = ({
                 Langkah 1: Gunakan Template Standar
               </h4>
               <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
-                Template Excel hanya memerlukan kolom: <code>Nama</code>, <code>NISN</code>, dan <code>Kelas</code>.
+                Mendukung kolom lengkap: <code>Nama</code>, <code>NISN</code>, <code>Kelas</code>, <code>NIK</code>, <code>Tempat Lahir</code>, <code>Tanggal Lahir</code>, <code>JK</code>, <code>Agama</code>, dan <code>Alamat</code>.
               </p>
             </div>
             <button

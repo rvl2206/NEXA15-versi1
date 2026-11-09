@@ -55,6 +55,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
     nama: '',
     nisn: '',
     nis: '',
+    nik: '',
     kelas: '',
     tempat_lahir: 'Ambon',
     tanggal_lahir: '',
@@ -117,6 +118,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
           nama: editingStudent.nama,
           nisn: editingStudent.nisn,
           nis: editingStudent.nis || '',
+          nik: editingStudent.nik || '',
           kelas: editingStudent.kelas,
           tempat_lahir: editingStudent.tempat_lahir || 'Ambon',
           tanggal_lahir: editingStudent.tanggal_lahir || '',
@@ -134,6 +136,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
           nama: '',
           nisn: '',
           nis: '',
+          nik: '',
           kelas: '',
           tempat_lahir: 'Ambon',
           tanggal_lahir: '',
@@ -249,14 +252,25 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">NIS Lokal (Opsional)</label>
               <input
                 type="text"
                 value={formData.nis || ''}
                 onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
-                placeholder="Contoh: 0102365332 (Kosong = Samakan NISN)"
+                placeholder="Kosong = NISN"
+                className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">NIK (16 Digit KTP/KK)</label>
+              <input
+                type="text"
+                value={formData.nik || ''}
+                onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                placeholder="Contoh: 817102..."
+                maxLength={16}
                 className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
               />
             </div>

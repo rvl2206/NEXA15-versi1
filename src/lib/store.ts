@@ -25,6 +25,7 @@ import {
 } from '../types';
 import { toast } from './toast';
 import { INITIAL_TEACHERS } from './seedData';
+import { MASTER_STUDENTS_DATA } from './masterStudentData';
 import {
   isSupabaseConfigured,
   syncStudentsToSupabase,
@@ -262,6 +263,14 @@ class AppStore {
       }
       if (savedStudents) {
         this.students = JSON.parse(savedStudents);
+      }
+
+      // Penggabungan non-destruktif Data Master Siswa Resmi SMAN 15 Ambon (80 Siswa dengan NIK & Biodata)
+      const { merged, updatedCount, addedCount } = studentOps.mergeMasterStudents(this.students, MASTER_STUDENTS_DATA);
+      if (updatedCount > 0 || addedCount > 0 || !savedStudents) {
+        this.students = merged;
+        await localforage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
+        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(this.students));
       }
       let savedAttendance = await localforage.getItem<string>(STORAGE_KEYS.ATTENDANCE);
       if (!savedAttendance) {

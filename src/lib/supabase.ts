@@ -1535,6 +1535,7 @@ ALTER TABLE public.students ADD COLUMN IF NOT EXISTS id TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS id_qr TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS rfid_uid TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS nis TEXT;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS nik TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS tempat_lahir TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS tanggal_lahir TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS jenis_kelamin TEXT;

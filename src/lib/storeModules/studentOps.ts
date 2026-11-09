@@ -337,7 +337,106 @@ export const studentOps = {
     return undefined;
   },
 
-  // Teacher data management
+  /**
+   * Menggabungkan data master siswa secara non-destruktif:
+   * - Memperkaya data siswa yang sudah ada (NIK, Tempat/Tgl Lahir, Agama, Alamat)
+   * - Menjaga data eksisting (ID, Kelas yang sudah ditetapkan, Foto, Kartu RFID, Riwayat Absensi)
+   * - Menambahkan siswa baru yang belum tercatat
+   */
+  mergeMasterStudents: function(
+    currentStudents: Student[],
+    masterStudents: Omit<Student, 'id' | 'createdAt'>[]
+  ): { merged: Student[]; updatedCount: number; addedCount: number } {
+    let updatedCount = 0;
+    let addedCount = 0;
 
+    const studentMap = new Map<string, Student>();
+    const nameMap = new Map<string, string>(); // lowercase name -> map key
 
+    currentStudents.forEach((s) => {
+      const key = s.nisn ? s.nisn.trim() : (s.id || s.nama);
+      studentMap.set(key, { ...s });
+      if (s.nama) {
+        nameMap.set(s.nama.trim().toLowerCase(), key);
+      }
+    });
+
+    masterStudents.forEach((master, idx) => {
+      const cleanNisn = master.nisn ? master.nisn.trim() : '';
+      const cleanName = master.nama ? master.nama.trim().toLowerCase() : '';
+
+      let existingKey = cleanNisn && studentMap.has(cleanNisn) ? cleanNisn : undefined;
+      if (!existingKey && cleanName && nameMap.has(cleanName)) {
+        existingKey = nameMap.get(cleanName);
+      }
+
+      if (existingKey) {
+        const existing = studentMap.get(existingKey)!;
+        let changed = false;
+        const updated: Student = { ...existing };
+
+        if (!updated.nik || (master.nik && updated.nik !== master.nik)) {
+          updated.nik = master.nik;
+          changed = true;
+        }
+
+        if (!updated.tempat_lahir || updated.tempat_lahir === 'Ambon') {
+          if (master.tempat_lahir) {
+            updated.tempat_lahir = master.tempat_lahir;
+            changed = true;
+          }
+        }
+
+        if (!updated.tanggal_lahir || updated.tanggal_lahir === '2008-05-12') {
+          if (master.tanggal_lahir) {
+            updated.tanggal_lahir = master.tanggal_lahir;
+            changed = true;
+          }
+        }
+
+        if (!updated.agama || updated.agama === 'Islam') {
+          if (master.agama) {
+            updated.agama = master.agama;
+            changed = true;
+          }
+        }
+
+        if (!updated.alamat || updated.alamat === '-' || updated.alamat === 'Kota Ambon') {
+          if (master.alamat && master.alamat !== '-') {
+            updated.alamat = master.alamat;
+            changed = true;
+          }
+        }
+
+        if (!updated.jenis_kelamin && master.jenis_kelamin) {
+          updated.jenis_kelamin = master.jenis_kelamin;
+          changed = true;
+        }
+
+        if (!updated.nis && master.nis) {
+          updated.nis = master.nis;
+          changed = true;
+        }
+
+        if (changed) {
+          studentMap.set(existingKey, updated);
+          updatedCount++;
+        }
+      } else {
+        const newStudent: Student = {
+          ...master,
+          id: `std-official-${String(idx + 1).padStart(3, '0')}`,
+          createdAt: new Date().toISOString(),
+        };
+        studentMap.set(cleanNisn || newStudent.id, newStudent);
+        addedCount++;
+      }
+    });
+
+    return {
+      merged: Array.from(studentMap.values()),
+      updatedCount,
+      addedCount,
+    };
+  },
 };
