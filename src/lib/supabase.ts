@@ -846,7 +846,7 @@ export async function saveSettingsToSupabase(
       school_city: settings.schoolCity || '',
       cutoff_time: settings.cutoffTime || '07:15',
       auto_alpa_cutoff_time: settings.autoAlpaCutoffTime || '14:30',
-      enable_auto_alpa: settings.enableAutoAlpa ?? true,
+      enable_auto_alpa: settings.enableAutoAlpa ?? false,
       school_days: settings.schoolDays || 6,
       academic_year: settings.academicYear || '2026/2027',
       enable_wa_notif: settings.enableWaNotif ?? false,

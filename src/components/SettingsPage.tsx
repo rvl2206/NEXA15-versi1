@@ -95,9 +95,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
 
-  // Hari Libur & Auto Alpa States
-  const [isProcessingAutoAlpa, setIsProcessingAutoAlpa] = useState(false);
-
   // RFID Hardware Test State
   const [rfidTestInput, setRfidTestInput] = useState('');
   const [rfidTestResult, setRfidTestResult] = useState<{
@@ -163,17 +160,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   
 
   
-
-  const handleRunAutoAlpaManual = () => {
-    setIsProcessingAutoAlpa(true);
-    const result = store.processAutoAlpa();
-    setIsProcessingAutoAlpa(false);
-    if (result.addedCount > 0) {
-      toast.success('Otopresensi Alpa Berhasil', `Berhasil menandai ${result.addedCount} siswa sebagai Alpa untuk tanggal ${result.date}.`);
-    } else {
-      toast.info('Tidak Ada Siswa Alpa Baru', `Seluruh siswa aktif sudah memiliki presensi atau hari ini merupakan hari libur/belum melewati jam ${settings.autoAlpaCutoffTime || '14:30'}.`);
-    }
-  };
 
   // State for Purging Saturday Alpa Records
   const [isPurgingSatAlpa, setIsPurgingSatAlpa] = useState(false);
@@ -1197,68 +1183,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Auto-Alpa 14:30 Section */}
-          <div className="pt-4 border-t border-white/10 space-y-4">
-            <div className="flex items-center justify-between bg-rose-50/80 dark:bg-rose-950/40 p-4 rounded-3xl border border-rose-200 dark:border-rose-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-rose-600 text-white rounded-2xl shadow-xs">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-rose-950 dark:text-rose-100 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>Otopresensi Alpa Otomatis (Default Jam 14:30)</span>
-                    <span className="px-2 py-0.5 bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 rounded-full text-[10px] font-bold">
-                      Batas Jam 14:30
-                    </span>
-                  </h4>
-                  <p className="text-[11px] text-rose-700 dark:text-rose-300 mt-0.5">
-                    Sistem akan membaca siswa aktif tanpa data presensi di atas jam 14:30 dan otomatis menandainya sebagai <strong>Alpa</strong> (tidak berlaku pada Hari Libur & Akhir Pekan).
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.enableAutoAlpa !== false}
-                  onChange={(e) => setSettings({ ...settings, enableAutoAlpa: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-rose-600"></div>
-              </label>
-            </div>
-
-            {settings.enableAutoAlpa !== false && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-white/10">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Batas Jam Otopresensi Alpa
-                  </label>
-                  <input
-                    type="time"
-                    value={settings.autoAlpaCutoffTime || '14:30'}
-                    onChange={(e) => setSettings({ ...settings, autoAlpaCutoffTime: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-rose-600 font-mono"
-                  />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                    Siswa tanpa presensi setelah jam <b>{settings.autoAlpaCutoffTime || '14:30'}</b> dianggap <b>Alpa</b>.
-                  </p>
-                </div>
-
-                <div className="flex flex-col justify-end">
-                  <button
-                    type="button"
-                    onClick={handleRunAutoAlpaManual}
-                    disabled={isProcessingAutoAlpa}
-                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
-                  >
-                    <Zap className={`w-4 h-4 ${isProcessingAutoAlpa ? 'animate-bounce' : ''}`} />
-                    <span>{isProcessingAutoAlpa ? 'Memproses...' : 'Jalankan Cek Alpa Otomatis Sekarang'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* WhatsApp Direct Section */}

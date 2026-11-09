@@ -120,10 +120,10 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
             type="button"
             onClick={handleBulkSetAlpa}
             className="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-sm cursor-pointer"
-            title="Tutup gerbang dan otomatis set Alpa untuk siswa yang tidak scan masuk"
+            title="Tutup gerbang dan tetapkan Alpa secara manual untuk siswa yang belum memiliki rekaman Masuk maupun Pulang"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>🚨 Tutup Gerbang (Auto-Alpa)</span>
+            <span>🚨 Tutup Gerbang (Manual / Alpa)</span>
           </button>
 
           <button
@@ -267,10 +267,10 @@ export const DailyPairedTable: React.FC<DailyPairedTableProps> = ({
                           Tanpa Absen Pulang
                         </span>
                       )}
-                      {item.partialInfo === 'Tanpa Absen Masuk' && (
-                        <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-sky-300 dark:border-sky-800" title="Siswa mencatat scan pulang namun tidak mencatat scan masuk">
+                      {(item.partialInfo === 'Tanpa Absen Masuk' || item.partialInfo === 'Tanpa Absen Masuk / Perlu Verifikasi') && (
+                        <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-sky-300 dark:border-sky-800" title="Siswa mencatat scan pulang namun tidak mencatat scan masuk (Perlu Verifikasi)">
                           <AlertCircle className="w-3 h-3 text-sky-600" />
-                          Tanpa Absen Masuk
+                          Tanpa Absen Masuk / Perlu Verifikasi
                         </span>
                       )}
                     </div>

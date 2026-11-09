@@ -107,7 +107,7 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
   schoolCity: 'Kota Ambon',
   cutoffTime: '07:15',
   autoAlpaCutoffTime: '14:30',
-  enableAutoAlpa: true,
+  enableAutoAlpa: false,
   schoolDays: 6, // 6 = 6 Hari Sekolah (Senin - Sabtu), 5 = 5 Hari Sekolah (Senin - Jumat)
   pulangStartTimeNormal: '13:30',
   pulangStartTimeFriday: '10:00',

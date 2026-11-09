@@ -337,26 +337,46 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
   };
 
   const handleBulkSetAlpa = () => {
-    // Guard: Pastikan bukan hari libur atau akhir pekan sekolah
+    // 1. Guard: Pastikan data siswa sudah termuat
+    if (students.length === 0) {
+      toast.warning('Data Belum Siap', 'Data siswa belum selesai dimuat. Silakan tunggu sebentar.');
+      return;
+    }
+
+    // 2. Guard: Pastikan bukan hari libur atau akhir pekan sekolah
     if (store.isHoliday(filterTanggal)) {
       toast.warning('Hari Libur / Akhir Pekan', 'Tanggal yang dipilih merupakan hari libur atau akhir pekan sekolah. Tutup Gerbang (Alpa) tidak dapat diproses.');
       return;
     }
 
-    // Kita anggap "yang belum masuk" sebagai alpa. 
-    // Hitungannya: total siswa (filterKelas) - total yang sudah ada record masuk hari ini
-    const totalStudentsInClass = filterKelas === 'Semua' 
-      ? students.filter(s => s.status !== 'nonaktif').length 
-      : students.filter(s => s.status !== 'nonaktif' && s.kelas === filterKelas).length;
-    const studentsCheckedIn = pairedSummaryCounts.total; // yang punya pasangan data (Masuk)
-    const countToUpdate = totalStudentsInClass - studentsCheckedIn;
+    // 3. Guard Tahap 5: Periksa antrean sinkronisasi offline
+    const pendingQueueCount = store.getOfflineQueueCount();
+    if (pendingQueueCount > 0) {
+      const confirmWithQueue = window.confirm(
+        `PERINGATAN SINKRONISASI OFFLINE:\n\nMasih terdapat ${pendingQueueCount} data presensi lokal dalam antrean sinkronisasi yang belum terkirim ke server cloud.\n\nMenjalankan Tutup Gerbang saat ini berisiko menetapkan Alpa kepada siswa yang sebenarnya sudah melakukan scan offline pada perangkat lain.\n\nApakah Anda ingin tetap melanjutkan Tutup Gerbang sekarang?`
+      );
+      if (!confirmWithQueue) {
+        return;
+      }
+    }
+
+    // 4. Hitung calon Alpa yang konsisten dengan aturan Tahap 3 & Tahap 4
+    const candidates = store.getCandidatesForCloseGate(filterTanggal, filterKelas);
+    const countToUpdate = candidates.length;
 
     if (countToUpdate <= 0) {
-      toast.info('Semua Hadir', 'Semua siswa aktif sudah memproses presensi Masuk hari ini.');
+      toast.info(
+        'Semua Siswa Terdata',
+        `Seluruh siswa aktif ${filterKelas !== 'Semua' ? `kelas ${filterKelas}` : ''} sudah memiliki rekaman presensi (Masuk/Pulang/Izin/Sakit) atau sudah berstatus Alpa pada ${formatIndoDate(filterTanggal)}.`
+      );
       return;
     }
 
-    if (!window.confirm(`Apakah Anda yakin ingin menutup gerbang dan memproses status ALPA untuk ${countToUpdate} siswa (Kelas: ${filterKelas}) yang belum melakukan presensi Masuk hari ini?`)) {
+    if (
+      !window.confirm(
+        `TUTUP GERBANG (MANUAL):\n\nApakah Anda yakin ingin menutup gerbang dan menetapkan status ALPA untuk ${countToUpdate} siswa (Kelas: ${filterKelas}) yang TIDAK memiliki rekaman presensi Masuk maupun Pulang pada ${formatIndoDate(filterTanggal)}?`
+      )
+    ) {
       return;
     }
 
@@ -1438,10 +1458,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                 type="button"
                 onClick={handleBulkSetAlpa}
                 className="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-sm cursor-pointer"
-                title="Tutup gerbang dan otomatis set Alpa untuk siswa yang tidak scan masuk"
+                title="Tutup gerbang dan tetapkan Alpa secara manual untuk siswa yang belum memiliki rekaman Masuk maupun Pulang"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
-                <span>🚨 Tutup Gerbang (Auto-Alpa)</span>
+                <span>🚨 Tutup Gerbang (Manual / Alpa)</span>
               </button>
 
               <button
@@ -1617,10 +1637,10 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
                               Tanpa Absen Pulang
                             </span>
                           )}
-                          {item.partialInfo === 'Tanpa Absen Masuk' && (
-                            <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-sky-300 dark:border-sky-800" title="Siswa mencatat scan pulang namun tidak mencatat scan masuk">
+                          {(item.partialInfo === 'Tanpa Absen Masuk' || item.partialInfo === 'Tanpa Absen Masuk / Perlu Verifikasi') && (
+                            <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-sky-300 dark:border-sky-800" title="Siswa mencatat scan pulang namun tidak mencatat scan masuk (Perlu Verifikasi)">
                               <AlertCircle className="w-3 h-3 text-sky-600" />
-                              Tanpa Absen Masuk
+                              Tanpa Absen Masuk / Perlu Verifikasi
                             </span>
                           )}
                         </div>

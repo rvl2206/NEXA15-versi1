@@ -347,7 +347,6 @@ class AppStore {
       if (savedDispatches) {
         this.dispatches = JSON.parse(savedDispatches);
       }
-      this.processAutoAlpa();
       this.sanitizeData();
     } catch (e) {
       console.warn('LocalStorage load error:', e);
@@ -1088,88 +1087,9 @@ class AppStore {
   }
 
   public processAutoAlpa(targetDateYyyyMmDd?: string): { addedCount: number; date: string } {
-    if (this.settings.enableAutoAlpa === false) {
-      return { addedCount: 0, date: targetDateYyyyMmDd || this.getTodayYyyyMmDd() };
-    }
-
-    const todayYyyyMmDd = this.getTodayYyyyMmDd();
-    const checkDate = targetDateYyyyMmDd ? this.normalizeToYyyyMmDd(targetDateYyyyMmDd) : todayYyyyMmDd;
-
-    // If checking for today, ensure current WIT time is >= autoAlpaCutoffTime (default 14:30)
-    if (checkDate === todayYyyyMmDd) {
-      const now = new Date();
-      let currentHourWIT = now.getHours();
-      let currentMinuteWIT = now.getMinutes();
-      try {
-        const parts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Asia/Jayapura',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }).formatToParts(now);
-        const h = parts.find((p) => p.type === 'hour');
-        const m = parts.find((p) => p.type === 'minute');
-        if (h) currentHourWIT = parseInt(h.value, 10);
-        if (m) currentMinuteWIT = parseInt(m.value, 10);
-      } catch {
-        // Fallback
-      }
-      const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
-      const [cutoffH, cutoffM] = cutoffStr.split(':').map((n) => parseInt(n, 10) || 0);
-      const cutoffMinutes = cutoffH * 60 + cutoffM;
-      const currentMinutes = currentHourWIT * 60 + currentMinuteWIT;
-
-      if (currentMinutes < cutoffMinutes) {
-        // Current time is before cutoff
-        return { addedCount: 0, date: checkDate };
-      }
-    }
-
-    // Check if target date is a holiday or weekend
-    if (this.isHoliday(checkDate)) {
-      return { addedCount: 0, date: checkDate };
-    }
-
-    const activeStudents = this.students.filter((s) => s.status === 'aktif');
-    if (activeStudents.length === 0) {
-      return { addedCount: 0, date: checkDate };
-    }
-
-    const newRecords: AttendanceRecord[] = [];
-    const cutoffStr = this.settings.autoAlpaCutoffTime || '14:30';
-
-    activeStudents.forEach((student) => {
-      // Check if student has any existing attendance record for checkDate
-      const existing = this.attendance.some((a) => a.nisn === student.nisn && this.isRecordForDate(a, checkDate));
-      if (!existing) {
-        const newRecord: AttendanceRecord = {
-          id: generateDeterministicAutoAlpaId(student.nisn, checkDate),
-          tanggal: checkDate,
-          timestamp: `${checkDate}T${cutoffStr}:00+09:00`,
-          nisn: student.nisn,
-          nama: student.nama,
-          kelas: student.kelas,
-          id_qr: student.id_qr || '',
-          jenis: 'Masuk',
-          status: 'Alpa',
-          petugas: `Otopresensi Sistem (${cutoffStr})`,
-          catatan: `Alpa Otomatis (Tidak ada presensi hingga jam ${cutoffStr})`,
-        };
-        newRecords.push(newRecord);
-      }
-    });
-
-    if (newRecords.length > 0) {
-      this.attendance = [...this.attendance, ...newRecords];
-      this.notify();
-      newRecords.forEach((rec) => {
-        this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
-      });
-      this.addLog('AUTO_ALPA_MASSAL', `Sistem Otopresensi (${cutoffStr}): Otomatis mencatat ${newRecords.length} siswa sebagai Alpa pada tanggal ${checkDate}.`);
-      syncAttendanceToSupabase(newRecords, this.getSupabaseConfig()).catch(() => {});
-    }
-
-    return { addedCount: newRecords.length, date: checkDate };
+    // Auto-Alpa otomatis dinonaktifkan sesuai kebijakan Tutup Gerbang Manual (Tahap 2).
+    // Penetapan status Alpa massal hanya dilakukan melalui aksi Tutup Gerbang oleh petugas.
+    return { addedCount: 0, date: targetDateYyyyMmDd ? this.normalizeToYyyyMmDd(targetDateYyyyMmDd) : this.getTodayYyyyMmDd() };
   }
 
   public getCurrentUser(): User | null {
@@ -1927,7 +1847,7 @@ class AppStore {
         changed = true;
       }
 
-      this.processAutoAlpa();
+      this.reconcileAttendanceWithLateScans();
       if (changed) {
         this.notify();
       }
@@ -2633,9 +2553,13 @@ class AppStore {
       );
     });
 
-    // Identify auto-alpa records (which can be replaced if a student scans Masuk)
+    // Identify auto-alpa or Tutup Gerbang records (which will be replaced if a student scans Masuk or Pulang)
     const autoAlpaRecord = studentTodayRecords.find(
-      (a) => a.id?.startsWith('att-autoalpa-') || a.catatan?.includes('Alpa Otomatis')
+      (a) =>
+        a.id?.startsWith('att-autoalpa-') ||
+        a.catatan?.includes('Alpa Otomatis') ||
+        a.catatan?.includes('Tutup Gerbang') ||
+        a.status === 'Alpa'
     );
 
     const dayOfWeekWIT = getDayOfWeekWIT(now);
@@ -3238,6 +3162,55 @@ class AppStore {
     return { success: true, count, message: 'OK' };
   }
 
+  /**
+   * Mengembalikan daftar siswa aktif yang belum memiliki rekaman presensi apapun (tidak ada Masuk dan tidak ada Pulang)
+   * serta belum tercatat Alpa pada tanggal target.
+   * Digunakan oleh fitur Tutup Gerbang Manual (Tahap 3 & Tahap 4).
+   */
+  public getCandidatesForCloseGate(targetDate?: string, filterKelas = 'Semua'): Student[] {
+    const normTarget = targetDate ? this.normalizeToYyyyMmDd(targetDate) : this.getTodayYyyyMmDd();
+    if (this.isHoliday(normTarget)) {
+      return [];
+    }
+
+    const dayRecords = this.attendance.filter((a) => this.isRecordForDate(a, normTarget));
+
+    const targetStudents = this.students.filter((s) => {
+      if (s.status === 'nonaktif') return false;
+      if (filterKelas !== 'Semua' && s.kelas !== filterKelas) return false;
+      return true;
+    });
+
+    const isAlpa = (r: AttendanceRecord) =>
+      r.status === 'Alpa' ||
+      Boolean(r.id?.startsWith('att-autoalpa-')) ||
+      Boolean(r.catatan?.includes('Alpa Otomatis')) ||
+      Boolean(r.catatan?.includes('Tutup Gerbang'));
+
+    return targetStudents.filter((student) => {
+      const studentDayRecords = dayRecords.filter(
+        (a) =>
+          (student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
+          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
+          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() &&
+            a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())
+      );
+
+      // 1. Ada Masuk yang sah (non-alpa)
+      const hasMasuk = studentDayRecords.some((a) => a.jenis === 'Masuk' && !isAlpa(a));
+      // 2. Ada Pulang yang sah
+      const hasPulang = studentDayRecords.some((a) => a.jenis === 'Pulang');
+      // 3. Ada status izin/sakit/sah lainnya
+      const hasOther = studentDayRecords.some((a) => a.status === 'Izin' || a.status === 'Sakit');
+      // 4. Sudah tercatat Alpa sebelumnya
+      const hasExistingAlpa = studentDayRecords.some((a) => a.status === 'Alpa');
+
+      // Siswa hanya menjadi calon Alpa Tutup Gerbang jika TIDAK memiliki Masuk,
+      // TIDAK memiliki Pulang, TIDAK memiliki Izin/Sakit, dan BELUM Alpa.
+      return !hasMasuk && !hasPulang && !hasOther && !hasExistingAlpa;
+    });
+  }
+
   public recordBulkStudentsAlpa(
     targetDate?: string,
     filterKelas = 'Semua',
@@ -3256,57 +3229,31 @@ class AppStore {
     }
 
     const timestampAlpa = `${normTarget}T08:00:00+09:00`; // Asumsikan ditandai alpa jam 08:00 WIT
+    const candidates = this.getCandidatesForCloseGate(normTarget, filterKelas);
 
-    const dayRecords = this.attendance.filter((a) => this.isRecordForDate(a, normTarget));
-
-    const targetStudents = this.students.filter((s) => {
-      if (s.status === 'nonaktif') return false;
-      if (filterKelas !== 'Semua' && s.kelas !== filterKelas) return false;
-      return true;
-    });
-
-    const newRecords: AttendanceRecord[] = [];
-    const updatedStudents: Student[] = [];
-
-    targetStudents.forEach((student) => {
-      const studentDayRecords = dayRecords.filter(
-        (a) =>
-          (student.nisn && a.nisn && a.nisn.trim() === student.nisn.trim()) ||
-          (student.id_qr && a.id_qr && a.id_qr.trim().toLowerCase() === student.id_qr.trim().toLowerCase()) ||
-          (a.nama.trim().toLowerCase() === student.nama.trim().toLowerCase() && a.kelas.trim().toLowerCase() === student.kelas.trim().toLowerCase())
-      );
-      
-      const masukRecord = studentDayRecords.find((a) => a.jenis === 'Masuk');
-
-      // Jika belum ada record masuk hari ini, berarti Alpa
-      if (!masukRecord) {
-        const rec: AttendanceRecord = {
-          id: `att-autoalpa-${Date.now()}-${student.nisn}-${Math.random().toString(36).substr(2, 4)}`,
-          tanggal: normTarget,
-          timestamp: timestampAlpa,
-          nisn: student.nisn,
-          nama: student.nama,
-          kelas: student.kelas,
-          id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
-          jenis: 'Masuk',
-          status: 'Alpa',
-          petugas: formatPetugasRole(officerEmail),
-          catatan: 'Tutup Gerbang (Tanpa Keterangan)',
-          terlambatMenit: 0,
-        };
-        newRecords.push(rec);
-        updatedStudents.push(student);
-      }
-    });
-
-    if (newRecords.length === 0) {
+    if (candidates.length === 0) {
       return {
         success: true,
         count: 0,
         updatedStudents: [],
-        message: 'Semua siswa sudah memiliki rekaman presensi pada tanggal ini.',
+        message: 'Semua siswa sudah memiliki rekaman presensi (Masuk/Pulang) atau sudah berstatus Alpa pada tanggal ini.',
       };
     }
+
+    const newRecords: AttendanceRecord[] = candidates.map((student) => ({
+      id: `att-autoalpa-${Date.now()}-${student.nisn}-${Math.random().toString(36).substr(2, 4)}`,
+      tanggal: normTarget,
+      timestamp: timestampAlpa,
+      nisn: student.nisn,
+      nama: student.nama,
+      kelas: student.kelas,
+      id_qr: student.id_qr || `69933068.${student.nisn}.${student.nama}`,
+      jenis: 'Masuk',
+      status: 'Alpa',
+      petugas: formatPetugasRole(officerEmail),
+      catatan: 'Tutup Gerbang (Tanpa Keterangan)',
+      terlambatMenit: 0,
+    }));
 
     this.attendance = [...newRecords, ...this.attendance];
     this.notify();
@@ -3314,18 +3261,62 @@ class AppStore {
     newRecords.forEach((rec) => {
       this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
     });
-    
+
     this.addLog(
-      'ALPA_MASSAL_OTOMATIS',
-      `Tutup Gerbang: Sistem otomatis mencatat presensi Alpa untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
+      'ALPA_MASSAL_MANUAL',
+      `Tutup Gerbang Manual: Petugas mencatat presensi Alpa untuk ${newRecords.length} siswa (Kelas: ${filterKelas}) oleh ${formatPetugasRole(officerEmail)}`
     );
 
     return {
       success: true,
       count: newRecords.length,
-      updatedStudents,
+      updatedStudents: candidates,
       message: `Berhasil memproses status Alpa untuk ${newRecords.length} siswa.`,
     };
+  }
+
+  /**
+   * Rekonsiliasi data presensi dengan scan terlambat:
+   * Jika siswa telah memiliki scan Masuk atau Pulang yang sah (non-Alpa) pada suatu tanggal,
+   * hapus rekaman Alpa lama/placeholder (Tutup Gerbang/Auto-Alpa) agar tidak terjadi data ganda.
+   */
+  public reconcileAttendanceWithLateScans(): void {
+    const isAlpa = (r: AttendanceRecord) =>
+      r.status === 'Alpa' ||
+      Boolean(r.id?.startsWith('att-autoalpa-')) ||
+      Boolean(r.catatan?.includes('Alpa Otomatis')) ||
+      Boolean(r.catatan?.includes('Tutup Gerbang'));
+
+    const recordsToDelete: AttendanceRecord[] = [];
+    const grouped = new Map<string, AttendanceRecord[]>();
+
+    for (const a of this.attendance) {
+      const dateStr = this.normalizeToYyyyMmDd(a.tanggal || a.timestamp);
+      const cleanNisn = (a.nisn || '').trim().toLowerCase();
+      const key = cleanNisn ? `${cleanNisn}_${dateStr}` : `${(a.nama || '').trim().toLowerCase()}_${(a.kelas || '').trim().toLowerCase()}_${dateStr}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(a);
+    }
+
+    for (const [_, records] of grouped.entries()) {
+      const hasRealScan = records.some((r) => !isAlpa(r));
+      if (hasRealScan) {
+        const alpaRecords = records.filter(isAlpa);
+        for (const alpa of alpaRecords) {
+          recordsToDelete.push(alpa);
+        }
+      }
+    }
+
+    if (recordsToDelete.length > 0) {
+      const deleteIds = new Set(recordsToDelete.map((r) => r.id));
+      this.attendance = this.attendance.filter((a) => !deleteIds.has(a.id));
+      recordsToDelete.forEach((rec) => {
+        this.enqueueSync({ id: rec.id, type: 'attendance', action: 'delete' });
+      });
+      this.saveLocalData(true);
+      this.notify();
+    }
   }
 
   public async addManualAttendance(data: Partial<AttendanceRecord> & { nisn: string; nama: string; kelas: string }): Promise<AttendanceRecord> {

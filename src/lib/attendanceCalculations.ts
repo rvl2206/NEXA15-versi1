@@ -44,6 +44,32 @@ export const isMatchKelas = (itemClass?: string, targetClass?: string) => {
   return itemClass.trim().toLowerCase() === targetClass.trim().toLowerCase();
 };
 
+export const isRecordBelongToStudent = (
+  student: { nisn?: string; id_qr?: string; nama?: string; kelas?: string },
+  record: AttendanceRecord
+): boolean => {
+  const normStudentNisn = student.nisn?.trim().toLowerCase();
+  const normRecordNisn = record.nisn?.trim().toLowerCase();
+  if (normStudentNisn && normRecordNisn && normStudentNisn === normRecordNisn) {
+    return true;
+  }
+  const normStudentQr = student.id_qr?.trim().toLowerCase();
+  const normRecordQr = record.id_qr?.trim().toLowerCase();
+  if (normStudentQr && normRecordQr && normStudentQr === normRecordQr) {
+    return true;
+  }
+  const normStudentNama = student.nama?.trim().toLowerCase();
+  const normRecordNama = record.nama?.trim().toLowerCase();
+  const normStudentKelas = student.kelas?.trim().toLowerCase();
+  const normRecordKelas = record.kelas?.trim().toLowerCase();
+  if (normStudentNama && normRecordNama && normStudentNama === normRecordNama) {
+    if (!normStudentKelas || !normRecordKelas || normStudentKelas === normRecordKelas) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const isMatchTanggal = (r: AttendanceRecord, yyyyMmDd: string) => {
   if (!yyyyMmDd) return true;
   const targetNorm = normalizeToYyyyMmDd(yyyyMmDd);
@@ -183,7 +209,7 @@ export interface PairedDailyRecord {
   pulang?: AttendanceRecord;
   status: AttendanceStatus;
   lateMinutes: number;
-  partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen';
+  partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' | 'Tanpa Absen Masuk / Perlu Verifikasi';
   petugas: string;
 }
 
@@ -210,27 +236,39 @@ export const calculateRawPairedDailyRecords = (
   const dayRecords = attendance.filter((r) => isMatchTanggal(r, filterTanggal));
   const activeStudentNisns = new Set(activeStudents.map((s) => s.nisn).filter(Boolean));
 
+  const isAlpaRecord = (r: AttendanceRecord) =>
+    r.status === 'Alpa' ||
+    Boolean(r.id?.startsWith('att-autoalpa-')) ||
+    Boolean(r.catatan?.includes('Alpa Otomatis')) ||
+    Boolean(r.catatan?.includes('Tutup Gerbang'));
+
   // 1. Process active registered students
   const paired: PairedDailyRecord[] = activeStudents.map((student) => {
-    const studentDayRecords = dayRecords.filter((r) => r.nisn === student.nisn);
-    const masuk = studentDayRecords.find((r) => r.jenis === 'Masuk');
+    const studentDayRecords = dayRecords.filter((r) => isRecordBelongToStudent(student, r));
+    const realMasuk = studentDayRecords.find((r) => r.jenis === 'Masuk' && !isAlpaRecord(r));
+    const alpaMasuk = studentDayRecords.find((r) => r.jenis === 'Masuk' && isAlpaRecord(r));
+    const masuk = realMasuk || alpaMasuk;
     const pulang = studentDayRecords.find((r) => r.jenis === 'Pulang');
 
     let status: AttendanceStatus = 'Alpa';
     let lateMinutes = 0;
-    let partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' = 'Tanpa Absen';
+    let partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' | 'Tanpa Absen Masuk / Perlu Verifikasi' = 'Tanpa Absen';
 
-    if (masuk) {
-      status = masuk.status;
-      lateMinutes = calculateLateMinutes(masuk, cutoffTime);
+    if (realMasuk) {
+      status = realMasuk.status;
+      lateMinutes = calculateLateMinutes(realMasuk, cutoffTime);
       if (!pulang && (status === 'Hadir' || status === 'Terlambat')) {
         partialInfo = 'Tanpa Absen Pulang';
       } else {
         partialInfo = 'Lengkap';
       }
     } else if (pulang) {
+      // Ada Pulang saja -> jangan Alpa; tampilkan Tanpa Absen Masuk / Perlu Verifikasi
       status = 'Hadir';
-      partialInfo = 'Tanpa Absen Masuk';
+      partialInfo = 'Tanpa Absen Masuk / Perlu Verifikasi';
+    } else if (alpaMasuk) {
+      status = 'Alpa';
+      partialInfo = 'Tanpa Absen';
     } else {
       status = 'Alpa';
       partialInfo = 'Tanpa Absen';
@@ -261,7 +299,9 @@ export const calculateRawPairedDailyRecords = (
   const unlinkedNisns: string[] = Array.from(new Set<string>(unlinkedRecords.map((r) => r.nisn).filter(Boolean)));
   unlinkedNisns.forEach((nisn) => {
     const studentDayRecords = unlinkedRecords.filter((r) => r.nisn === nisn);
-    const masuk = studentDayRecords.find((r) => r.jenis === 'Masuk');
+    const realMasuk = studentDayRecords.find((r) => r.jenis === 'Masuk' && !isAlpaRecord(r));
+    const alpaMasuk = studentDayRecords.find((r) => r.jenis === 'Masuk' && isAlpaRecord(r));
+    const masuk = realMasuk || alpaMasuk;
     const pulang = studentDayRecords.find((r) => r.jenis === 'Pulang');
     const sample = masuk || pulang || studentDayRecords[0];
 
@@ -277,11 +317,11 @@ export const calculateRawPairedDailyRecords = (
 
     let status: AttendanceStatus = 'Alpa';
     let lateMinutes = 0;
-    let partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' = 'Tanpa Absen';
+    let partialInfo: 'Lengkap' | 'Tanpa Absen Pulang' | 'Tanpa Absen Masuk' | 'Tanpa Absen' | 'Tanpa Absen Masuk / Perlu Verifikasi' = 'Tanpa Absen';
 
-    if (masuk) {
-      status = masuk.status;
-      lateMinutes = calculateLateMinutes(masuk, cutoffTime);
+    if (realMasuk) {
+      status = realMasuk.status;
+      lateMinutes = calculateLateMinutes(realMasuk, cutoffTime);
       if (!pulang && (status === 'Hadir' || status === 'Terlambat')) {
         partialInfo = 'Tanpa Absen Pulang';
       } else {
@@ -289,7 +329,10 @@ export const calculateRawPairedDailyRecords = (
       }
     } else if (pulang) {
       status = 'Hadir';
-      partialInfo = 'Tanpa Absen Masuk';
+      partialInfo = 'Tanpa Absen Masuk / Perlu Verifikasi';
+    } else if (alpaMasuk) {
+      status = 'Alpa';
+      partialInfo = 'Tanpa Absen';
     }
 
     paired.push({

@@ -245,7 +245,8 @@ export function evaluateScanEligibility<
   const isAutoAlpa = (r: T) =>
     r.status === 'Alpa' ||
     Boolean(r.id?.startsWith('att-autoalpa-')) ||
-    Boolean(r.catatan?.includes('Alpa Otomatis'));
+    Boolean(r.catatan?.includes('Alpa Otomatis')) ||
+    Boolean(r.catatan?.includes('Tutup Gerbang'));
 
   const masukRecord = recordsToday.find((r) => r.jenis === 'Masuk' && !isAutoAlpa(r));
   const pulangRecord = recordsToday.find((r) => r.jenis === 'Pulang');
