@@ -278,22 +278,22 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'flex-start',
+          justifyContent: 'space-between',
           flex: 1,
-          paddingTop: '4px',
-          paddingBottom: '2px',
+          paddingTop: '5px',
+          paddingBottom: '3px',
         }}
       >
         {/* SUBHEADER BADGE: KARTU PELAJAR WITH HORIZONTAL ACCENT LINES */}
-        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', paddingLeft: '14px', paddingRight: '14px', marginBottom: '4px' }}>
-          <div style={{ height: '1px', backgroundColor: '#e2e8f0', flex: 1 }} />
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', paddingLeft: '14px', paddingRight: '14px', marginBottom: '2px' }}>
+          <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
           <span
             style={{
-              padding: '1px 8px',
+              padding: '1.5px 10px',
               backgroundColor: '#eff6ff',
               border: '1px solid #bfdbfe',
               color: '#1d4ed8',
-              fontSize: '7.5px',
+              fontSize: '8px',
               fontWeight: 900,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
@@ -303,24 +303,25 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
           >
             KARTU PELAJAR
           </span>
-          <div style={{ height: '1px', backgroundColor: '#e2e8f0', flex: 1 }} />
+          <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
         </div>
 
-        {/* STUDENT PORTRAIT PHOTO */}
+        {/* STUDENT PORTRAIT PHOTO - PAS FOTO 3X4 (84px x 112px, RASIO 3:4) */}
         <div
           style={{
-            width: '74px',
-            height: '92px',
-            borderRadius: '14px',
+            width: '84px',
+            height: '112px',
+            borderRadius: '12px',
             border: '2px solid #2563eb',
             overflow: 'hidden',
             backgroundColor: '#1d4ed8',
             position: 'relative',
-            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)',
+            boxShadow: '0 3px 8px rgba(37, 99, 235, 0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            margin: '2px 0',
           }}
         >
           {foto ? (
@@ -352,30 +353,31 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
                   position: 'absolute',
                   top: '4px',
                   right: '4px',
-                  fontSize: '5.5px',
+                  fontSize: '6.5px',
                   fontWeight: 900,
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
                   color: '#ffffff',
-                  padding: '1px 3px',
+                  padding: '1.5px 4px',
                   borderRadius: '3px',
                   fontFamily: 'monospace',
+                  letterSpacing: '0.02em',
                 }}
               >
                 {initials}
               </span>
 
-              {/* Student in uniform illustration */}
-              <svg viewBox="0 0 100 120" style={{ width: '100%', height: '100%' }}>
+              {/* Student in uniform illustration (3x4 ratio: 84x112) */}
+              <svg viewBox="0 0 84 112" style={{ width: '100%', height: '100%' }}>
                 {/* Head */}
-                <ellipse cx="50" cy="38" rx="16" ry="18" fill="#fde68a" />
+                <ellipse cx="42" cy="36" rx="15" ry="17" fill="#fde68a" />
                 {/* Peci / Hair */}
-                <path d="M33 30 C33 16, 67 16, 67 30 Z" fill="#0f172a" />
+                <path d="M26 28 C26 14, 58 14, 58 28 Z" fill="#0f172a" />
                 {/* Collar & White shirt */}
-                <path d="M18 120 L24 68 L36 58 L50 72 L64 58 L76 68 L82 120 Z" fill="#ffffff" />
+                <path d="M12 112 L18 64 L28 54 L42 68 L56 54 L66 64 L72 112 Z" fill="#ffffff" />
                 {/* Navy Tie */}
-                <polygon points="50,72 45,95 50,112 55,95" fill="#0f172a" />
-                {/* Golden Badge on chest */}
-                <circle cx="68" cy="85" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+                <polygon points="42,68 37,90 42,106 47,90" fill="#0f172a" />
+                {/* Golden OSIS Badge on chest */}
+                <circle cx="58" cy="80" r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
               </svg>
             </div>
           )}
@@ -384,36 +386,37 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
         {/* STUDENT NAME */}
         <h3
           style={{
-            fontSize: '11px',
+            fontSize: '11.5px',
             fontWeight: 900,
             textTransform: 'uppercase',
             color: '#0f172a',
             textAlign: 'center',
-            margin: '4px 0 1px 0',
+            margin: '2px 0 1px 0',
             letterSpacing: '-0.01em',
-            paddingLeft: '8px',
-            paddingRight: '8px',
+            paddingLeft: '6px',
+            paddingRight: '6px',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             maxWidth: '100%',
+            lineHeight: 1.2,
           }}
         >
           {cleanNama}
         </h3>
 
         {/* NISN & NIS / KELAS PILL */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3px' }}>
           <div
             style={{
-              padding: '1.5px 8px',
+              padding: '2px 8px',
               backgroundColor: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              fontSize: '7.5px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              fontSize: '8px',
               fontFamily: 'monospace',
-              fontWeight: 700,
-              color: '#334155',
+              fontWeight: 800,
+              color: '#1e293b',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
@@ -431,53 +434,53 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
           </div>
         </div>
 
-        {/* BIODATA TABLE CONTAINER */}
+        {/* BIODATA TABLE CONTAINER - DISESUAIKAN AGAR LEBIH JELAS & PROPORSIONAL */}
         <div
           style={{
-            width: 'calc(100% - 16px)',
+            width: 'calc(100% - 14px)',
             backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
+            border: '1.5px solid #e2e8f0',
             borderRadius: '10px',
             overflow: 'hidden',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-            marginBottom: '4px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            marginBottom: '3px',
           }}
         >
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <tbody style={{ fontSize: '7px', lineHeight: 1.2 }}>
+            <tbody style={{ fontSize: '8px', lineHeight: 1.25 }}>
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
                   Tempat, Tgl Lahir
                 </td>
-                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {tempatLahir}, {tanggalLahir}
                 </td>
               </tr>
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
                   Jenis Kelamin
                 </td>
-                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a' }}>
+                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
                   {formattedGender}
                 </td>
               </tr>
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
                   Agama
                 </td>
-                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a' }}>
+                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
                   {agama}
                 </td>
               </tr>
               <tr>
-                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
                   Alamat
                 </td>
-                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {alamat}
                 </td>
               </tr>
@@ -491,8 +494,8 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
         style={{
           backgroundColor: '#1863E5',
           color: '#ffffff',
-          paddingTop: '3.5px',
-          paddingBottom: '3.5px',
+          paddingTop: '4.5px',
+          paddingBottom: '4.5px',
           paddingLeft: '6px',
           paddingRight: '6px',
           textAlign: 'center',
@@ -631,34 +634,34 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'flex-start',
+          justifyContent: 'space-between',
           flex: 1,
           paddingLeft: '10px',
           paddingRight: '10px',
           paddingTop: '6px',
-          paddingBottom: '4px',
+          paddingBottom: '3px',
         }}
       >
-        {/* QR CODE CONTAINER CARD */}
+        {/* QR CODE CONTAINER CARD - DIPERBESAR AGAR SANGAT MUDAH DIBACA / DIPINDAI */}
         <div
           style={{
             width: '100%',
             backgroundColor: '#ffffff',
             border: '1.5px solid #bfdbfe',
             borderRadius: '14px',
-            padding: '6px',
+            padding: '8px 6px 7px 6px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 5px rgba(24, 99, 229, 0.05)',
-            marginBottom: '6px',
+            boxShadow: '0 2px 6px rgba(24, 99, 229, 0.06)',
+            marginBottom: '4px',
           }}
         >
           <div style={{ lineHeight: 0 }}>
             <QRCodeSVG
               value={computedQr}
-              size={84}
+              size={112}
               level="M"
               includeMargin={false}
               fgColor="#0f172a"
@@ -669,15 +672,15 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
           {/* Under QR Pill: NISN · NAMA SISWA */}
           <div
             style={{
-              marginTop: '5px',
-              padding: '2px 8px',
+              marginTop: '6px',
+              padding: '2.5px 10px',
               backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #cbd5e1',
               borderRadius: '6px',
-              fontSize: '7px',
+              fontSize: '7.5px',
               fontFamily: 'monospace',
               fontWeight: 800,
-              color: '#1e293b',
+              color: '#0f172a',
               textAlign: 'center',
               maxWidth: '100%',
               overflow: 'hidden',
@@ -690,27 +693,27 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
           </div>
         </div>
 
-        {/* KETENTUAN PENGGUNAAN KARTU BOX */}
+        {/* KETENTUAN PENGGUNAAN KARTU BOX - UKURAN TEKS DISESUAIKAN */}
         <div
           style={{
             width: '100%',
             backgroundColor: '#f8fafc',
             border: '1px solid #e2e8f0',
             borderRadius: '10px',
-            padding: '5px 7px',
+            padding: '5px 8px',
             textAlign: 'left',
             boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-            marginBottom: '4px',
+            marginBottom: '3px',
           }}
         >
           <p
             style={{
-              fontSize: '6.5px',
+              fontSize: '7px',
               fontWeight: 900,
               textTransform: 'uppercase',
               color: '#0f172a',
               letterSpacing: '0.04em',
-              margin: '0 0 2.5px 0',
+              margin: '0 0 2px 0',
             }}
           >
             KETENTUAN PENGGUNAAN KARTU:
@@ -718,17 +721,17 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
           <ol
             style={{
               margin: 0,
-              paddingLeft: '10px',
-              fontSize: '5.8px',
+              paddingLeft: '11px',
+              fontSize: '6.8px',
               fontWeight: 500,
-              color: '#475569',
-              lineHeight: 1.25,
+              color: '#334155',
+              lineHeight: 1.3,
             }}
           >
-            <li style={{ marginBottom: '1.5px' }}>
+            <li style={{ marginBottom: '1px' }}>
               Kartu ini wajib dibawa setiap hari sekolah untuk presensi masuk &amp; pulang.
             </li>
-            <li style={{ marginBottom: '1.5px' }}>
+            <li style={{ marginBottom: '1px' }}>
               Dilarang meminjamkan kartu kepada orang lain.
             </li>
             <li>
