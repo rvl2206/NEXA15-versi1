@@ -18,6 +18,8 @@ import {
   RefreshCw,
   PanelLeftOpen,
   HelpCircle,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 import { SchoolLogo } from './SchoolLogo';
 import { store } from '../lib/store';
@@ -48,6 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(store.getOfflineQueueCount());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -55,6 +59,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
     const unsubscribe = store.subscribe(() => {
       setOfflineQueueCount(store.getOfflineQueueCount());
@@ -86,9 +98,27 @@ export const Navbar: React.FC<NavbarProps> = ({
       clearInterval(interval);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       unsubscribe();
     };
   }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      toast.info(
+        'Petunjuk Instalasi Android',
+        'Buka menu titik tiga (⋮) di Chrome HP Anda, lalu pilih "Instal Aplikasi" atau "Tambahkan ke Layar Utama".'
+      );
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+      toast.success('Pemasangan Berhasil', 'Aplikasi NEXA15 telah ditambahkan ke layar HP Android Anda.');
+    }
+    setDeferredPrompt(null);
+  };
 
   const handleForceSync = async () => {
     if (offlineQueueCount > 0) {
@@ -236,6 +266,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
             </div>
+
+            {/* Install PWA Button on Android/Desktop */}
+            {isInstallable && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border border-emerald-400/40 rounded-xl text-[11px] font-extrabold shadow-sm transition-all cursor-pointer btn-press animate-pulse"
+                title="Pasang Aplikasi NEXA15 di Layar Utama HP Android"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Pasang di Android</span>
+                <span className="sm:hidden">Pasang</span>
+              </button>
+            )}
 
 
 

@@ -144,6 +144,59 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [todayLupaKartuCount, setTodayLupaKartuCount] = useState<number>(() => store.getTodayLupaKartuList().total);
   const [scheduleStatus, setScheduleStatus] = useState(() => store.getTodayScheduleStatus());
 
+  // Kiosk & Wake Lock State for Dedicated Android Scanner Kiosk
+  const [isKioskMode, setIsKioskMode] = useState<boolean>(false);
+  const wakeLockRef = useRef<any>(null);
+
+  const requestWakeLock = async () => {
+    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      } catch (e) {
+        console.warn('Wake Lock request notice:', e);
+      }
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      } catch (e) {
+        console.warn('Wake Lock release notice:', e);
+      }
+    }
+  };
+
+  const toggleKioskMode = async () => {
+    if (!isKioskMode) {
+      setIsKioskMode(true);
+      await requestWakeLock();
+      if (!isCameraActive) {
+        setTimeout(() => startCamera(), 100);
+      }
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch {}
+      toast.success(
+        'Mode Kiosk Scanner Aktif',
+        'Layar diatur tetap menyala tanpa mati (Wake Lock aktif). Perangkat Android siap beroperasi sebagai mesin scanner presensi mandiri.'
+      );
+    } else {
+      setIsKioskMode(false);
+      await releaseWakeLock();
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch {}
+      toast.info('Mode Kiosk Dinonaktifkan', 'Kembali ke tampilan scanner biasa.');
+    }
+  };
+
   useEffect(() => {
     const updateSchedule = () => setScheduleStatus(store.getTodayScheduleStatus());
     updateSchedule();
@@ -257,6 +310,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
       }
       unsubscribe();
       stopCamera();
+      releaseWakeLock();
     };
   }, []);
 
@@ -1273,6 +1327,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
                   {todayLupaKartuCount}
                 </span>
               )}
+            </button>
+
+            {/* Dedicated Android Kiosk Mode Button (Screen Stay On) */}
+            <button
+              type="button"
+              onClick={toggleKioskMode}
+              className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
+                isKioskMode
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-md shadow-amber-500/20 animate-pulse'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-white/10 hover:border-amber-400/40'
+              }`}
+              title="Mode Mesin Kiosk: Layar HP/Tablet Android tetap menyala tanpa mati otomatis (Wake Lock) untuk gerbang presensi"
+            >
+              <Smartphone className="w-4 h-4 text-amber-400" />
+              <span>{isKioskMode ? 'Kiosk Aktif (Layar Terjaga)' : 'Mode Kiosk Mesin'}</span>
             </button>
           </div>
         </div>
