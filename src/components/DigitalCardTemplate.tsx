@@ -105,6 +105,11 @@ export const DigitalCardTemplate: React.FC = () => {
   const [customNama, setCustomNama] = useState<string>('');
   const [customNisn, setCustomNisn] = useState<string>('');
   const [customKelas, setCustomKelas] = useState<string>('');
+  const [customTempatLahir, setCustomTempatLahir] = useState<string>('Ambon');
+  const [customTanggalLahir, setCustomTanggalLahir] = useState<string>('2008-05-12');
+  const [customJenisKelamin, setCustomJenisKelamin] = useState<string>('Laki-laki');
+  const [customAgama, setCustomAgama] = useState<string>('Islam');
+  const [customAlamat, setCustomAlamat] = useState<string>('Kota Ambon');
   const [tahunAjaran, setTahunAjaran] = useState<string>('2024/2025');
   const [statusSiswa, setStatusSiswa] = useState<string>('Siswa Aktif');
   const [cardSize, setCardSize] = useState<CardSizeOption>('CR80');
@@ -117,7 +122,14 @@ export const DigitalCardTemplate: React.FC = () => {
       return {
         nama: selectedStudent.nama,
         nisn: selectedStudent.nisn,
+        nis: selectedStudent.nis || selectedStudent.nisn,
         kelas: selectedStudent.kelas,
+        tempatLahir: selectedStudent.tempat_lahir || 'Ambon',
+        tanggalLahir: selectedStudent.tanggal_lahir || '2008-05-12',
+        jenisKelamin: selectedStudent.jenis_kelamin || 'Laki-laki',
+        agama: selectedStudent.agama || 'Islam',
+        alamat: selectedStudent.alamat || 'Kota Ambon',
+        foto: selectedStudent.foto,
         tahun: tahunAjaran || '2024/2025',
         status: statusSiswa || 'Siswa Aktif',
         qrValue: `69933068.${selectedStudent.nisn}.${selectedStudent.nama}`,
@@ -125,20 +137,34 @@ export const DigitalCardTemplate: React.FC = () => {
     }
     if (mode === 'custom') {
       return {
-        nama: customNama || '____________________',
-        nisn: customNisn || '____________________',
-        kelas: customKelas || '____________________',
-        tahun: tahunAjaran || '____________________',
-        status: statusSiswa || '____________________',
+        nama: customNama || 'MAULIDAN KAREPESINA',
+        nisn: customNisn || '0102365332',
+        nis: customNisn || '0102365332',
+        kelas: customKelas || 'X-1',
+        tempatLahir: customTempatLahir || 'Ambon',
+        tanggalLahir: customTanggalLahir || '2008-05-12',
+        jenisKelamin: customJenisKelamin || 'Laki-laki',
+        agama: customAgama || 'Islam',
+        alamat: customAlamat || 'Kota Ambon',
+        foto: '',
+        tahun: tahunAjaran || '2024/2025',
+        status: statusSiswa || 'Siswa Aktif',
         qrValue: customNisn ? `69933068.${customNisn}.${customNama || 'SISWA'}` : 'TEMPLATESMA15AMBON',
       };
     }
     return {
-      nama: '____________________',
-      nisn: '____________________',
-      kelas: '____________________',
-      tahun: tahunAjaran ? tahunAjaran : '____________________',
-      status: statusSiswa ? statusSiswa : '____________________',
+      nama: 'MAULIDAN KAREPESINA',
+      nisn: '0102365332',
+      nis: '0102365332',
+      kelas: 'X-1',
+      tempatLahir: 'Ambon',
+      tanggalLahir: '2008-05-12',
+      jenisKelamin: 'Laki-laki',
+      agama: 'Islam',
+      alamat: 'Kota Ambon',
+      foto: '',
+      tahun: tahunAjaran ? tahunAjaran : '2024/2025',
+      status: statusSiswa ? statusSiswa : 'Siswa Aktif',
       qrValue: 'SMANEGERI15AMBON_TEMPLATE_ABSENSI_DIGITAL',
     };
   };
@@ -419,12 +445,12 @@ export const DigitalCardTemplate: React.FC = () => {
 
           {/* Mode 3: Custom Input */}
           {mode === 'custom' && (
-            <div className="space-y-3 bg-indigo-950/40 border border-indigo-800/50 p-3.5 rounded-xl text-xs space-y-2">
+            <div className="space-y-3 bg-indigo-950/40 border border-indigo-800/50 p-3.5 rounded-xl text-xs">
               <div>
                 <label className="text-slate-300 font-medium mb-1 block">Nama Siswa:</label>
                 <input
                   type="text"
-                  placeholder="Contoh: AHMAD RIVALDI"
+                  placeholder="Contoh: MAULIDAN KAREPESINA"
                   value={customNama}
                   onChange={(e) => setCustomNama(e.target.value)}
                   className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -432,10 +458,10 @@ export const DigitalCardTemplate: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-slate-300 font-medium mb-1 block">NISN:</label>
+                  <label className="text-slate-300 font-medium mb-1 block">NISN / NIS:</label>
                   <input
                     type="text"
-                    placeholder="0012345678"
+                    placeholder="0102365332"
                     value={customNisn}
                     onChange={(e) => setCustomNisn(e.target.value)}
                     className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -451,6 +477,70 @@ export const DigitalCardTemplate: React.FC = () => {
                     className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+              </div>
+
+              {/* Biodata Fields for Reference Design */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-300 font-medium mb-1 block">Tempat Lahir:</label>
+                  <input
+                    type="text"
+                    placeholder="Ambon"
+                    value={customTempatLahir}
+                    onChange={(e) => setCustomTempatLahir(e.target.value)}
+                    className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-medium mb-1 block">Tanggal Lahir:</label>
+                  <input
+                    type="text"
+                    placeholder="2008-05-12"
+                    value={customTanggalLahir}
+                    onChange={(e) => setCustomTanggalLahir(e.target.value)}
+                    className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-300 font-medium mb-1 block">Jenis Kelamin:</label>
+                  <select
+                    value={customJenisKelamin}
+                    onChange={(e) => setCustomJenisKelamin(e.target.value)}
+                    className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-300 font-medium mb-1 block">Agama:</label>
+                  <select
+                    value={customAgama}
+                    onChange={(e) => setCustomAgama(e.target.value)}
+                    className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="Islam">Islam</option>
+                    <option value="Kristen Protestan">Kristen Protestan</option>
+                    <option value="Katolik">Katolik</option>
+                    <option value="Hindu">Hindu</option>
+                    <option value="Buddha">Buddha</option>
+                    <option value="Konghucu">Konghucu</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-medium mb-1 block">Alamat:</label>
+                <input
+                  type="text"
+                  placeholder="Jl. Ir. M. Putuhena, Kota Ambon"
+                  value={customAlamat}
+                  onChange={(e) => setCustomAlamat(e.target.value)}
+                  className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
             </div>
           )}
@@ -589,7 +679,14 @@ export const DigitalCardTemplate: React.FC = () => {
                   <OfficialStudentIDCardFront
                     nama={values.nama}
                     nisn={values.nisn}
+                    nis={values.nis}
                     kelas={values.kelas}
+                    tempatLahir={values.tempatLahir}
+                    tanggalLahir={values.tanggalLahir}
+                    jenisKelamin={values.jenisKelamin}
+                    agama={values.agama}
+                    alamat={values.alamat}
+                    foto={values.foto}
                     tahunAjaran={values.tahun}
                     statusSiswa={values.status}
                     qrValue={values.qrValue}
@@ -606,7 +703,13 @@ export const DigitalCardTemplate: React.FC = () => {
                     KARTU SISI BELAKANG (BACK SIDE)
                   </span>
 
-                  <OfficialStudentIDCardBack cardSize={cardSize} />
+                  <OfficialStudentIDCardBack
+                    nama={values.nama}
+                    nisn={values.nisn}
+                    kelas={values.kelas}
+                    qrValue={values.qrValue}
+                    cardSize={cardSize}
+                  />
                 </div>
               )}
             </div>
@@ -653,7 +756,14 @@ export const DigitalCardTemplate: React.FC = () => {
                                   <OfficialStudentIDCardFront
                                     nama={s.nama}
                                     nisn={s.nisn}
+                                    nis={s.nis || s.nisn}
                                     kelas={s.kelas}
+                                    tempatLahir={s.tempat_lahir || 'Ambon'}
+                                    tanggalLahir={s.tanggal_lahir || '2008-05-12'}
+                                    jenisKelamin={s.jenis_kelamin || 'Laki-laki'}
+                                    agama={s.agama || 'Islam'}
+                                    alamat={s.alamat || 'Kota Ambon'}
+                                    foto={s.foto}
                                     tahunAjaran={tahunAjaran || '2024/2025'}
                                     statusSiswa={statusSiswa || 'Siswa Aktif'}
                                     qrValue={qrVal}
@@ -661,7 +771,13 @@ export const DigitalCardTemplate: React.FC = () => {
                                   />
                                 )}
                                 {(activeSide === 'both' || activeSide === 'back') && (
-                                  <OfficialStudentIDCardBack cardSize={cardSize} />
+                                  <OfficialStudentIDCardBack
+                                    nama={s.nama}
+                                    nisn={s.nisn}
+                                    kelas={s.kelas}
+                                    qrValue={qrVal}
+                                    cardSize={cardSize}
+                                  />
                                 )}
                               </div>
                             </div>

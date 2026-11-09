@@ -26,9 +26,14 @@ export interface Student {
   id_qr?: string; // e.g. "69933068"
   rfid_uid?: string; // UID Kartu RFID / NFC (e.g. "04A1B2C3D4", "1234567890")
   nisn: string; // e.g. "3080370790"
+  nis?: string; // Nomor Induk Siswa lokal sekolah
   nama: string; // e.g. "DADANG BUAMONA"
   kelas: string; // e.g. "XI IPA 1"
+  tempat_lahir?: string; // e.g. "Ambon"
+  tanggal_lahir?: string; // e.g. "2008-05-12"
   jenis_kelamin?: 'L' | 'P' | string; // Jenis Kelamin Siswa
+  agama?: string; // e.g. "Islam"
+  alamat?: string; // e.g. "Jl. Ir. M. Putuhena"
   no_hp_ortu?: string; // No. WA / HP Orang Tua (e.g. 08123456789)
   foto?: string;
   status: 'aktif' | 'nonaktif';

@@ -209,7 +209,15 @@ export const StudentMassPrintModal: React.FC<StudentMassPrintModalProps> = ({
                       <OfficialStudentIDCardFront
                         nama={student.nama}
                         nisn={student.nisn}
+                        nis={student.nis || student.nisn}
                         kelas={student.kelas}
+                        tempatLahir={student.tempat_lahir || 'Ambon'}
+                        tanggalLahir={student.tanggal_lahir || '2008-05-12'}
+                        jenisKelamin={student.jenis_kelamin || 'Laki-laki'}
+                        agama={student.agama || 'Islam'}
+                        alamat={student.alamat || 'Kota Ambon'}
+                        foto={student.foto}
+                        qrValue={`69933068.${student.nisn}.${student.nama}`}
                         isSelected={isSelected}
                         showCheckbox={true}
                         cardSize={cardSize}
@@ -227,6 +235,10 @@ export const StudentMassPrintModal: React.FC<StudentMassPrintModalProps> = ({
                     {/* BACK SIDE CARD */}
                     {(massPrintSide === 'both' || massPrintSide === 'back') && (
                       <OfficialStudentIDCardBack
+                        nama={student.nama}
+                        nisn={student.nisn}
+                        kelas={student.kelas}
+                        qrValue={`69933068.${student.nisn}.${student.nama}`}
                         isSelected={isSelected}
                         showCheckbox={true}
                         cardSize={cardSize}

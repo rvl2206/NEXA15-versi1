@@ -54,7 +54,13 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const [formData, setFormData] = useState<Omit<Student, 'id' | 'createdAt'>>({
     nama: '',
     nisn: '',
+    nis: '',
     kelas: '',
+    tempat_lahir: 'Ambon',
+    tanggal_lahir: '',
+    jenis_kelamin: 'L',
+    agama: 'Islam',
+    alamat: '',
     rfid_uid: '',
     id_qr: '',
     status: 'aktif',
@@ -110,7 +116,13 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         setFormData({
           nama: editingStudent.nama,
           nisn: editingStudent.nisn,
+          nis: editingStudent.nis || '',
           kelas: editingStudent.kelas,
+          tempat_lahir: editingStudent.tempat_lahir || 'Ambon',
+          tanggal_lahir: editingStudent.tanggal_lahir || '',
+          jenis_kelamin: editingStudent.jenis_kelamin || 'L',
+          agama: editingStudent.agama || 'Islam',
+          alamat: editingStudent.alamat || '',
           rfid_uid: editingStudent.rfid_uid || '',
           id_qr: editingStudent.id_qr,
           status: editingStudent.status || 'aktif',
@@ -121,7 +133,13 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         setFormData({
           nama: '',
           nisn: '',
+          nis: '',
           kelas: '',
+          tempat_lahir: 'Ambon',
+          tanggal_lahir: '',
+          jenis_kelamin: 'L',
+          agama: 'Islam',
+          alamat: '',
           rfid_uid: '',
           id_qr: '',
           status: 'aktif',
@@ -231,6 +249,30 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">NIS Lokal (Opsional)</label>
+              <input
+                type="text"
+                value={formData.nis || ''}
+                onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
+                placeholder="Contoh: 0102365332 (Kosong = Samakan NISN)"
+                className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kelas</label>
+              <input
+                type="text"
+                value={formData.kelas}
+                onChange={(e) => setFormData({ ...formData, kelas: e.target.value })}
+                placeholder="Contoh: X IPA 1, XI MIPA 2, XII IPS 3"
+                className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nama Lengkap Siswa</label>
             <input
@@ -250,16 +292,73 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kelas</label>
-            <input
-              type="text"
-              value={formData.kelas}
-              onChange={(e) => setFormData({ ...formData, kelas: e.target.value })}
-              placeholder="Contoh: X IPA 1, XI MIPA 2, XII IPS 3"
-              className="w-full px-3 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
-              required
-            />
+          {/* Biodata Siswa untuk Kartu Pelajar Resmi */}
+          <div className="p-3 bg-blue-50/40 dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-800 space-y-2.5">
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 block uppercase tracking-wider">
+              Biodata Kartu Pelajar (Sisi Depan)
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tempat Lahir</label>
+                <input
+                  type="text"
+                  value={formData.tempat_lahir || ''}
+                  onChange={(e) => setFormData({ ...formData, tempat_lahir: e.target.value })}
+                  placeholder="Contoh: Ambon"
+                  className="w-full px-2.5 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Lahir</label>
+                <input
+                  type="date"
+                  value={formData.tanggal_lahir || ''}
+                  onChange={(e) => setFormData({ ...formData, tanggal_lahir: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Jenis Kelamin</label>
+                <select
+                  value={formData.jenis_kelamin || 'L'}
+                  onChange={(e) => setFormData({ ...formData, jenis_kelamin: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Agama</label>
+                <select
+                  value={formData.agama || 'Islam'}
+                  onChange={(e) => setFormData({ ...formData, agama: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="Islam">Islam</option>
+                  <option value="Kristen Protestan">Kristen Protestan</option>
+                  <option value="Katolik">Katolik</option>
+                  <option value="Hindu">Hindu</option>
+                  <option value="Buddha">Buddha</option>
+                  <option value="Konghucu">Konghucu</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Alamat Tinggal Siswa</label>
+              <input
+                type="text"
+                value={formData.alamat || ''}
+                onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
+                placeholder="Contoh: Jl. Ir. M. Putuhena, Kota Ambon"
+                className="w-full px-2.5 py-1.5 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
           </div>
 
           {/* RFID / NFC Card UID */}

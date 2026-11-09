@@ -1,18 +1,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { SchoolLogo } from './SchoolLogo';
 import { store } from '../lib/store';
-import {
-  User,
-  Hash,
-  GraduationCap,
-  Calendar,
-  ShieldCheck,
-  Building2,
-  Star,
-  ClipboardList,
-  MapPin,
-} from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 
 export type CardSizeOption = 'CR80' | 'B2' | 'B1';
 
@@ -32,33 +21,41 @@ export const CARD_SIZES: Record<
     badge: 'CR80 (54 x 85.6 MM)',
     widthMM: 53.98,
     heightMM: 85.6,
-    widthPx: 204,
-    heightPx: 324,
+    widthPx: 250,
+    heightPx: 396,
   },
   B2: {
     name: 'Plastik B2 (70 x 100 mm / 7 x 10 cm)',
     badge: 'B2 (70 x 100 MM)',
     widthMM: 70,
     heightMM: 100,
-    widthPx: 265,
-    heightPx: 378,
+    widthPx: 285,
+    heightPx: 407,
   },
   B1: {
     name: 'Plastik B1 (55 x 90 mm / 5.5 x 9 cm)',
     badge: 'B1 (55 x 90 MM)',
     widthMM: 55,
     heightMM: 90,
-    widthPx: 208,
-    heightPx: 340,
+    widthPx: 256,
+    heightPx: 418,
   },
 };
 
-interface CardFrontProps {
+export interface CardFrontProps {
   nama: string;
   nisn: string;
-  kelas: string;
+  kelas?: string;
+  nis?: string;
+  tempatLahir?: string;
+  tanggalLahir?: string;
+  jenisKelamin?: string;
+  agama?: string;
+  alamat?: string;
+  foto?: string;
   tahunAjaran?: string;
   schoolName?: string;
+  schoolAddress?: string;
   statusSiswa?: string;
   qrValue?: string;
   cardSize?: CardSizeOption;
@@ -68,476 +65,74 @@ interface CardFrontProps {
   className?: string;
 }
 
-export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
-  nama,
-  nisn,
-  kelas,
-  tahunAjaran = '2026/2027',
-  schoolName,
-  statusSiswa = 'Siswa Aktif',
-  qrValue,
-  cardSize = 'CR80',
-  isSelected = true,
-  onClick,
-  showCheckbox = false,
-  className = '',
-}) => {
-  const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
-  const activeSchoolName = schoolName || store.getSettings().schoolName || 'SMA NEGERI 15 AMBON';
-  const schoolNpsn = store.getSettings().schoolNPSN || '69933068';
-  const computedQr = qrValue || (nisn ? `${schoolNpsn}.${nisn}.${nama}` : 'SMANEGERI15AMBON_TEMPLATE');
-
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        width: `${currentSize.widthPx}px`,
-        height: `${currentSize.heightPx}px`,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1.5px solid #f59e0b',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        position: 'relative',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      }}
-      className={`official-id-card shadow-md text-slate-900 transition-all select-none shrink-0 ${
-        !isSelected ? 'opacity-40 hover:opacity-80 print:hidden' : ''
-      } ${className}`}
-    >
-      {/* Checkbox for selection in Mass Print mode */}
-      {showCheckbox && (
-        <div className="absolute top-1.5 right-1.5 z-20 print:hidden">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => {}}
-            className="w-3.5 h-3.5 text-amber-500 rounded border-slate-700 focus:ring-amber-500 cursor-pointer"
-          />
-        </div>
-      )}
-
-      {/* TOP NAVY HEADER SECTION */}
-      <div
-        style={{
-          backgroundColor: '#071a3d',
-          color: '#ffffff',
-          paddingTop: '6px',
-          paddingBottom: '4px',
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        {/* Gold corner accent lines */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '4px',
-            left: '4px',
-            width: '10px',
-            height: '10px',
-            borderTop: '1.5px solid #f59e0b',
-            borderLeft: '1.5px solid #f59e0b',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '4px',
-            right: '4px',
-            width: '10px',
-            height: '10px',
-            borderTop: '1.5px solid #f59e0b',
-            borderRight: '1.5px solid #f59e0b',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Dedicated School Logo Slot with Fixed Box */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2px' }}>
-          <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <SchoolLogo size={32} className="w-full h-full drop-shadow-sm" />
-          </div>
-        </div>
-
-        {/* Titles */}
-        <h2
-          style={{
-            fontSize: '9.5px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            color: '#ffffff',
-            margin: 0,
-            lineHeight: 1.15,
-          }}
-        >
-          KARTU ABSENSI DIGITAL
-        </h2>
-        <h3
-          style={{
-            fontSize: '8.5px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: '#f59e0b',
-            marginTop: '1px',
-            marginBottom: 0,
-          }}
-        >
-          {activeSchoolName}
-        </h3>
-      </div>
-
-      {/* MIDDLE SECTION - QR CODE & STUDENT DETAILS ON CLEAN WHITE */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          paddingTop: '3px',
-          paddingBottom: '3px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flex: 1,
-          position: 'relative',
-          zIndex: 10,
-        }}
-      >
-        <p
-          style={{
-            fontSize: '7px',
-            fontWeight: 900,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: '#071a3d',
-            textAlign: 'center',
-            margin: '0 0 2px 0',
-          }}
-        >
-          SCAN UNTUK ABSENSI
-        </p>
-
-        <div
-          style={{
-            padding: '3px',
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            border: '1.5px solid #f59e0b',
-            display: 'inline-block',
-            lineHeight: 0,
-          }}
-        >
-          <QRCodeSVG
-            value={computedQr}
-            size={68}
-            level="M"
-            includeMargin={false}
-            fgColor="#071a3d"
-            bgColor="#ffffff"
-            style={{ display: 'block', borderRadius: '4px' }}
-          />
-        </div>
-
-        {/* LOWER STUDENT INFO FIELDS */}
-        <div style={{ width: '100%', marginTop: '3px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {/* Row 1: Nama */}
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '7.5px', width: '100%' }}>
-            <div
-              style={{
-                width: '13px',
-                height: '13px',
-                borderRadius: '3px',
-                backgroundColor: '#071a3d',
-                color: '#fde047',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginRight: '4px',
-              }}
-            >
-              <User style={{ width: '8px', height: '8px' }} />
-            </div>
-            <span style={{ fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', width: '52px', flexShrink: 0 }}>
-              NAMA
-            </span>
-            <span style={{ fontWeight: 900, color: '#071a3d', marginRight: '3px' }}>:</span>
-            <span
-              style={{
-                fontWeight: 900,
-                color: '#0f172a',
-                textTransform: 'uppercase',
-                borderBottom: '1px solid #cbd5e1',
-                flex: 1,
-                paddingBottom: '1px',
-                fontSize: '7.5px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {nama}
-            </span>
-          </div>
-
-          {/* Row 2: NISN */}
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '7.5px', width: '100%' }}>
-            <div
-              style={{
-                width: '13px',
-                height: '13px',
-                borderRadius: '3px',
-                backgroundColor: '#071a3d',
-                color: '#fde047',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginRight: '4px',
-              }}
-            >
-              <Hash style={{ width: '8px', height: '8px' }} />
-            </div>
-            <span style={{ fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', width: '52px', flexShrink: 0 }}>
-              NISN
-            </span>
-            <span style={{ fontWeight: 900, color: '#071a3d', marginRight: '3px' }}>:</span>
-            <span
-              style={{
-                fontFamily: 'monospace',
-                fontWeight: 900,
-                color: '#0f172a',
-                letterSpacing: '0.03em',
-                borderBottom: '1px solid #cbd5e1',
-                flex: 1,
-                paddingBottom: '1px',
-                fontSize: '7.5px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {nisn}
-            </span>
-          </div>
-
-          {/* Row 3: KELAS */}
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '7.5px', width: '100%' }}>
-            <div
-              style={{
-                width: '13px',
-                height: '13px',
-                borderRadius: '3px',
-                backgroundColor: '#071a3d',
-                color: '#fde047',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginRight: '4px',
-              }}
-            >
-              <GraduationCap style={{ width: '8px', height: '8px' }} />
-            </div>
-            <span style={{ fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', width: '52px', flexShrink: 0 }}>
-              KELAS
-            </span>
-            <span style={{ fontWeight: 900, color: '#071a3d', marginRight: '3px' }}>:</span>
-            <span
-              style={{
-                fontWeight: 900,
-                color: '#0f172a',
-                textTransform: 'uppercase',
-                borderBottom: '1px solid #cbd5e1',
-                flex: 1,
-                paddingBottom: '1px',
-                fontSize: '7.5px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {kelas}
-            </span>
-          </div>
-
-          {/* Row 4: TAHUN AJARAN */}
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '7.5px', width: '100%' }}>
-            <div
-              style={{
-                width: '13px',
-                height: '13px',
-                borderRadius: '3px',
-                backgroundColor: '#071a3d',
-                color: '#fde047',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginRight: '4px',
-              }}
-            >
-              <Calendar style={{ width: '8px', height: '8px' }} />
-            </div>
-            <span style={{ fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', width: '52px', flexShrink: 0 }}>
-              THN AJAR
-            </span>
-            <span style={{ fontWeight: 900, color: '#071a3d', marginRight: '3px' }}>:</span>
-            <span
-              style={{
-                fontWeight: 700,
-                color: '#1e293b',
-                textTransform: 'uppercase',
-                borderBottom: '1px solid #cbd5e1',
-                flex: 1,
-                paddingBottom: '1px',
-                fontSize: '7.5px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {tahunAjaran}
-            </span>
-          </div>
-
-          {/* Row 5: STATUS */}
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '7.5px', width: '100%' }}>
-            <div
-              style={{
-                width: '13px',
-                height: '13px',
-                borderRadius: '3px',
-                backgroundColor: '#071a3d',
-                color: '#fde047',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginRight: '4px',
-              }}
-            >
-              <ShieldCheck style={{ width: '8px', height: '8px' }} />
-            </div>
-            <span style={{ fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', width: '52px', flexShrink: 0 }}>
-              STATUS
-            </span>
-            <span style={{ fontWeight: 900, color: '#071a3d', marginRight: '3px' }}>:</span>
-            <span
-              style={{
-                fontWeight: 900,
-                color: '#047857',
-                textTransform: 'uppercase',
-                borderBottom: '1px solid #cbd5e1',
-                flex: 1,
-                paddingBottom: '1px',
-                fontSize: '7.5px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {statusSiswa}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* BOTTOM FOOTER SECTION WITH ANGULAR CHEVRON NOTCH */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, pointerEvents: 'none', marginBottom: '-1px' }}>
-          <svg
-            viewBox="0 0 500 22"
-            style={{ width: '100%', height: '10px', fill: '#071a3d' }}
-            preserveAspectRatio="none"
-          >
-            <path d="M0,22 L210,22 L250,2 L290,22 L500,22 L500,0 L0,0 Z" fill="#071a3d" />
-            <path d="M0,22 L210,22 L250,2 L290,22 L500,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
-          </svg>
-        </div>
-        <div
-          style={{
-            backgroundColor: '#071a3d',
-            color: '#ffffff',
-            paddingTop: '1px',
-            paddingBottom: '4px',
-            paddingLeft: '8px',
-            paddingRight: '8px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1px' }}>
-            <Building2 style={{ width: '10px', height: '10px', color: '#f59e0b' }} />
-          </div>
-          <p
-            style={{
-              fontSize: '6.5px',
-              fontWeight: 900,
-              letterSpacing: '0.08em',
-              color: '#ffffff',
-              textTransform: 'uppercase',
-              margin: 0,
-              lineHeight: 1.1,
-            }}
-          >
-            DISIPLIN HARI INI,
-          </p>
-          <p
-            style={{
-              fontSize: '7px',
-              fontWeight: 900,
-              letterSpacing: '0.08em',
-              color: '#f59e0b',
-              textTransform: 'uppercase',
-              margin: '1px 0 0 0',
-              lineHeight: 1.1,
-            }}
-          >
-            PRESTASI ESOK HARI
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginTop: '2px' }}>
-            <div style={{ height: '1px', width: '14px', backgroundColor: 'rgba(245, 158, 11, 0.5)' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <div style={{ height: '1px', width: '14px', backgroundColor: 'rgba(245, 158, 11, 0.5)' }} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface CardBackProps {
+export interface CardBackProps {
+  nama?: string;
+  nisn?: string;
+  kelas?: string;
+  qrValue?: string;
   cardSize?: CardSizeOption;
   schoolName?: string;
+  headmasterName?: string;
+  headmasterNIP?: string;
+  dateStr?: string;
   isSelected?: boolean;
   onClick?: () => void;
   showCheckbox?: boolean;
   className?: string;
 }
 
-export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
-  cardSize = 'CR80',
+// Helper to extract initials from name (e.g. Maulidan Karepesina -> MK)
+function getInitials(name?: string): string {
+  if (!name) return 'S15';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return parts[0].substring(0, 2).toUpperCase();
+}
+
+/**
+ * ==============================================================================
+ * KARTU SISI DEPAN (FRONT SIDE): KARTU PELAJAR
+ * Sesuai Desain Resmi SMA Negeri 15 Ambon (Header Biru Royal, Foto, Biodata)
+ * ==============================================================================
+ */
+export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
+  nama,
+  nisn,
+  kelas = '',
+  nis,
+  tempatLahir = 'Ambon',
+  tanggalLahir = '2008-05-12',
+  jenisKelamin = 'Laki-laki',
+  agama = 'Islam',
+  alamat = 'Kota Ambon',
+  foto,
   schoolName,
+  schoolAddress,
+  cardSize = 'CR80',
   isSelected = true,
   onClick,
   showCheckbox = false,
   className = '',
 }) => {
   const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
-  const activeSchoolName = schoolName || store.getSettings().schoolName || 'SMA NEGERI 15 AMBON';
+  const settings = store.getSettings();
+  const activeSchoolName = schoolName || settings.schoolName || 'SMA NEGERI 15 AMBON';
+  const activeSchoolAddress = schoolAddress || settings.schoolAddress || 'Jl. Ir. M. Putuhena, Kec. Teluk Ambon, Kota Ambon';
+
+  const cleanNama = (nama || 'MAULIDAN KAREPESINA').trim();
+  const cleanNisn = (nisn || '0102365332').trim();
+  const cleanNis = (nis || cleanNisn).trim();
+  const initials = getInitials(cleanNama);
+
+  // Formatting gender
+  const formattedGender =
+    jenisKelamin === 'L' || jenisKelamin === 'Laki-laki'
+      ? 'Laki-laki'
+      : jenisKelamin === 'P' || jenisKelamin === 'Perempuan'
+      ? 'Perempuan'
+      : jenisKelamin || 'Laki-laki';
 
   return (
     <div
@@ -549,14 +144,15 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
         flexDirection: 'column',
         justifyContent: 'space-between',
         backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1.5px solid #f59e0b',
+        borderRadius: '18px',
+        border: '1.5px solid #dbeafe',
         overflow: 'hidden',
         boxSizing: 'border-box',
         position: 'relative',
+        boxShadow: '0 8px 20px -4px rgba(24, 99, 229, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
-      className={`official-id-card shadow-md text-slate-900 transition-all select-none shrink-0 ${
+      className={`official-id-card-front text-slate-900 transition-all select-none shrink-0 ${
         !isSelected ? 'opacity-40 hover:opacity-80 print:hidden' : ''
       } ${className}`}
     >
@@ -567,264 +163,655 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
             type="checkbox"
             checked={isSelected}
             onChange={() => {}}
-            className="w-3.5 h-3.5 text-amber-500 rounded border-slate-700 focus:ring-amber-500 cursor-pointer"
+            className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
           />
         </div>
       )}
 
-      {/* TOP NAVY HEADER SECTION */}
-      <div
-        style={{
-          backgroundColor: '#071a3d',
-          color: '#ffffff',
-          paddingTop: '6px',
-          paddingBottom: '4px',
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          position: 'relative',
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
+      {/* TOP HEADER SECTION - ROYAL BLUE */}
+      <div style={{ flexShrink: 0 }}>
         <div
           style={{
-            position: 'absolute',
-            top: '4px',
-            left: '4px',
-            width: '10px',
-            height: '10px',
-            borderTop: '1.5px solid #f59e0b',
-            borderLeft: '1.5px solid #f59e0b',
-            pointerEvents: 'none',
+            backgroundColor: '#1863E5',
+            color: '#ffffff',
+            paddingTop: '7px',
+            paddingBottom: '6px',
+            paddingLeft: '8px',
+            paddingRight: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '4px',
+            position: 'relative',
           }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '4px',
-            right: '4px',
-            width: '10px',
-            height: '10px',
-            borderTop: '1.5px solid #f59e0b',
-            borderRight: '1.5px solid #f59e0b',
-            pointerEvents: 'none',
-          }}
-        />
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
-          <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            <SchoolLogo size={28} className="w-full h-full drop-shadow-sm" />
+        >
+          {/* Left Emblem: Circular Maluku Provincial Shield */}
+          <div
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '1.5px solid rgba(255, 255, 255, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <svg viewBox="0 0 24 24" style={{ width: '15px', height: '15px', fill: '#fbbf24', stroke: '#f59e0b', strokeWidth: '1' }}>
+              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+            </svg>
           </div>
-          <div style={{ textAlign: 'right', flex: 1, paddingLeft: '6px' }}>
+
+          {/* Center Titles */}
+          <div style={{ textAlign: 'center', flex: 1, paddingLeft: '2px', paddingRight: '2px' }}>
+            <p
+              style={{
+                fontSize: '6.5px',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: '#ffffff',
+                opacity: 0.95,
+                margin: 0,
+                lineHeight: 1.15,
+              }}
+            >
+              PEMERINTAH PROVINSI MALUKU
+            </p>
             <h2
               style={{
-                fontSize: '9.5px',
+                fontSize: '10px',
                 fontWeight: 900,
                 textTransform: 'uppercase',
-                letterSpacing: '0.04em',
+                letterSpacing: '0.02em',
                 color: '#ffffff',
-                margin: 0,
+                margin: '1px 0',
                 lineHeight: 1.15,
               }}
             >
               {activeSchoolName}
             </h2>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '1px', marginBottom: '1px' }}>
-              <div style={{ height: '1px', backgroundColor: 'rgba(245, 158, 11, 0.6)', flex: 1 }} />
-              <div style={{ width: '4px', height: '4px', transform: 'rotate(45deg)', backgroundColor: '#f59e0b', flexShrink: 0 }} />
-            </div>
-            <p style={{ fontSize: '6.5px', fontWeight: 900, letterSpacing: '0.06em', color: '#f59e0b', textTransform: 'uppercase', margin: 0 }}>
-              CERDAS, BERKARAKTER, BERPRESTASI
+            <p
+              style={{
+                fontSize: '5.5px',
+                fontWeight: 500,
+                color: '#ffffff',
+                opacity: 0.85,
+                margin: 0,
+                lineHeight: 1.15,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {activeSchoolAddress}
             </p>
           </div>
+
+          {/* Right Emblem: Circular Graduation Cap */}
+          <div
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}
+          >
+            <GraduationCap style={{ width: '15px', height: '15px', color: '#1863E5' }} />
+          </div>
         </div>
+
+        {/* Yellow/Gold Accent Stripe */}
+        <div style={{ height: '2.5px', backgroundColor: '#F59E0B' }} />
       </div>
 
-      {/* MIDDLE SECTION - RULES & RETURN INFO ON CLEAN WHITE */}
+      {/* MIDDLE BODY CONTENT */}
       <div
         style={{
-          backgroundColor: '#ffffff',
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          paddingTop: '4px',
-          paddingBottom: '4px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
           flex: 1,
-          position: 'relative',
-          zIndex: 10,
-          textAlign: 'left',
+          paddingTop: '4px',
+          paddingBottom: '2px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <div
+        {/* SUBHEADER BADGE: KARTU PELAJAR WITH HORIZONTAL ACCENT LINES */}
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', paddingLeft: '14px', paddingRight: '14px', marginBottom: '4px' }}>
+          <div style={{ height: '1px', backgroundColor: '#e2e8f0', flex: 1 }} />
+          <span
             style={{
-              backgroundColor: '#071a3d',
-              color: '#ffffff',
+              padding: '1px 8px',
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#1d4ed8',
+              fontSize: '7.5px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
               borderRadius: '9999px',
-              paddingTop: '1.5px',
-              paddingBottom: '1.5px',
-              paddingLeft: '6px',
-              paddingRight: '6px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              alignSelf: 'flex-start',
+              whiteSpace: 'nowrap',
             }}
           >
-            <div
-              style={{
-                width: '11px',
-                height: '11px',
-                borderRadius: '50%',
-                backgroundColor: '#2563eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <ClipboardList style={{ width: '6.5px', height: '6.5px', color: '#ffffff' }} />
-            </div>
-            <span style={{ fontSize: '7px', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              KETENTUAN PENGGUNAAN KARTU
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '1px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', fontSize: '7px', fontWeight: 500, color: '#1e293b', lineHeight: 1.15 }}>
-              <span style={{ width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#071a3d', color: '#ffffff', fontSize: '6.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                1
-              </span>
-              <span>Bukti presensi sah siswa SMAN 15 Ambon.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', fontSize: '7px', fontWeight: 500, color: '#1e293b', lineHeight: 1.15 }}>
-              <span style={{ width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#071a3d', color: '#ffffff', fontSize: '6.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                2
-              </span>
-              <span>Wajib dibawa setiap hari &amp; tdk dipindahtangankan.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', fontSize: '7px', fontWeight: 500, color: '#1e293b', lineHeight: 1.15 }}>
-              <span style={{ width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#071a3d', color: '#ffffff', fontSize: '6.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                3
-              </span>
-              <span>Pelanggaran dikenakan sanksi tata tertib.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', fontSize: '7px', fontWeight: 500, color: '#1e293b', lineHeight: 1.15 }}>
-              <span style={{ width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#071a3d', color: '#ffffff', fontSize: '6.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                4
-              </span>
-              <span>Bila hilang/rusak, lapor ke Bagian TU.</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px', marginBottom: '2px' }}>
-          <div style={{ height: '1px', backgroundColor: '#e2e8f0', flex: 1 }} />
-          <div style={{ width: '4px', height: '4px', transform: 'rotate(45deg)', backgroundColor: '#071a3d' }} />
+            KARTU PELAJAR
+          </span>
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', flex: 1 }} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* STUDENT PORTRAIT PHOTO */}
+        <div
+          style={{
+            width: '74px',
+            height: '92px',
+            borderRadius: '14px',
+            border: '2px solid #2563eb',
+            overflow: 'hidden',
+            backgroundColor: '#1d4ed8',
+            position: 'relative',
+            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {foto ? (
+            <img
+              src={foto}
+              alt={cleanNama}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 60%, #1e40af 100%)',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Initials badge in top-right */}
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '4px',
+                  fontSize: '5.5px',
+                  fontWeight: 900,
+                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  color: '#ffffff',
+                  padding: '1px 3px',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {initials}
+              </span>
+
+              {/* Student in uniform illustration */}
+              <svg viewBox="0 0 100 120" style={{ width: '100%', height: '100%' }}>
+                {/* Head */}
+                <ellipse cx="50" cy="38" rx="16" ry="18" fill="#fde68a" />
+                {/* Peci / Hair */}
+                <path d="M33 30 C33 16, 67 16, 67 30 Z" fill="#0f172a" />
+                {/* Collar & White shirt */}
+                <path d="M18 120 L24 68 L36 58 L50 72 L64 58 L76 68 L82 120 Z" fill="#ffffff" />
+                {/* Navy Tie */}
+                <polygon points="50,72 45,95 50,112 55,95" fill="#0f172a" />
+                {/* Golden Badge on chest */}
+                <circle cx="68" cy="85" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* STUDENT NAME */}
+        <h3
+          style={{
+            fontSize: '11px',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            color: '#0f172a',
+            textAlign: 'center',
+            margin: '4px 0 1px 0',
+            letterSpacing: '-0.01em',
+            paddingLeft: '8px',
+            paddingRight: '8px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%',
+          }}
+        >
+          {cleanNama}
+        </h3>
+
+        {/* NISN & NIS / KELAS PILL */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
           <div
             style={{
-              backgroundColor: '#071a3d',
-              color: '#ffffff',
-              borderRadius: '9999px',
-              paddingTop: '1.5px',
-              paddingBottom: '1.5px',
-              paddingLeft: '6px',
-              paddingRight: '6px',
+              padding: '1.5px 8px',
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '7.5px',
+              fontFamily: 'monospace',
+              fontWeight: 700,
+              color: '#334155',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              alignSelf: 'flex-start',
             }}
           >
-            <div
-              style={{
-                width: '11px',
-                height: '11px',
-                borderRadius: '50%',
-                backgroundColor: '#2563eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <MapPin style={{ width: '6.5px', height: '6.5px', color: '#ffffff' }} />
-            </div>
-            <span style={{ fontSize: '7px', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              PENGEMBALIAN KARTU HILANG
-            </span>
+            <span>NISN: {cleanNisn}</span>
+            <span style={{ color: '#94a3b8' }}>·</span>
+            <span>NIS: {cleanNis}</span>
+            {kelas && (
+              <>
+                <span style={{ color: '#94a3b8' }}>·</span>
+                <span style={{ color: '#1863E5', fontFamily: 'sans-serif', fontWeight: 800 }}>{kelas}</span>
+              </>
+            )}
           </div>
+        </div>
 
-          <p style={{ fontSize: '6.5px', fontWeight: 500, color: '#475569', margin: '1px 0 0 1px' }}>
-            Jika menemukan kartu ini, mohon kembalikan ke:
-          </p>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '1px', paddingTop: '1px' }}>
-            <div
-              style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                backgroundColor: '#071a3d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Building2 style={{ width: '10px', height: '10px', color: '#fde047' }} />
-            </div>
-            <div style={{ lineHeight: 1.15 }}>
-              <p style={{ fontSize: '7.5px', fontWeight: 900, color: '#071a3d', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
-                SMA NEGERI 15 AMBON
-              </p>
-              <p style={{ fontSize: '6.5px', fontWeight: 700, color: '#334155', margin: '1px 0 0 0' }}>
-                Jl. Wara Kembang Buton, Kec. Sirimau, Ambon
-              </p>
-            </div>
-          </div>
+        {/* BIODATA TABLE CONTAINER */}
+        <div
+          style={{
+            width: 'calc(100% - 16px)',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            marginBottom: '4px',
+          }}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <tbody style={{ fontSize: '7px', lineHeight: 1.2 }}>
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  Tempat, Tgl Lahir
+                </td>
+                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {tempatLahir}, {tanggalLahir}
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  Jenis Kelamin
+                </td>
+                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a' }}>
+                  {formattedGender}
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  Agama
+                </td>
+                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a' }}>
+                  {agama}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ width: '70px', padding: '2px 4px 2px 6px', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  Alamat
+                </td>
+                <td style={{ width: '6px', padding: '2px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                <td style={{ padding: '2px 6px 2px 2px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {alamat}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* BOTTOM FOOTER SECTION WITH ANGULAR CHEVRON NOTCH */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, pointerEvents: 'none', marginBottom: '-1px' }}>
-          <svg
-            viewBox="0 0 500 22"
-            style={{ width: '100%', height: '10px', fill: '#071a3d' }}
-            preserveAspectRatio="none"
-          >
-            <path d="M0,22 L210,22 L250,2 L290,22 L500,22 L500,0 L0,0 Z" fill="#071a3d" />
-            <path d="M0,22 L210,22 L250,2 L290,22 L500,22" fill="none" stroke="#f59e0b" strokeWidth="2" />
-          </svg>
+      {/* BOTTOM FOOTER SECTION - ROYAL BLUE */}
+      <div
+        style={{
+          backgroundColor: '#1863E5',
+          color: '#ffffff',
+          paddingTop: '3.5px',
+          paddingBottom: '3.5px',
+          paddingLeft: '6px',
+          paddingRight: '6px',
+          textAlign: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <p
+          style={{
+            fontSize: '6.5px',
+            fontWeight: 700,
+            color: '#ffffff',
+            margin: 0,
+            letterSpacing: '0.02em',
+            lineHeight: 1.2,
+          }}
+        >
+          Berlaku Selama Menjadi Siswa SMA Negeri 15 Ambon
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * ==============================================================================
+ * KARTU SISI BELAKANG (BACK SIDE): KARTU PRESENSI SISWA
+ * Sesuai Desain Resmi: QR Code Presensi, Ketentuan Penggunaan, Stempel & TTD Kepsek
+ * ==============================================================================
+ */
+export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
+  nama,
+  nisn,
+  qrValue,
+  cardSize = 'CR80',
+  schoolName,
+  headmasterName,
+  headmasterNIP,
+  dateStr = 'Juli 2024',
+  isSelected = true,
+  onClick,
+  showCheckbox = false,
+  className = '',
+}) => {
+  const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
+  const settings = store.getSettings();
+  const activeSchoolName = schoolName || settings.schoolName || 'SMA NEGERI 15 AMBON';
+  const schoolNpsn = settings.schoolNPSN || '69933068';
+
+  const cleanNama = (nama || 'MAULIDAN KAREPESINA').trim();
+  const cleanNisn = (nisn || '0102365332').trim();
+  const computedQr = qrValue || `${schoolNpsn}.${cleanNisn}.${cleanNama}`;
+
+  const activeHeadmasterName = headmasterName || (settings as any).headmasterName || 'Drs. Johanis Latuheru, M.Pd.';
+  const activeHeadmasterNIP = headmasterNIP || (settings as any).headmasterNIP || '196805121994031007';
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        width: `${currentSize.widthPx}px`,
+        height: `${currentSize.heightPx}px`,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        backgroundColor: '#ffffff',
+        borderRadius: '18px',
+        border: '1.5px solid #dbeafe',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        position: 'relative',
+        boxShadow: '0 8px 20px -4px rgba(24, 99, 229, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+      className={`official-id-card-back text-slate-900 transition-all select-none shrink-0 ${
+        !isSelected ? 'opacity-40 hover:opacity-80 print:hidden' : ''
+      } ${className}`}
+    >
+      {/* Checkbox for selection in Mass Print mode */}
+      {showCheckbox && (
+        <div className="absolute top-1.5 right-1.5 z-20 print:hidden">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => {}}
+            className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+          />
         </div>
+      )}
+
+      {/* TOP HEADER SECTION - ROYAL BLUE */}
+      <div style={{ flexShrink: 0 }}>
         <div
           style={{
-            backgroundColor: '#071a3d',
+            backgroundColor: '#1863E5',
             color: '#ffffff',
-            paddingTop: '2px',
-            paddingBottom: '4px',
-            paddingLeft: '8px',
-            paddingRight: '8px',
+            paddingTop: '8px',
+            paddingBottom: '6px',
+            paddingLeft: '12px',
+            paddingRight: '12px',
             textAlign: 'center',
           }}
         >
-          <p style={{ fontSize: '6.5px', fontWeight: 900, letterSpacing: '0.08em', color: '#ffffff', textTransform: 'uppercase', margin: 0 }}>
-            BERLAKU SELAMA MENJADI PESERTA DIDIK
+          <h2
+            style={{
+              fontSize: '11px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: '#ffffff',
+              margin: 0,
+              lineHeight: 1.15,
+            }}
+          >
+            KARTU PRESENSI SISWA
+          </h2>
+          <p
+            style={{
+              fontSize: '7.5px',
+              fontWeight: 600,
+              color: '#bfdbfe',
+              margin: '1px 0 0 0',
+              lineHeight: 1.1,
+            }}
+          >
+            {activeSchoolName}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginTop: '2px' }}>
-            <div style={{ height: '1px', width: '16px', backgroundColor: 'rgba(245, 158, 11, 0.5)' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <Star style={{ width: '6px', height: '6px', color: '#f59e0b', fill: '#f59e0b' }} />
-            <div style={{ height: '1px', width: '16px', backgroundColor: 'rgba(245, 158, 11, 0.5)' }} />
+        </div>
+
+        {/* Yellow/Gold Accent Stripe */}
+        <div style={{ height: '2.5px', backgroundColor: '#F59E0B' }} />
+      </div>
+
+      {/* MIDDLE BODY SECTION */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          flex: 1,
+          paddingLeft: '10px',
+          paddingRight: '10px',
+          paddingTop: '6px',
+          paddingBottom: '4px',
+        }}
+      >
+        {/* QR CODE CONTAINER CARD */}
+        <div
+          style={{
+            width: '100%',
+            backgroundColor: '#ffffff',
+            border: '1.5px solid #bfdbfe',
+            borderRadius: '14px',
+            padding: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 5px rgba(24, 99, 229, 0.05)',
+            marginBottom: '6px',
+          }}
+        >
+          <div style={{ lineHeight: 0 }}>
+            <QRCodeSVG
+              value={computedQr}
+              size={84}
+              level="M"
+              includeMargin={false}
+              fgColor="#0f172a"
+              bgColor="#ffffff"
+            />
           </div>
+
+          {/* Under QR Pill: NISN · NAMA SISWA */}
+          <div
+            style={{
+              marginTop: '5px',
+              padding: '2px 8px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              fontSize: '7px',
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              color: '#1e293b',
+              textAlign: 'center',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {cleanNisn} · {cleanNama}
+          </div>
+        </div>
+
+        {/* KETENTUAN PENGGUNAAN KARTU BOX */}
+        <div
+          style={{
+            width: '100%',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '5px 7px',
+            textAlign: 'left',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            marginBottom: '4px',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '6.5px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              color: '#0f172a',
+              letterSpacing: '0.04em',
+              margin: '0 0 2.5px 0',
+            }}
+          >
+            KETENTUAN PENGGUNAAN KARTU:
+          </p>
+          <ol
+            style={{
+              margin: 0,
+              paddingLeft: '10px',
+              fontSize: '5.8px',
+              fontWeight: 500,
+              color: '#475569',
+              lineHeight: 1.25,
+            }}
+          >
+            <li style={{ marginBottom: '1.5px' }}>
+              Kartu ini wajib dibawa setiap hari sekolah untuk presensi masuk &amp; pulang.
+            </li>
+            <li style={{ marginBottom: '1.5px' }}>
+              Dilarang meminjamkan kartu kepada orang lain.
+            </li>
+            <li>
+              Jika menemukan kartu ini, mohon kembalikan ke pihak sekolah.
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      {/* FOOTER SECTION: CIRCULAR STAMP & HEADMASTER SIGNATURE */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          paddingLeft: '12px',
+          paddingRight: '12px',
+          paddingBottom: '8px',
+          paddingTop: '2px',
+          flexShrink: 0,
+        }}
+      >
+        {/* Left: Official Circular Stamp Watermark */}
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            border: '1.5px dashed rgba(37, 99, 235, 0.75)',
+            backgroundColor: 'rgba(239, 246, 255, 0.4)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: 'rotate(-10deg)',
+            flexShrink: 0,
+            userSelect: 'none',
+          }}
+        >
+          <span style={{ fontSize: '5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
+            STEMPEL
+          </span>
+          <span style={{ fontSize: '5.5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1.1 }}>
+            RESMI
+          </span>
+          <span style={{ fontSize: '4.5px', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
+            SMAN 15
+          </span>
+        </div>
+
+        {/* Right: Headmaster Signature & NIP */}
+        <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+          <p style={{ fontSize: '6px', fontWeight: 500, color: '#64748b', margin: 0 }}>
+            Ambon, {dateStr}
+          </p>
+          <p style={{ fontSize: '6.5px', fontWeight: 700, color: '#334155', margin: '0.5px 0' }}>
+            Kepala Sekolah,
+          </p>
+          {/* Signature Vertical Spacing */}
+          <div style={{ height: '16px' }} />
+          <p
+            style={{
+              fontSize: '7px',
+              fontWeight: 800,
+              color: '#0f172a',
+              margin: 0,
+              textDecoration: 'underline',
+              lineHeight: 1.15,
+            }}
+          >
+            {activeHeadmasterName}
+          </p>
+          <p
+            style={{
+              fontSize: '5.5px',
+              fontFamily: 'monospace',
+              fontWeight: 600,
+              color: '#64748b',
+              margin: '0.5px 0 0 0',
+            }}
+          >
+            NIP. {activeHeadmasterNIP}
+          </p>
         </div>
       </div>
     </div>

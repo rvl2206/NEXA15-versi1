@@ -22,7 +22,6 @@ import { StudentDeleteConfirmModal } from './StudentDeleteConfirmModal';
 import { StudentRfidBindModal } from './StudentRfidBindModal';
 import { StudentQrPrintModal } from './StudentQrPrintModal';
 import { StudentClearAllModal } from './StudentClearAllModal';
-import { OfficialStudentIDCardFront, OfficialStudentIDCardBack } from './OfficialStudentIDCard';
 import {
   Users,
   Search,
