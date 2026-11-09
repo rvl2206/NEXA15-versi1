@@ -354,6 +354,27 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     </div>
                   )}
 
+                  {/* Realtime & Storage Bucket Live Status Indicator (OPSI A & B) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div className="flex items-center gap-2 p-2.5 bg-white/5 border border-white/10 rounded-xl text-xs">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${store.getRealtimeStatus() ? 'bg-emerald-400 animate-pulse ring-2 ring-emerald-400/30' : 'bg-slate-500'}`} />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-white block truncate">Supabase Realtime (Opsi A)</span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {store.getRealtimeStatus() ? 'WebSocket Terhubung (< 1 detik)' : 'Aktif mendengarkan perubahan tabel'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-2.5 bg-white/5 border border-white/10 rounded-xl text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0 ring-2 ring-blue-400/30" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-white block truncate">Storage: nexa-photos (Opsi B)</span>
+                        <span className="text-[10px] text-slate-400 block truncate">Bucket Foto Profil Siswa & Guru Aktif</span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Auto Sync Toggle & Sync Actions */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3.5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-3">

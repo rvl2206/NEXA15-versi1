@@ -49,7 +49,12 @@ import {
   Eye,
   Radio,
   Archive,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
+import { uploadProfilePhotoToSupabase } from '../lib/supabase';
 
 interface TeacherManagementProps {
   userRole?: UserRole;
@@ -192,6 +197,37 @@ const TeacherTableRow = React.memo(({
   return prev.teacher === next.teacher && prev.isSelected === next.isSelected && prev.index === next.index;
 });
 
+function compressImageFile(file: File, maxWidth = 800, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole = 'Admin' }) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -230,8 +266,50 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
     no_hp: '',
     rfid_uid: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
+    foto: '',
   });
   const [formError, setFormError] = useState('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('File Tidak Valid', 'Silakan pilih file gambar (JPG, PNG, WEBP).');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const compressedBlob = await compressImageFile(file, 800, 0.85);
+      const nipIdentifier = formData.nip.trim() || `guru_${Date.now()}`;
+      const uploadRes = await uploadProfilePhotoToSupabase(
+        compressedBlob,
+        'guru',
+        nipIdentifier,
+        store.getSupabaseConfig()
+      );
+
+      if (uploadRes.success && uploadRes.publicUrl) {
+        setFormData((prev) => ({ ...prev, foto: uploadRes.publicUrl }));
+        toast.success('Foto Terunggah', 'Foto profil guru tersimpan di Cloud Storage.');
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData((prev) => ({ ...prev, foto: reader.result as string }));
+          toast.info('Foto Disimpan Lokal', 'Foto disimpan lokal (Supabase Storage offline).');
+        };
+        reader.readAsDataURL(compressedBlob);
+      }
+    } catch (err: any) {
+      toast.error('Gagal Mengunggah', err?.message || 'Terjadi kesalahan saat memproses foto.');
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
 
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -321,6 +399,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       no_hp: '',
       rfid_uid: '',
       status: 'aktif',
+      foto: '',
     });
     setFormError('');
     setShowAddModal(true);
@@ -336,6 +415,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       no_hp: teacher.no_hp || '',
       rfid_uid: teacher.rfid_uid || '',
       status: teacher.status || 'aktif',
+      foto: teacher.foto || '',
     });
     setFormError('');
     setShowEditModal(true);
@@ -379,6 +459,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       wali_kelas: formData.wali_kelas.trim() || undefined,
       no_hp: formData.no_hp.trim() || undefined,
       rfid_uid: cleanRfid || undefined,
+      foto: formData.foto || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -428,6 +509,7 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
       wali_kelas: formData.wali_kelas.trim() || undefined,
       no_hp: formData.no_hp.trim() || undefined,
       rfid_uid: cleanRfid || undefined,
+      foto: formData.foto || undefined,
       status: formData.status,
       id_qr: `69933068.${cleanNip}`,
     });
@@ -1050,6 +1132,85 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-sky-500" />
+                    Foto Profil Guru
+                  </span>
+                  {formData.foto && formData.foto.startsWith('http') && (
+                    <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Cloud Storage
+                    </span>
+                  )}
+                </label>
+
+                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-800 border border-white/10 shrink-0 flex items-center justify-center">
+                    {formData.foto ? (
+                      <img
+                        src={formData.foto}
+                        alt={formData.nama || 'Guru'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '';
+                        }}
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-500" />
+                    )}
+                    {isUploadingPhoto && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        disabled={isUploadingPhoto}
+                        onClick={() => photoInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{isUploadingPhoto ? 'Mengunggah...' : 'Pilih Foto'}</span>
+                      </button>
+
+                      {formData.foto && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, foto: '' })}
+                          className="px-2.5 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.foto || ''}
+                      onChange={(e) => setFormData({ ...formData, foto: e.target.value })}
+                      placeholder="Atau tempel URL gambar (https://...)"
+                      className="w-full px-2.5 py-1 text-[11px] border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-1 focus:ring-sky-600 placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Foto akan dikompresi otomatis dan disimpan di Supabase Storage Bucket ('nexa-photos').
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Status Guru
                 </label>
@@ -1208,6 +1369,85 @@ export const TeacherManagement: React.FC<TeacherManagementProps> = ({ userRole =
                 </div>
                 <p className="text-[10px] text-sky-700/80 dark:text-sky-400/80 mt-1">
                   💡 <strong>Tip:</strong> Tap kartu RFID guru pada reader USB untuk memperbarui nomor kartu.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-sky-500" />
+                    Foto Profil Guru
+                  </span>
+                  {formData.foto && formData.foto.startsWith('http') && (
+                    <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Cloud Storage
+                    </span>
+                  )}
+                </label>
+
+                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-800 border border-white/10 shrink-0 flex items-center justify-center">
+                    {formData.foto ? (
+                      <img
+                        src={formData.foto}
+                        alt={formData.nama || 'Guru'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '';
+                        }}
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-500" />
+                    )}
+                    {isUploadingPhoto && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        disabled={isUploadingPhoto}
+                        onClick={() => photoInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{isUploadingPhoto ? 'Mengunggah...' : 'Pilih Foto'}</span>
+                      </button>
+
+                      {formData.foto && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, foto: '' })}
+                          className="px-2.5 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.foto || ''}
+                      onChange={(e) => setFormData({ ...formData, foto: e.target.value })}
+                      placeholder="Atau tempel URL gambar (https://...)"
+                      className="w-full px-2.5 py-1 text-[11px] border border-white/10 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-1 focus:ring-sky-600 placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Foto akan dikompresi otomatis dan disimpan di Supabase Storage Bucket ('nexa-photos').
                 </p>
               </div>
 

@@ -1180,6 +1180,264 @@ export async function sendPasswordResetLink(
   }
 }
 
+// ==============================================================================
+// 1. SUPABASE REALTIME SUBSCRIPTION (OPSI A: Postgres Changes Listener)
+// ==============================================================================
+
+export interface RealtimeHandlers {
+  onAttendanceInsert?: (record: AttendanceRecord) => void;
+  onAttendanceUpdate?: (record: AttendanceRecord) => void;
+  onAttendanceDelete?: (id: string) => void;
+  onTeacherAttendanceInsert?: (record: TeacherAttendanceRecord) => void;
+  onTeacherAttendanceUpdate?: (record: TeacherAttendanceRecord) => void;
+  onTeacherAttendanceDelete?: (id: string) => void;
+  onStatusChange?: (status: string) => void;
+}
+
+/**
+ * Mendengarkan perubahan data presensi siswa dan guru secara real-time via WebSocket Supabase.
+ * Mengupdate layar monitor piket / dashboard pimpinan secara instan (< 1 detik).
+ */
+export function subscribeToSupabaseRealtime(
+  handlers: RealtimeHandlers,
+  customConfig?: SupabaseConfig
+): () => void {
+  const client = getSupabaseClient(customConfig);
+  if (!client) return () => {};
+
+  const channel = client
+    .channel('nexa_realtime_presence')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'attendance' },
+      (payload) => {
+        if (payload.new && handlers.onAttendanceInsert) {
+          const row = payload.new as any;
+          handlers.onAttendanceInsert({
+            id: row.id,
+            tanggal: row.tanggal,
+            timestamp: row.timestamp,
+            nisn: row.nisn || '',
+            nama: row.nama || '',
+            kelas: row.kelas || '',
+            id_qr: row.id_qr || '',
+            rfid_uid: row.rfid_uid || undefined,
+            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
+            jenis: row.jenis || 'Masuk',
+            status: row.status || 'Hadir',
+            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
+            petugas: row.petugas || 'Sistem',
+            catatan: row.catatan || '',
+          });
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'attendance' },
+      (payload) => {
+        if (payload.new && handlers.onAttendanceUpdate) {
+          const row = payload.new as any;
+          handlers.onAttendanceUpdate({
+            id: row.id,
+            tanggal: row.tanggal,
+            timestamp: row.timestamp,
+            nisn: row.nisn || '',
+            nama: row.nama || '',
+            kelas: row.kelas || '',
+            id_qr: row.id_qr || '',
+            rfid_uid: row.rfid_uid || undefined,
+            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
+            jenis: row.jenis || 'Masuk',
+            status: row.status || 'Hadir',
+            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
+            petugas: row.petugas || 'Sistem',
+            catatan: row.catatan || '',
+          });
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'attendance' },
+      (payload) => {
+        if (payload.old && (payload.old as any).id && handlers.onAttendanceDelete) {
+          handlers.onAttendanceDelete((payload.old as any).id);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'teacher_attendance' },
+      (payload) => {
+        if (payload.new && handlers.onTeacherAttendanceInsert) {
+          const row = payload.new as any;
+          handlers.onTeacherAttendanceInsert({
+            id: row.id,
+            tanggal: row.tanggal,
+            timestamp: row.timestamp,
+            nip: row.nip || '',
+            nama: row.nama || '',
+            jabatan: row.jabatan || '',
+            id_qr: row.id_qr || '',
+            rfid_uid: row.rfid_uid || undefined,
+            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
+            jenis: row.jenis || 'Masuk',
+            status: row.status || 'Hadir',
+            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
+            petugas: row.petugas || 'Sistem',
+            catatan: row.catatan || '',
+          });
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'teacher_attendance' },
+      (payload) => {
+        if (payload.new && handlers.onTeacherAttendanceUpdate) {
+          const row = payload.new as any;
+          handlers.onTeacherAttendanceUpdate({
+            id: row.id,
+            tanggal: row.tanggal,
+            timestamp: row.timestamp,
+            nip: row.nip || '',
+            nama: row.nama || '',
+            jabatan: row.jabatan || '',
+            id_qr: row.id_qr || '',
+            rfid_uid: row.rfid_uid || undefined,
+            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
+            jenis: row.jenis || 'Masuk',
+            status: row.status || 'Hadir',
+            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
+            petugas: row.petugas || 'Sistem',
+            catatan: row.catatan || '',
+          });
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'teacher_attendance' },
+      (payload) => {
+        if (payload.old && (payload.old as any).id && handlers.onTeacherAttendanceDelete) {
+          handlers.onTeacherAttendanceDelete((payload.old as any).id);
+        }
+      }
+    )
+    .subscribe((status) => {
+      if (handlers.onStatusChange) {
+        handlers.onStatusChange(status);
+      }
+    });
+
+  return () => {
+    try {
+      client.removeChannel(channel);
+    } catch {}
+  };
+}
+
+// ==============================================================================
+// 2. SUPABASE STORAGE BUCKET (OPSI B: Foto Profil Siswa & Guru)
+// ==============================================================================
+
+/**
+ * Mengonversi data URL base64 menjadi Blob secara aman dan hemat memori
+ */
+export function base64DataUrlToBlob(dataUrl: string): { blob: Blob; contentType: string; extension: string } {
+  const parts = dataUrl.split(';base64,');
+  const contentType = (parts[0].split(':')[1] || 'image/jpeg').trim();
+  const extension = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+  
+  const byteCharacters = atob(parts[1]);
+  const byteArrays = [];
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    byteArrays.push(new Uint8Array(byteNumbers));
+  }
+  return {
+    blob: new Blob(byteArrays, { type: contentType }),
+    contentType,
+    extension,
+  };
+}
+
+/**
+ * Mengunggah berkas foto profil Siswa atau Guru ke Supabase Storage Bucket ('nexa-photos').
+ * Mengembalikan public URL permanen yang dapat langsung digunakan pada tag <img>.
+ */
+export async function uploadProfilePhotoToSupabase(
+  fileOrBase64: File | Blob | string,
+  entityType: 'siswa' | 'guru',
+  identifier: string,
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+
+  try {
+    let fileBlob: Blob;
+    let extension = 'jpg';
+    let contentType = 'image/jpeg';
+
+    if (typeof fileOrBase64 === 'string') {
+      if (fileOrBase64.startsWith('data:')) {
+        const converted = base64DataUrlToBlob(fileOrBase64);
+        fileBlob = converted.blob;
+        extension = converted.extension;
+        contentType = converted.contentType;
+      } else if (fileOrBase64.startsWith('http://') || fileOrBase64.startsWith('https://')) {
+        // Sudah berupa URL eksternal atau URL Supabase
+        return { success: true, publicUrl: fileOrBase64 };
+      } else {
+        return { success: false, error: 'Format foto tidak valid.' };
+      }
+    } else if (fileOrBase64 instanceof File) {
+      fileBlob = fileOrBase64;
+      contentType = fileOrBase64.type || 'image/jpeg';
+      const nameParts = fileOrBase64.name.split('.');
+      if (nameParts.length > 1) {
+        extension = nameParts[nameParts.length - 1].toLowerCase();
+      }
+    } else {
+      fileBlob = fileOrBase64;
+      contentType = fileOrBase64.type || 'image/jpeg';
+    }
+
+    const cleanId = (identifier || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = `${entityType}/${cleanId}_${Date.now()}.${extension}`;
+
+    const { data, error } = await client.storage
+      .from('nexa-photos')
+      .upload(filePath, fileBlob, {
+        contentType,
+        upsert: true,
+      });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const { data: urlData } = client.storage.from('nexa-photos').getPublicUrl(data.path);
+    return {
+      success: true,
+      publicUrl: urlData.publicUrl,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Gagal mengunggah foto profil ke Supabase Storage.',
+    };
+  }
+}
+
 // SQL schema generator
 
 export function getSupabaseTeacherOnlySchemaSQL(): string {
@@ -1494,6 +1752,39 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'problematic_student_dispatches' AND policyname = 'Allow all dispatches') THEN
         CREATE POLICY "Allow all dispatches" ON public.problematic_student_dispatches FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- 10. STORAGE BUCKET UNTUK FOTO PROFIL SISWA & GURU (nexa-photos)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('nexa-photos', 'nexa-photos', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Public Access NEXA Photos') THEN
+        CREATE POLICY "Public Access NEXA Photos" ON storage.objects FOR SELECT USING (bucket_id = 'nexa-photos');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Allow Upload NEXA Photos') THEN
+        CREATE POLICY "Allow Upload NEXA Photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'nexa-photos');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Allow Update NEXA Photos') THEN
+        CREATE POLICY "Allow Update NEXA Photos" ON storage.objects FOR UPDATE USING (bucket_id = 'nexa-photos');
+    END IF;
+END $$;
+
+-- 11. PUBLIKASI REALTIME (Untuk Sinkronisasi Seketika < 1 Detik Lintas Perangkat)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        BEGIN
+            ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END;
+        BEGIN
+            ALTER PUBLICATION supabase_realtime ADD TABLE public.teacher_attendance;
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END;
     END IF;
 END $$;
 `;

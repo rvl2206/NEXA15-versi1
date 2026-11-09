@@ -63,6 +63,8 @@ import {
   saveTeacherAttendanceToSupabase,
   saveMultipleTeacherAttendanceToSupabase,
   saveLogToSupabase,
+  subscribeToSupabaseRealtime,
+  uploadProfilePhotoToSupabase,
 } from './supabase';
 
 import { formatPetugasRole } from './exportUtils';
@@ -186,6 +188,8 @@ class AppStore {
   private listeners: Array<() => void> = [];
   public syncQueue: SyncQueueItem[] = [];
   private isSyncingQueue = false;
+  private realtimeUnsubscribe: (() => void) | null = null;
+  private isRealtimeConnected = false;
 
   constructor() {
     this.init();
@@ -384,6 +388,8 @@ class AppStore {
     if (this.syncQueue.length > 0) {
       this.processPendingSyncQueue();
     }
+    // Aktifkan listener WebSocket Supabase Realtime (Opsi A)
+    this.initRealtimeSubscription();
   }
 
   /**
@@ -855,12 +861,148 @@ class AppStore {
   }
 
   public updateSettings(newSettings: Partial<SchoolSettings>) {
+    const supabaseChanged =
+      (newSettings.supabaseUrl !== undefined && newSettings.supabaseUrl !== this.settings.supabaseUrl) ||
+      (newSettings.supabaseKey !== undefined && newSettings.supabaseKey !== this.settings.supabaseKey);
+
     this.settings = { ...this.settings, ...newSettings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
     this.notify();
     saveSettingsToSupabase(this.settings, this.getSupabaseConfig()).catch((err) => {
       console.warn('Supabase settings update error:', err);
     });
+
+    if (supabaseChanged) {
+      this.initRealtimeSubscription();
+    }
+  }
+
+  // ==============================================================================
+  // REALTIME WEBSOCKET SUBSCRIPTION (OPSI A)
+  // ==============================================================================
+
+  public getRealtimeStatus(): boolean {
+    return this.isRealtimeConnected;
+  }
+
+  public initRealtimeSubscription(): void {
+    if (this.realtimeUnsubscribe) {
+      this.realtimeUnsubscribe();
+      this.realtimeUnsubscribe = null;
+    }
+
+    const config = this.getSupabaseConfig();
+    if (!isSupabaseConfigured(config)) {
+      this.isRealtimeConnected = false;
+      return;
+    }
+
+    try {
+      this.realtimeUnsubscribe = subscribeToSupabaseRealtime(
+        {
+          onAttendanceInsert: (record) => {
+            const exists = this.attendance.some((a) => a.id === record.id);
+            if (!exists) {
+              this.attendance = [record, ...this.attendance];
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onAttendanceUpdate: (record) => {
+            const idx = this.attendance.findIndex((a) => a.id === record.id);
+            if (idx !== -1) {
+              this.attendance[idx] = { ...this.attendance[idx], ...record };
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onAttendanceDelete: (id) => {
+            const before = this.attendance.length;
+            this.attendance = this.attendance.filter((a) => a.id !== id);
+            if (this.attendance.length !== before) {
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onTeacherAttendanceInsert: (record) => {
+            const exists = this.teacherAttendance.some((ta) => ta.id === record.id);
+            if (!exists) {
+              this.teacherAttendance = [record, ...this.teacherAttendance];
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onTeacherAttendanceUpdate: (record) => {
+            const idx = this.teacherAttendance.findIndex((ta) => ta.id === record.id);
+            if (idx !== -1) {
+              this.teacherAttendance[idx] = { ...this.teacherAttendance[idx], ...record };
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onTeacherAttendanceDelete: (id) => {
+            const before = this.teacherAttendance.length;
+            this.teacherAttendance = this.teacherAttendance.filter((ta) => ta.id !== id);
+            if (this.teacherAttendance.length !== before) {
+              this.saveLocalData();
+              this.notify();
+            }
+          },
+          onStatusChange: (status) => {
+            this.isRealtimeConnected = status === 'SUBSCRIBED';
+            this.notify();
+          },
+        },
+        config
+      );
+    } catch (err) {
+      console.warn('Gagal menginisialisasi listener realtime Supabase:', err);
+      this.isRealtimeConnected = false;
+    }
+  }
+
+  public stopRealtimeSubscription(): void {
+    if (this.realtimeUnsubscribe) {
+      this.realtimeUnsubscribe();
+      this.realtimeUnsubscribe = null;
+    }
+    this.isRealtimeConnected = false;
+  }
+
+  // ==============================================================================
+  // STORAGE BUCKET FOTO PROFIL (OPSI B)
+  // ==============================================================================
+
+  public async uploadStudentPhoto(studentId: string, fileOrBase64: File | Blob | string): Promise<{ success: boolean; url?: string; error?: string }> {
+    const student = this.getStudentById(studentId);
+    if (!student) {
+      return { success: false, error: 'Siswa tidak ditemukan.' };
+    }
+    const res = await uploadProfilePhotoToSupabase(fileOrBase64, 'siswa', student.nisn, this.getSupabaseConfig());
+    if (res.success && res.publicUrl) {
+      student.foto = res.publicUrl;
+      this.enqueueSync({ id: student.id, type: 'student', action: 'upsert', data: student });
+      this.saveLocalData(true);
+      this.notify();
+      return { success: true, url: res.publicUrl };
+    }
+    return { success: false, error: res.error || 'Gagal mengunggah foto profil siswa.' };
+  }
+
+  public async uploadTeacherPhoto(teacherId: string, fileOrBase64: File | Blob | string): Promise<{ success: boolean; url?: string; error?: string }> {
+    const teacher = this.getTeacherById(teacherId);
+    if (!teacher) {
+      return { success: false, error: 'Guru tidak ditemukan.' };
+    }
+    const res = await uploadProfilePhotoToSupabase(fileOrBase64, 'guru', teacher.nip, this.getSupabaseConfig());
+    if (res.success && res.publicUrl) {
+      teacher.foto = res.publicUrl;
+      this.enqueueSync({ id: teacher.id, type: 'teacher', action: 'upsert', data: teacher });
+      this.saveLocalData(true);
+      this.notify();
+      return { success: true, url: res.publicUrl };
+    }
+    return { success: false, error: res.error || 'Gagal mengunggah foto profil guru.' };
   }
 
   public getHolidays(): Holiday[] {
