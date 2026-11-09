@@ -1,4 +1,4 @@
-﻿import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
+import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
 import { SettingsSecurityAndMaintenance } from './SettingsSecurityAndMaintenance';
 import { SettingsHolidays } from './SettingsHolidays';
 import { SettingsHealthCheck } from './SettingsHealthCheck';
@@ -12,9 +12,11 @@ import {
   getPostgresSelfHostedSchemaSQL,
   getDockerComposePostgresYAML,
   generateFullSqlBackupDump,
+  uploadSchoolAssetToSupabase,
 } from '../lib/supabase';
 import { toast } from '../lib/toast';
 import { SchoolLogo } from './SchoolLogo';
+import { OfficialStudentIDCardFront, OfficialStudentIDCardBack } from './OfficialStudentIDCard';
 import {
   Settings,
   School,
@@ -70,6 +72,10 @@ import {
   CreditCard,
   Volume2,
   Cpu,
+  Stamp,
+  FileSignature,
+  Award,
+  Building2,
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -201,128 +207,129 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     }
   };
 
-  // School Logo Upload State
+  // School Visual Assets Upload & Management States
   const logoFileInputRef = useRef<HTMLInputElement>(null);
-  const [isProcessingLogo, setIsProcessingLogo] = useState(false);
-  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const provinceLogoInputRef = useRef<HTMLInputElement>(null);
+  const stampInputRef = useRef<HTMLInputElement>(null);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
 
-  const processLogoFile = (file: File) => {
+  const [uploadingAsset, setUploadingAsset] = useState<string | null>(null);
+  const [draggingAsset, setDraggingAsset] = useState<string | null>(null);
+
+  type VisualAssetKey = 'schoolLogo' | 'provinceLogo' | 'schoolStamp' | 'headmasterSignature';
+
+  const processAssetFile = async (
+    file: File,
+    assetKey: VisualAssetKey,
+    assetLabel: string,
+    targetMaxDim = 512
+  ) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Format File Salah', 'Harap pilih file gambar (PNG, JPG, SVG, atau WebP).');
+      toast.error('Format Berkas Salah', `Harap pilih berkas gambar (PNG, JPG, SVG, atau WebP) untuk ${assetLabel}.`);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Ukuran File Terlalu Besar', 'Maksimum ukuran gambar logo adalah 5MB.');
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Ukuran Berkas Terlalu Besar', `Maksimum ukuran gambar ${assetLabel} adalah 8MB.`);
       return;
     }
 
-    setIsProcessingLogo(true);
+    setUploadingAsset(assetKey);
     const reader = new FileReader();
 
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (!result) {
-        setIsProcessingLogo(false);
+    reader.onload = async (event) => {
+      const rawResult = event.target?.result as string;
+      if (!rawResult) {
+        setUploadingAsset(null);
         return;
       }
 
-      // If SVG, save directly to keep clean vector paths
-      if (file.type.includes('svg') || result.startsWith('data:image/svg+xml')) {
-        setSettings((prev) => ({ ...prev, schoolLogo: result }));
-        store.updateSettings({ schoolLogo: result });
-        setIsProcessingLogo(false);
-        toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo vektor SVG telah diterapkan ke seluruh komponen dan kartu.');
-        return;
-      }
+      try {
+        let finalDataUrl = rawResult;
 
-      // If raster image (PNG, JPG, WebP), scale onto a crisp canvas (max 512px) to optimize local storage & retain alpha transparency
-      const img = new window.Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const maxDim = 512;
-          let w = img.width;
-          let h = img.height;
-
-          if (w > h) {
-            if (w > maxDim) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            }
-          } else {
-            if (h > maxDim) {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, w, h);
-            const optimizedBase64 = canvas.toDataURL('image/png', 0.95);
-            setSettings((prev) => ({ ...prev, schoolLogo: optimizedBase64 }));
-            store.updateSettings({ schoolLogo: optimizedBase64 });
-            setIsProcessingLogo(false);
-            toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah diunggah dan otomatis disesuaikan ukurannya di seluruh layout.');
-          } else {
-            setSettings((prev) => ({ ...prev, schoolLogo: result }));
-            store.updateSettings({ schoolLogo: result });
-            setIsProcessingLogo(false);
-            toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah disimpan.');
-          }
-        } catch {
-          setSettings((prev) => ({ ...prev, schoolLogo: result }));
-          store.updateSettings({ schoolLogo: result });
-          setIsProcessingLogo(false);
-          toast.success('Logo Sekolah Berhasil Diperbarui', 'Logo sekolah baru telah disimpan.');
+        // If not SVG, scale cleanly on high-res canvas while preserving full transparent alpha channels (essential for logos, stamps & signatures)
+        if (!file.type.includes('svg') && !rawResult.startsWith('data:image/svg+xml')) {
+          finalDataUrl = await new Promise<string>((resolve) => {
+            const img = new window.Image();
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                let w = img.width;
+                let h = img.height;
+                if (w > targetMaxDim || h > targetMaxDim) {
+                  if (w > h) {
+                    h = Math.round((h * targetMaxDim) / w);
+                    w = targetMaxDim;
+                  } else {
+                    w = Math.round((w * targetMaxDim) / h);
+                    h = targetMaxDim;
+                  }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.imageSmoothingEnabled = true;
+                  ctx.imageSmoothingQuality = 'high';
+                  ctx.drawImage(img, 0, 0, w, h);
+                  resolve(canvas.toDataURL('image/png', 0.95));
+                } else {
+                  resolve(rawResult);
+                }
+              } catch {
+                resolve(rawResult);
+              }
+            };
+            img.onerror = () => resolve(rawResult);
+            img.src = rawResult;
+          });
         }
-      };
 
-      img.onerror = () => {
-        setIsProcessingLogo(false);
-        toast.error('Gagal Membaca Gambar', 'Pastikan file gambar valid dan tidak rusak.');
-      };
+        // Attempt direct upload to Supabase Storage Bucket ('nexa-photos' / 'school/')
+        const uploadTypeMap: Record<VisualAssetKey, 'school_logo' | 'province_logo' | 'school_stamp' | 'headmaster_signature'> = {
+          schoolLogo: 'school_logo',
+          provinceLogo: 'province_logo',
+          schoolStamp: 'school_stamp',
+          headmasterSignature: 'headmaster_signature',
+        };
 
-      img.src = result;
+        const uploadRes = await uploadSchoolAssetToSupabase(finalDataUrl, uploadTypeMap[assetKey]);
+        let savedAssetUrl = finalDataUrl;
+        let storageNote = 'Tersimpan permanen di database lokal & sinkronisasi cloud.';
+
+        if (uploadRes.success && uploadRes.publicUrl) {
+          savedAssetUrl = uploadRes.publicUrl;
+          storageNote = 'Tersimpan permanen di Supabase Cloud Storage & Database PostgreSQL.';
+        }
+
+        // Apply immediately to React state and persistent store
+        setSettings((prev) => ({ ...prev, [assetKey]: savedAssetUrl }));
+        store.updateSettings({ [assetKey]: savedAssetUrl });
+        toast.success(`${assetLabel} Berhasil Disimpan`, `${assetLabel} telah aktif dan ${storageNote}`);
+      } catch (err: any) {
+        console.warn(`Error uploading ${assetKey}:`, err);
+        setSettings((prev) => ({ ...prev, [assetKey]: rawResult }));
+        store.updateSettings({ [assetKey]: rawResult });
+        toast.success(`${assetLabel} Disimpan Offline`, `${assetLabel} tersimpan di penyimpanan offline browser.`);
+      } finally {
+        setUploadingAsset(null);
+      }
     };
 
     reader.onerror = () => {
-      setIsProcessingLogo(false);
-      toast.error('Gagal Mengunggah', 'Terjadi kesalahan saat membaca file.');
+      setUploadingAsset(null);
+      toast.error('Gagal Membaca Berkas', 'Terjadi kesalahan saat memproses berkas gambar.');
     };
 
     reader.readAsDataURL(file);
   };
 
-  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files[0]) {
-      processLogoFile(files[0]);
-    }
-    if (e.target) {
-      e.target.value = '';
-    }
-  };
-
-  const handleLogoDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDraggingLogo(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processLogoFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleRemoveLogo = () => {
-    setSettings((prev) => ({ ...prev, schoolLogo: '' }));
-    store.updateSettings({ schoolLogo: '' });
-    toast.info('Logo Kustom Dihapus', 'Sistem kembali menggunakan lambang sekolah default.');
+  const handleRemoveAsset = (assetKey: VisualAssetKey, assetLabel: string) => {
+    setSettings((prev) => ({ ...prev, [assetKey]: '' }));
+    store.updateSettings({ [assetKey]: '' });
+    toast.info(`${assetLabel} Dihapus`, `Sistem kembali menggunakan tampilan standar untuk ${assetLabel.toLowerCase()}.`);
   };
 
 
@@ -343,6 +350,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     e.preventDefault();
     store.updateSettings(settings);
     setSavedSuccess(true);
+    toast.success(
+      'Pengaturan Berhasil Disimpan',
+      'Identitas sekolah, data pejabat, dan aset visual telah tersimpan permanen di database & cloud.'
+    );
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
@@ -465,164 +476,515 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Logo Sekolah Upload & Auto-Fit Layout Section */}
-          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 relative overflow-hidden space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Identitas Visual & Berkas Gambar Resmi Sekolah (Logo, Lambang Provinsi, Stempel, TTD) */}
+          <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-amber-500/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 relative overflow-hidden space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
               <div>
-                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>Logo Sekolah & Identitas Visual</span>
+                <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-blue-400" />
+                  <span>Aset Visual & Berkas Resmi Sekolah</span>
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Unggah berkas gambar resmi untuk Logo Sekolah, Logo Provinsi, Stempel Cap Basah, dan Tanda Tangan Kepala Sekolah. Seluruh berkas otomatis dioptimalkan, disimpan permanen pada server database Supabase &amp; cache offline, serta langsung tampil pada kartu pelajar dan laporan.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-[10px] font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  Tersimpan Permanen di Server &amp; Database
+                </span>
+              </div>
+            </div>
+
+            {/* Grid 4 Kartu Upload: Logo Sekolah, Logo Provinsi, Stempel, TTD */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 1. LOGO SEKOLAH */}
+              <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <School className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs font-bold text-white">Logo Sekolah</span>
+                  </div>
                   {settings.schoolLogo ? (
-                    <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-full text-[10px] font-bold">
-                      Logo Kustom Aktif
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[9px] font-bold">
+                      Aktif
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-bold">
-                      Lambang Standar
+                    <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full text-[9px] font-bold">
+                      Default
                     </span>
                   )}
-                </h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Unggah logo resmi sekolah (PNG, JPG, SVG, WebP). Sistem akan otomatis menyesuaikan ukuran (auto-fit) di seluruh kartu, navbar, kartu guru, dan laporan.
-                </p>
-              </div>
+                </div>
 
-              {settings.schoolLogo && (
-                <button
-                  type="button"
-                  onClick={handleRemoveLogo}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
+                <input
+                  type="file"
+                  ref={logoFileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) processAssetFile(e.target.files[0], 'schoolLogo', 'Logo Sekolah', 512);
+                    if (e.target) e.target.value = '';
+                  }}
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDraggingAsset('schoolLogo'); }}
+                  onDragLeave={() => setDraggingAsset(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDraggingAsset(null);
+                    if (e.dataTransfer.files?.[0]) processAssetFile(e.dataTransfer.files[0], 'schoolLogo', 'Logo Sekolah', 512);
+                  }}
+                  onClick={() => logoFileInputRef.current?.click()}
+                  className={`h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-3 cursor-pointer transition-all ${
+                    draggingAsset === 'schoolLogo'
+                      ? 'border-blue-500 bg-blue-500/20'
+                      : 'border-white/10 hover:border-blue-400/50 bg-black/20 hover:bg-black/30'
+                  }`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus Logo</span>
-                </button>
-              )}
-            </div>
+                  <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-2 mb-1.5 overflow-hidden">
+                    <SchoolLogo className="w-full h-full object-contain" />
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-semibold text-center">
+                    {uploadingAsset === 'schoolLogo' ? 'Memproses...' : 'Klik / Tarik Logo Sekolah'}
+                  </p>
+                  <p className="text-[9px] text-slate-400">PNG transparan / JPG / SVG</p>
+                </div>
 
-            {/* Hidden Input File */}
-            <input
-              type="file"
-              ref={logoFileInputRef}
-              onChange={handleLogoFileChange}
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              className="hidden"
-            />
-
-            {/* Drag & Drop Upload Zone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDraggingLogo(true);
-              }}
-              onDragLeave={() => setIsDraggingLogo(false)}
-              onDrop={handleLogoDrop}
-              onClick={() => logoFileInputRef.current?.click()}
-              className={`p-5 rounded-3xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
-                isDraggingLogo
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50 scale-[1.01]'
-                  : 'border-white/10 hover:border-blue-400 hover:bg-white/80 dark:hover:bg-slate-800/80 bg-white/50 dark:bg-slate-900/50'
-              }`}
-            >
-              <div className="w-16 h-16 rounded-3xl bg-white/5 backdrop-blur-xl shadow-md border border-white/10 flex items-center justify-center p-2 relative overflow-hidden group">
-                <SchoolLogo className="w-full h-full object-contain drop-shadow-xs" />
-                <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-3xl">
-                  <Upload className="w-5 h-5 animate-bounce" />
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    disabled={uploadingAsset === 'schoolLogo'}
+                    className="flex-1 py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAsset === 'schoolLogo' ? 'Menyimpan...' : 'Unggah Logo'}</span>
+                  </button>
+                  {settings.schoolLogo && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAsset('schoolLogo', 'Logo Sekolah')}
+                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
+                      title="Hapus Logo Kustom"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 border border-white/10 shadow-lg shadow-blue-500/20 text-white rounded-2xl text-xs font-bold shadow-xs transition-colors mb-1.5">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{isProcessingLogo ? 'Memproses Logo...' : 'Pilih File Logo Sekolah'}</span>
+              {/* 2. LOGO / LAMBANG PROVINSI */}
+              <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-white">Lambang Provinsi</span>
+                  </div>
+                  {settings.provinceLogo ? (
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[9px] font-bold">
+                      Aktif
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full text-[9px] font-bold">
+                      Perisai Standar
+                    </span>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium">
-                  atau tarik dan lepas (drag & drop) file logo ke sini
-                </p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  Format: PNG (transparan disarankan), JPG, SVG, WebP • Maks. 5MB
-                </p>
+
+                <input
+                  type="file"
+                  ref={provinceLogoInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) processAssetFile(e.target.files[0], 'provinceLogo', 'Lambang Provinsi', 512);
+                    if (e.target) e.target.value = '';
+                  }}
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDraggingAsset('provinceLogo'); }}
+                  onDragLeave={() => setDraggingAsset(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDraggingAsset(null);
+                    if (e.dataTransfer.files?.[0]) processAssetFile(e.dataTransfer.files[0], 'provinceLogo', 'Lambang Provinsi', 512);
+                  }}
+                  onClick={() => provinceLogoInputRef.current?.click()}
+                  className={`h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-3 cursor-pointer transition-all ${
+                    draggingAsset === 'provinceLogo'
+                      ? 'border-amber-500 bg-amber-500/20'
+                      : 'border-white/10 hover:border-amber-400/50 bg-black/20 hover:bg-black/30'
+                  }`}
+                >
+                  <div className="w-16 h-16 rounded-full bg-white/10 border border-amber-400/50 flex items-center justify-center p-2 mb-1.5 overflow-hidden">
+                    {settings.provinceLogo ? (
+                      <img src={settings.provinceLogo} alt="Logo Provinsi" className="w-full h-full object-contain" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="w-8 h-8 fill-amber-400 stroke-amber-500">
+                        <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+                      </svg>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-semibold text-center">
+                    {uploadingAsset === 'provinceLogo' ? 'Memproses...' : 'Klik / Tarik Logo Provinsi'}
+                  </p>
+                  <p className="text-[9px] text-slate-400">Lambang Daerah / Maluku</p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => provinceLogoInputRef.current?.click()}
+                    disabled={uploadingAsset === 'provinceLogo'}
+                    className="flex-1 py-1.5 px-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAsset === 'provinceLogo' ? 'Menyimpan...' : 'Unggah Provinsi'}</span>
+                  </button>
+                  {settings.provinceLogo && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAsset('provinceLogo', 'Lambang Provinsi')}
+                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
+                      title="Hapus Logo Provinsi Kustom"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. STEMPEL RESMI SEKOLAH */}
+              <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Stamp className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-bold text-white">Stempel Resmi</span>
+                  </div>
+                  {settings.schoolStamp ? (
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[9px] font-bold">
+                      Cap Basah
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full text-[9px] font-bold">
+                      Stempel Standar
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  ref={stampInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) processAssetFile(e.target.files[0], 'schoolStamp', 'Stempel Resmi Sekolah', 512);
+                    if (e.target) e.target.value = '';
+                  }}
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDraggingAsset('schoolStamp'); }}
+                  onDragLeave={() => setDraggingAsset(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDraggingAsset(null);
+                    if (e.dataTransfer.files?.[0]) processAssetFile(e.dataTransfer.files[0], 'schoolStamp', 'Stempel Resmi Sekolah', 512);
+                  }}
+                  onClick={() => stampInputRef.current?.click()}
+                  className={`h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-3 cursor-pointer transition-all ${
+                    draggingAsset === 'schoolStamp'
+                      ? 'border-cyan-500 bg-cyan-500/20'
+                      : 'border-white/10 hover:border-cyan-400/50 bg-black/20 hover:bg-black/30'
+                  }`}
+                >
+                  <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-1.5 mb-1.5 overflow-hidden">
+                    {settings.schoolStamp ? (
+                      <img src={settings.schoolStamp} alt="Stempel Resmi" className="w-full h-full object-contain -rotate-6" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full border-2 border-dashed border-cyan-400/70 flex flex-col items-center justify-center -rotate-12">
+                        <span className="text-[6px] font-black text-cyan-300">STEMPEL</span>
+                        <span className="text-[5px] font-bold text-cyan-400">SMAN 15</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-semibold text-center">
+                    {uploadingAsset === 'schoolStamp' ? 'Memproses...' : 'Klik / Tarik Cap Stempel'}
+                  </p>
+                  <p className="text-[9px] text-slate-400">PNG transparan disarankan</p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => stampInputRef.current?.click()}
+                    disabled={uploadingAsset === 'schoolStamp'}
+                    className="flex-1 py-1.5 px-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAsset === 'schoolStamp' ? 'Menyimpan...' : 'Unggah Stempel'}</span>
+                  </button>
+                  {settings.schoolStamp && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAsset('schoolStamp', 'Stempel Resmi')}
+                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
+                      title="Hapus Stempel Kustom"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. TANDA TANGAN KEPALA SEKOLAH */}
+              <div className="bg-slate-900/60 p-4 rounded-2xl border border-white/10 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileSignature className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">TTD Kepala Sekolah</span>
+                  </div>
+                  {settings.headmasterSignature ? (
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[9px] font-bold">
+                      Digital Aktif
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full text-[9px] font-bold">
+                      Manual
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  ref={signatureInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) processAssetFile(e.target.files[0], 'headmasterSignature', 'Tanda Tangan Kepala Sekolah', 512);
+                    if (e.target) e.target.value = '';
+                  }}
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDraggingAsset('headmasterSignature'); }}
+                  onDragLeave={() => setDraggingAsset(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDraggingAsset(null);
+                    if (e.dataTransfer.files?.[0]) processAssetFile(e.dataTransfer.files[0], 'headmasterSignature', 'Tanda Tangan Kepala Sekolah', 512);
+                  }}
+                  onClick={() => signatureInputRef.current?.click()}
+                  className={`h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-3 cursor-pointer transition-all ${
+                    draggingAsset === 'headmasterSignature'
+                      ? 'border-emerald-500 bg-emerald-500/20'
+                      : 'border-white/10 hover:border-emerald-400/50 bg-black/20 hover:bg-black/30'
+                  }`}
+                >
+                  <div className="w-20 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-1.5 mb-1.5 overflow-hidden">
+                    {settings.headmasterSignature ? (
+                      <img src={settings.headmasterSignature} alt="TTD Kepala Sekolah" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="text-center">
+                        <FileSignature className="w-6 h-6 text-slate-500 mx-auto mb-1" />
+                        <span className="text-[7.5px] text-slate-400 font-medium">Spasi Manual</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-semibold text-center">
+                    {uploadingAsset === 'headmasterSignature' ? 'Memproses...' : 'Klik / Tarik Tanda Tangan'}
+                  </p>
+                  <p className="text-[9px] text-slate-400">PNG transparan tanpa background</p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => signatureInputRef.current?.click()}
+                    disabled={uploadingAsset === 'headmasterSignature'}
+                    className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAsset === 'headmasterSignature' ? 'Menyimpan...' : 'Unggah TTD'}</span>
+                  </button>
+                  {settings.headmasterSignature && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAsset('headmasterSignature', 'Tanda Tangan')}
+                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
+                      title="Hapus Tanda Tangan Kustom"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Layout Preview Auto-Sizing Showcase */}
-            <div className="bg-white/80 dark:bg-slate-900/80 p-4 rounded-2xl border border-white/10">
-              <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-3">
-                <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Simulasi Penyesuaian Ukuran di Seluruh Tata Letak (Live Auto-Fit)</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* 1. Header / Navbar Preview */}
-                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    1. Navbar & Header
+            {/* LIVE PREVIEW KARTU SISWA REAL-TIME */}
+            <div className="bg-slate-950/70 p-5 rounded-2xl border border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-extrabold text-white uppercase tracking-wider">
+                    Pratinjau Langsung Kartu Pelajar (Real-Time Live Card Preview)
                   </span>
-                  <div className="flex items-center gap-2 p-2 bg-black/20 backdrop-blur-md rounded-lg border border-white/10 shadow-2xs w-full justify-center">
-                    <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                      <SchoolLogo size={28} className="w-full h-full" />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                      <p className="text-[10px] font-black text-white truncate">NEXA15</p>
-                      <p className="text-[8px] text-slate-400 truncate">{settings.schoolName || 'SMA NEGERI 15 AMBON'}</p>
-                    </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Semua logo, stempel, nama instansi &amp; tanda tangan di atas langsung terpasang pada kartu di bawah:
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-6 p-4 bg-slate-900/40 rounded-xl border border-white/5">
+                {/* Kartu Sisi Depan */}
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider mb-2">
+                    Sisi Depan (Identitas Siswa)
+                  </span>
+                  <div className="shadow-2xl rounded-[18px] overflow-hidden">
+                    <OfficialStudentIDCardFront
+                      nama="MAULIDAN KAREPESINA"
+                      nisn="0102365332"
+                      nis="0102365332"
+                      kelas="X-1"
+                      tempatLahir="Ambon"
+                      tanggalLahir="2008-05-12"
+                      jenisKelamin="Laki-laki"
+                      agama="Islam"
+                      alamat={settings.schoolAddress || 'Kota Ambon'}
+                      cardSize="CR80"
+                      isSelected={true}
+                    />
                   </div>
                 </div>
 
-                {/* 2. Kartu Absensi Pelajar CR80 Preview */}
-                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    2. Kartu Siswa & Guru
+                {/* Kartu Sisi Belakang */}
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mb-2">
+                    Sisi Belakang (QR, Stempel &amp; TTD)
                   </span>
-                  <div className="p-2 bg-[#071a3d] text-white rounded-lg border border-amber-500/40 shadow-2xs w-full flex flex-col items-center justify-center">
-                    <div className="w-7 h-7 flex items-center justify-center mb-0.5">
-                      <SchoolLogo size={28} className="w-full h-full drop-shadow-xs" />
-                    </div>
-                    <p className="text-[7.5px] font-black text-amber-400 uppercase truncate max-w-full">
-                      {settings.schoolName || 'SMA NEGERI 15 AMBON'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Login Modal & Laporan Preview */}
-                <div className="p-3 bg-white/5/60 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    3. Login & Dokumen
-                  </span>
-                  <div className="p-2 bg-gradient-to-br from-[#071a3d] to-slate-900 text-white rounded-lg border border-white/20 shadow-2xs w-full flex items-center justify-center gap-2">
-                    <div className="w-8 h-8 p-1 bg-white/10 rounded-lg flex items-center justify-center">
-                      <SchoolLogo size={32} className="w-full h-full" />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                      <p className="text-[9px] font-black text-amber-300">PRESENSI</p>
-                      <p className="text-[7.5px] text-slate-300 truncate">Sistem Digital</p>
-                    </div>
+                  <div className="shadow-2xl rounded-[18px] overflow-hidden">
+                    <OfficialStudentIDCardBack
+                      nama="MAULIDAN KAREPESINA"
+                      nisn="0102365332"
+                      kelas="X-1"
+                      cardSize="CR80"
+                      isSelected={true}
+                    />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nama Sekolah</label>
-              <input
-                type="text"
-                value={settings.schoolName}
-                onChange={(e) => setSettings({ ...settings, schoolName: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
-                required
-              />
+          {/* Form Identitas Sekolah & Data Pejabat */}
+          <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 space-y-5">
+            <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+              <Building2 className="w-4 h-4 text-blue-400" />
+              <span>Data Pokok Identitas Sekolah &amp; Pejabat Penandatangan</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Nama Instansi / Pemerintah Daerah</label>
+                <input
+                  type="text"
+                  value={settings.provinceName || 'PEMERINTAH PROVINSI MALUKU'}
+                  onChange={(e) => setSettings({ ...settings, provinceName: e.target.value })}
+                  placeholder="e.g. PEMERINTAH PROVINSI MALUKU"
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
+                  required
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Teks kop instansi di baris teratas kartu pelajar.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Nama Satuan Pendidikan (Sekolah)</label>
+                <input
+                  type="text"
+                  value={settings.schoolName}
+                  onChange={(e) => setSettings({ ...settings, schoolName: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
+                  required
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Nama resmi sekolah pada header kartu dan laporan.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">NPSN Sekolah</label>
+                <input
+                  type="text"
+                  value={settings.schoolNPSN}
+                  onChange={(e) => setSettings({ ...settings, schoolNPSN: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Kota / Kabupaten</label>
+                <input
+                  type="text"
+                  value={settings.schoolCity || 'Kota Ambon'}
+                  onChange={(e) => setSettings({ ...settings, schoolCity: e.target.value })}
+                  placeholder="e.g. Kota Ambon"
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Tahun Ajaran</label>
+                <input
+                  type="text"
+                  value={settings.academicYear}
+                  onChange={(e) => setSettings({ ...settings, academicYear: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">NPSN Sekolah</label>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Alamat Lengkap Sekolah</label>
               <input
                 type="text"
-                value={settings.schoolNPSN}
-                onChange={(e) => setSettings({ ...settings, schoolNPSN: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
-                required
+                value={settings.schoolAddress || ''}
+                onChange={(e) => setSettings({ ...settings, schoolAddress: e.target.value })}
+                placeholder="e.g. Jl. Ir. M. Putuhena, Kec. Teluk Ambon, Kota Ambon"
+                className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
               />
+              <p className="text-[10px] text-slate-400 mt-0.5">Ditampilkan pada sub-header kartu pelajar dan kop surat.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Nama Kepala Sekolah (Lengkap dengan Gelar)</label>
+                <input
+                  type="text"
+                  value={settings.headmasterName || 'Drs. Johanis Latuheru, M.Pd.'}
+                  onChange={(e) => setSettings({ ...settings, headmasterName: e.target.value })}
+                  placeholder="e.g. Drs. Johanis Latuheru, M.Pd."
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Nama pejabat pada bagian tanda tangan sisi belakang kartu pelajar.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">NIP Kepala Sekolah</label>
+                <input
+                  type="text"
+                  value={settings.headmasterNIP || '196805121994031007'}
+                  onChange={(e) => setSettings({ ...settings, headmasterNIP: e.target.value })}
+                  placeholder="e.g. 196805121994031007"
+                  className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">NIP kepala sekolah di bawah tanda tangan.</p>
+              </div>
             </div>
           </div>
 

@@ -113,6 +113,12 @@ export interface SchoolSettings {
   schoolName: string;
   schoolNPSN: string;
   schoolLogo?: string; // Base64 data URL or image URL for custom school logo
+  provinceName?: string; // e.g. "PEMERINTAH PROVINSI MALUKU"
+  provinceLogo?: string; // Base64 data URL or image URL for provincial emblem/logo
+  schoolStamp?: string; // Base64 data URL or image URL for official school stamp/seal
+  headmasterSignature?: string; // Base64 data URL or image URL for headmaster signature
+  headmasterName?: string; // e.g. "Drs. Johanis Latuheru, M.Pd."
+  headmasterNIP?: string; // e.g. "196805121994031007"
   schoolAddress?: string;
   schoolCity?: string;
   cutoffTime: string; // e.g. "07:15"

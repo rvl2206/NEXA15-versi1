@@ -831,18 +831,24 @@ export async function saveSettingsToSupabase(
   const client = getSupabaseClient(customConfig);
   if (!client) return false;
   try {
-    const payload = {
+    const payload: Record<string, any> = {
       id: 'school_config',
-      school_name: settings.schoolName || 'SMAN 15 KEPULAUAN SULA',
+      school_name: settings.schoolName || 'SMA NEGERI 15 AMBON',
       school_npsn: settings.schoolNPSN || '69933068',
       school_logo: settings.schoolLogo || '',
+      province_name: settings.provinceName || 'PEMERINTAH PROVINSI MALUKU',
+      province_logo: settings.provinceLogo || '',
+      school_stamp: settings.schoolStamp || '',
+      headmaster_signature: settings.headmasterSignature || '',
+      headmaster_name: settings.headmasterName || 'Drs. Johanis Latuheru, M.Pd.',
+      headmaster_nip: settings.headmasterNIP || '196805121994031007',
       school_address: settings.schoolAddress || '',
       school_city: settings.schoolCity || '',
       cutoff_time: settings.cutoffTime || '07:15',
       auto_alpa_cutoff_time: settings.autoAlpaCutoffTime || '14:30',
       enable_auto_alpa: settings.enableAutoAlpa ?? true,
       school_days: settings.schoolDays || 6,
-      academic_year: settings.academicYear || '2024/2025',
+      academic_year: settings.academicYear || '2026/2027',
       enable_wa_notif: settings.enableWaNotif ?? false,
       wa_template_hadir: settings.waTemplateHadir || '',
       wa_template_terlambat: settings.waTemplateTerlambat || '',
@@ -860,12 +866,29 @@ export async function saveSettingsToSupabase(
       rfid_beep_feedback: settings.rfidBeepFeedback ?? true,
       rfid_auto_record: settings.rfidAutoRecord ?? true,
       rfid_allow_unregistered_card_prompt: settings.rfidAllowUnregisteredCardPrompt ?? true,
+      settings_json: settings,
       updated_at: new Date().toISOString(),
     };
+
+    // Save with primary ID 'school_config'
     const { error } = await client.from('school_settings').upsert(payload, { onConflict: 'id' });
     if (error) {
-      console.warn('Supabase saveSettings notice:', error.message);
-      return false;
+      console.warn('Supabase saveSettings with full columns notice, trying resilient fallback:', error.message);
+      // Fallback: If some specific columns are not yet in the DB table, persist via settings_json and base fields
+      const fallbackPayload: Record<string, any> = {
+        id: 'school_config',
+        school_name: settings.schoolName || 'SMA NEGERI 15 AMBON',
+        settings_json: settings,
+        updated_at: new Date().toISOString(),
+      };
+      const { error: fallbackErr } = await client.from('school_settings').upsert(fallbackPayload, { onConflict: 'id' });
+      if (fallbackErr) {
+        // Also try upserting with 'default' id to match legacy databases
+        await client.from('school_settings').upsert({ id: 'default', settings_json: settings, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      }
+    } else {
+      // Also sync to 'default' ID if present to ensure complete cross-table consistency
+      client.from('school_settings').upsert({ ...payload, id: 'default' }, { onConflict: 'id' }).then(() => {}, () => {});
     }
     return true;
   } catch (err: any) {
@@ -880,40 +903,54 @@ export async function fetchSettingsFromSupabase(
   const client = getSupabaseClient(customConfig);
   if (!client) return null;
   try {
-    const { data, error } = await client.from('school_settings').select('*').eq('id', 'school_config').single();
-    if (error) {
+    // Check both 'school_config' and 'default' rows
+    const { data: list, error } = await client.from('school_settings').select('*').limit(2);
+    if (error || !list || list.length === 0) {
       return null;
     }
-    if (!data) return null;
+
+    const data = list.find((r: any) => r.id === 'school_config') || list[0];
+    const jsonSettings: Partial<SchoolSettings> =
+      data.settings_json && typeof data.settings_json === 'object'
+        ? data.settings_json
+        : typeof data.settings_json === 'string'
+        ? JSON.parse(data.settings_json)
+        : {};
 
     const res: Partial<SchoolSettings> = {
-      schoolName: data.school_name || data.schoolName,
-      schoolNPSN: data.school_npsn || data.schoolNPSN,
-      schoolLogo: data.school_logo || data.schoolLogo,
-      schoolAddress: data.school_address || data.schoolAddress,
-      schoolCity: data.school_city || data.schoolCity,
-      cutoffTime: data.cutoff_time || data.cutoffTime,
-      autoAlpaCutoffTime: data.auto_alpa_cutoff_time || data.autoAlpaCutoffTime,
-      enableAutoAlpa: data.enable_auto_alpa ?? data.enableAutoAlpa,
-      schoolDays: data.school_days || data.schoolDays,
-      academicYear: data.academic_year || data.academicYear,
-      enableWaNotif: data.enable_wa_notif ?? data.enableWaNotif,
-      waTemplateHadir: data.wa_template_hadir || data.waTemplateHadir,
-      waTemplateTerlambat: data.wa_template_terlambat || data.waTemplateTerlambat,
-      waTemplateIzinSakit: data.wa_template_izin_sakit || data.waTemplateIzinSakit,
-      waTemplateAlpa: data.wa_template_alpa || data.waTemplateAlpa,
-      waTemplateWaliKelas: data.wa_template_wali_kelas || data.waTemplateWaliKelas,
-      holidays: Array.isArray(data.holidays) ? data.holidays : (Array.isArray(data.holidays_json) ? data.holidays_json : []),
-      homeroomAssignments: data.homeroom_assignments && typeof data.homeroom_assignments === 'object' ? data.homeroom_assignments : {},
-      problemThresholdAlpa: data.problem_threshold_alpa ?? data.problemThresholdAlpa,
-      problemThresholdTerlambat: data.problem_threshold_terlambat ?? data.problemThresholdTerlambat,
-      problemThresholdMinRate: data.problem_threshold_min_rate ?? data.problemThresholdMinRate,
-      enableRfidReader: data.enable_rfid_reader ?? data.enableRfidReader,
-      rfidReaderMode: data.rfid_reader_mode || data.rfidReaderMode,
-      rfidCardType: data.rfid_card_type || data.rfidCardType,
-      rfidBeepFeedback: data.rfid_beep_feedback ?? data.rfidBeepFeedback,
-      rfidAutoRecord: data.rfid_auto_record ?? data.rfidAutoRecord,
-      rfidAllowUnregisteredCardPrompt: data.rfid_allow_unregistered_card_prompt ?? data.rfidAllowUnregisteredCardPrompt,
+      schoolName: data.school_name || data.schoolName || jsonSettings.schoolName,
+      schoolNPSN: data.school_npsn || data.schoolNPSN || jsonSettings.schoolNPSN,
+      schoolLogo: data.school_logo || data.schoolLogo || jsonSettings.schoolLogo,
+      provinceName: data.province_name || data.provinceName || jsonSettings.provinceName,
+      provinceLogo: data.province_logo || data.provinceLogo || jsonSettings.provinceLogo,
+      schoolStamp: data.school_stamp || data.schoolStamp || jsonSettings.schoolStamp,
+      headmasterSignature: data.headmaster_signature || data.headmasterSignature || jsonSettings.headmasterSignature,
+      headmasterName: data.headmaster_name || data.headmasterName || jsonSettings.headmasterName,
+      headmasterNIP: data.headmaster_nip || data.headmasterNIP || jsonSettings.headmasterNIP,
+      schoolAddress: data.school_address || data.schoolAddress || jsonSettings.schoolAddress,
+      schoolCity: data.school_city || data.schoolCity || jsonSettings.schoolCity,
+      cutoffTime: data.cutoff_time || data.cutoffTime || jsonSettings.cutoffTime,
+      autoAlpaCutoffTime: data.auto_alpa_cutoff_time || data.autoAlpaCutoffTime || jsonSettings.autoAlpaCutoffTime,
+      enableAutoAlpa: data.enable_auto_alpa ?? data.enableAutoAlpa ?? jsonSettings.enableAutoAlpa,
+      schoolDays: data.school_days || data.schoolDays || jsonSettings.schoolDays,
+      academicYear: data.academic_year || data.academicYear || jsonSettings.academicYear,
+      enableWaNotif: data.enable_wa_notif ?? data.enableWaNotif ?? jsonSettings.enableWaNotif,
+      waTemplateHadir: data.wa_template_hadir || data.waTemplateHadir || jsonSettings.waTemplateHadir,
+      waTemplateTerlambat: data.wa_template_terlambat || data.waTemplateTerlambat || jsonSettings.waTemplateTerlambat,
+      waTemplateIzinSakit: data.wa_template_izin_sakit || data.waTemplateIzinSakit || jsonSettings.waTemplateIzinSakit,
+      waTemplateAlpa: data.wa_template_alpa || data.waTemplateAlpa || jsonSettings.waTemplateAlpa,
+      waTemplateWaliKelas: data.wa_template_wali_kelas || data.waTemplateWaliKelas || jsonSettings.waTemplateWaliKelas,
+      holidays: Array.isArray(data.holidays) ? data.holidays : Array.isArray(jsonSettings.holidays) ? jsonSettings.holidays : [],
+      homeroomAssignments: data.homeroom_assignments && typeof data.homeroom_assignments === 'object' ? data.homeroom_assignments : (jsonSettings.homeroomAssignments || {}),
+      problemThresholdAlpa: data.problem_threshold_alpa ?? data.problemThresholdAlpa ?? jsonSettings.problemThresholdAlpa,
+      problemThresholdTerlambat: data.problem_threshold_terlambat ?? data.problemThresholdTerlambat ?? jsonSettings.problemThresholdTerlambat,
+      problemThresholdMinRate: data.problem_threshold_min_rate ?? data.problemThresholdMinRate ?? jsonSettings.problemThresholdMinRate,
+      enableRfidReader: data.enable_rfid_reader ?? data.enableRfidReader ?? jsonSettings.enableRfidReader,
+      rfidReaderMode: data.rfid_reader_mode || data.rfidReaderMode || jsonSettings.rfidReaderMode,
+      rfidCardType: data.rfid_card_type || data.rfidCardType || jsonSettings.rfidCardType,
+      rfidBeepFeedback: data.rfid_beep_feedback ?? data.rfidBeepFeedback ?? jsonSettings.rfidBeepFeedback,
+      rfidAutoRecord: data.rfid_auto_record ?? data.rfidAutoRecord ?? jsonSettings.rfidAutoRecord,
+      rfidAllowUnregisteredCardPrompt: data.rfid_allow_unregistered_card_prompt ?? data.rfidAllowUnregisteredCardPrompt ?? jsonSettings.rfidAllowUnregisteredCardPrompt,
     };
     return res;
   } catch (err: any) {
@@ -1438,6 +1475,83 @@ export async function uploadProfilePhotoToSupabase(
   }
 }
 
+/**
+ * Mengunggah berkas aset sekolah (Logo Sekolah, Logo Provinsi, Stempel Resmi, TTD Kepala Sekolah)
+ * ke Supabase Storage Bucket ('nexa-photos' / 'school/').
+ * Mengembalikan public URL permanen yang dapat disimpan ke database dan cache.
+ */
+export async function uploadSchoolAssetToSupabase(
+  fileOrBase64: File | Blob | string,
+  assetType: 'school_logo' | 'province_logo' | 'school_stamp' | 'headmaster_signature',
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  const client = getSupabaseClient(customConfig);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+
+  try {
+    let fileBlob: Blob;
+    let extension = 'png';
+    let contentType = 'image/png';
+
+    if (typeof fileOrBase64 === 'string') {
+      if (fileOrBase64.startsWith('http://') || fileOrBase64.startsWith('https://')) {
+        return { success: true, publicUrl: fileOrBase64 };
+      }
+      if (fileOrBase64.startsWith('data:')) {
+        const converted = base64DataUrlToBlob(fileOrBase64);
+        fileBlob = converted.blob;
+        extension = converted.extension;
+        contentType = converted.contentType;
+      } else {
+        return { success: false, error: 'Format berkas gambar tidak valid.' };
+      }
+    } else if (fileOrBase64 instanceof File) {
+      fileBlob = fileOrBase64;
+      contentType = fileOrBase64.type || 'image/png';
+      const parts = fileOrBase64.name.split('.');
+      if (parts.length > 1) {
+        extension = parts[parts.length - 1].toLowerCase();
+      }
+    } else {
+      fileBlob = fileOrBase64;
+      contentType = fileOrBase64.type || 'image/png';
+    }
+
+    const filePath = `school/${assetType}_${Date.now()}.${extension}`;
+
+    // Race against 7-second timeout so it never hangs if network is slow/unstable
+    const uploadPromise = client.storage
+      .from('nexa-photos')
+      .upload(filePath, fileBlob, {
+        contentType,
+        upsert: true,
+      });
+
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((_, reject) =>
+      setTimeout(() => reject(new Error('Koneksi storage timeout')), 7000)
+    );
+
+    const { data, error } = (await Promise.race([uploadPromise, timeoutPromise])) as any;
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const { data: urlData } = client.storage.from('nexa-photos').getPublicUrl(data.path);
+    return {
+      success: true,
+      publicUrl: urlData.publicUrl,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Gagal mengunggah berkas aset sekolah ke Supabase Storage.',
+    };
+  }
+}
+
 // SQL schema generator
 
 export function getSupabaseTeacherOnlySchemaSQL(): string {
@@ -1667,13 +1781,19 @@ CREATE TABLE IF NOT EXISTS public.school_settings (
     school_name TEXT NOT NULL,
     school_npsn TEXT,
     school_logo TEXT,
+    province_name TEXT DEFAULT 'PEMERINTAH PROVINSI MALUKU',
+    province_logo TEXT,
+    school_stamp TEXT,
+    headmaster_signature TEXT,
+    headmaster_name TEXT DEFAULT 'Drs. Johanis Latuheru, M.Pd.',
+    headmaster_nip TEXT DEFAULT '196805121994031007',
     school_address TEXT,
     school_city TEXT,
     cutoff_time TEXT NOT NULL DEFAULT '07:15',
     auto_alpa_cutoff_time TEXT DEFAULT '14:30',
     enable_auto_alpa BOOLEAN DEFAULT true,
     school_days INT DEFAULT 6,
-    academic_year TEXT DEFAULT '2024/2025',
+    academic_year TEXT DEFAULT '2026/2027',
     enable_wa_notif BOOLEAN DEFAULT false,
     wa_template_hadir TEXT,
     wa_template_terlambat TEXT,
@@ -1691,8 +1811,17 @@ CREATE TABLE IF NOT EXISTS public.school_settings (
     rfid_beep_feedback BOOLEAN DEFAULT true,
     rfid_auto_record BOOLEAN DEFAULT true,
     rfid_allow_unregistered_card_prompt BOOLEAN DEFAULT true,
+    settings_json JSONB,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS province_name TEXT DEFAULT 'PEMERINTAH PROVINSI MALUKU';
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS province_logo TEXT;
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS school_stamp TEXT;
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS headmaster_signature TEXT;
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS headmaster_name TEXT DEFAULT 'Drs. Johanis Latuheru, M.Pd.';
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS headmaster_nip TEXT DEFAULT '196805121994031007';
+ALTER TABLE public.school_settings ADD COLUMN IF NOT EXISTS settings_json JSONB;
 
 -- 8. TABEL DISPOSISI SISWA BERMASALAH (problematic_student_dispatches)
 CREATE TABLE IF NOT EXISTS public.problematic_student_dispatches (

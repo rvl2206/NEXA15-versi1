@@ -185,23 +185,34 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
             position: 'relative',
           }}
         >
-          {/* Left Emblem: Circular Maluku Provincial Shield */}
+          {/* Left Emblem: Circular Maluku Provincial Shield or Custom Provincial Emblem */}
           <div
             style={{
               width: '26px',
               height: '26px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              border: '1.5px solid rgba(255, 255, 255, 0.6)',
+              backgroundColor: settings.provinceLogo ? '#ffffff' : 'rgba(255, 255, 255, 0.15)',
+              border: '1.5px solid rgba(255, 255, 255, 0.7)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              overflow: 'hidden',
+              padding: settings.provinceLogo ? '2px' : 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
           >
-            <svg viewBox="0 0 24 24" style={{ width: '15px', height: '15px', fill: '#fbbf24', stroke: '#f59e0b', strokeWidth: '1' }}>
-              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
-            </svg>
+            {settings.provinceLogo ? (
+              <img
+                src={settings.provinceLogo}
+                alt="Logo Provinsi"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <svg viewBox="0 0 24 24" style={{ width: '15px', height: '15px', fill: '#fbbf24', stroke: '#f59e0b', strokeWidth: '1' }}>
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+              </svg>
+            )}
           </div>
 
           {/* Center Titles */}
@@ -218,7 +229,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
                 lineHeight: 1.15,
               }}
             >
-              PEMERINTAH PROVINSI MALUKU
+              {settings.provinceName || 'PEMERINTAH PROVINSI MALUKU'}
             </p>
             <h2
               style={{
@@ -250,7 +261,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
             </p>
           </div>
 
-          {/* Right Emblem: Circular Graduation Cap */}
+          {/* Right Emblem: School Logo or Circular Graduation Cap */}
           <div
             style={{
               width: '26px',
@@ -261,10 +272,20 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              overflow: 'hidden',
+              padding: settings.schoolLogo ? '2px' : 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
           >
-            <GraduationCap style={{ width: '15px', height: '15px', color: '#1863E5' }} />
+            {settings.schoolLogo ? (
+              <img
+                src={settings.schoolLogo}
+                alt="Logo Sekolah"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <GraduationCap style={{ width: '15px', height: '15px', color: '#1863E5' }} />
+            )}
           </div>
         </div>
 
@@ -512,7 +533,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
             lineHeight: 1.2,
           }}
         >
-          Berlaku Selama Menjadi Siswa SMA Negeri 15 Ambon
+          Berlaku Selama Menjadi Siswa {activeSchoolName}
         </p>
       </div>
     </div>
@@ -755,43 +776,79 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
         }}
       >
         {/* Left: Official Circular Stamp Watermark */}
-        <div
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: '1.5px dashed rgba(37, 99, 235, 0.75)',
-            backgroundColor: 'rgba(239, 246, 255, 0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transform: 'rotate(-10deg)',
-            flexShrink: 0,
-            userSelect: 'none',
-          }}
-        >
-          <span style={{ fontSize: '5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
-            STEMPEL
-          </span>
-          <span style={{ fontSize: '5.5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1.1 }}>
-            RESMI
-          </span>
-          <span style={{ fontSize: '4.5px', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
-            SMAN 15
-          </span>
-        </div>
+        {settings.schoolStamp ? (
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              userSelect: 'none',
+              flexShrink: 0,
+            }}
+          >
+            <img
+              src={settings.schoolStamp}
+              alt="Stempel Resmi Sekolah"
+              style={{
+                maxWidth: '44px',
+                maxHeight: '44px',
+                objectFit: 'contain',
+                transform: 'rotate(-5deg)',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.08))',
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              border: '1.5px dashed rgba(37, 99, 235, 0.75)',
+              backgroundColor: 'rgba(239, 246, 255, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: 'rotate(-10deg)',
+              flexShrink: 0,
+              userSelect: 'none',
+            }}
+          >
+            <span style={{ fontSize: '5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
+              STEMPEL
+            </span>
+            <span style={{ fontSize: '5.5px', fontWeight: 900, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1.1 }}>
+              RESMI
+            </span>
+            <span style={{ fontSize: '4.5px', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', lineHeight: 1 }}>
+              SMAN 15
+            </span>
+          </div>
+        )}
 
         {/* Right: Headmaster Signature & NIP */}
         <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
           <p style={{ fontSize: '6px', fontWeight: 500, color: '#64748b', margin: 0 }}>
-            Ambon, {dateStr}
+            {settings.schoolCity || 'Ambon'}, {dateStr}
           </p>
           <p style={{ fontSize: '6.5px', fontWeight: 700, color: '#334155', margin: '0.5px 0' }}>
             Kepala Sekolah,
           </p>
-          {/* Signature Vertical Spacing */}
-          <div style={{ height: '16px' }} />
+          {/* Signature Image or Spacer */}
+          {settings.headmasterSignature ? (
+            <div style={{ height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', margin: '-2px 0' }}>
+              <img
+                src={settings.headmasterSignature}
+                alt="Tanda Tangan Kepala Sekolah"
+                style={{ maxHeight: '24px', maxWidth: '85px', objectFit: 'contain' }}
+              />
+            </div>
+          ) : (
+            <div style={{ height: '16px' }} />
+          )}
           <p
             style={{
               fontSize: '7px',
