@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   KeyRound, ShieldCheck, CheckCircle2, Lock, EyeOff, Eye, 
   RotateCcw, ShieldAlert, Trash2, RefreshCw 
