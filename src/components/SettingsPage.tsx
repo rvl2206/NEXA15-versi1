@@ -392,7 +392,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   const handleResetData = () => {
     store.resetToSeedData();
     setSettings(store.getSettings());
-    toast.success('Database Direset', 'Database berhasil direset ke data awal contoh sekolah!');
+    toast.success('Database Direset', 'Cache lokal berhasil dikosongkan. Data diselaraskan dari Supabase Cloud (SSOT).');
   };
 
   const handleClearStudents = () => {
@@ -1866,9 +1866,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
         <div className="p-4 bg-white/5/50 border border-white/10 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Ke Data Awal Contoh</p>
+            <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Cache & Sinkronkan Supabase</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Mengembalikan data siswa dan rekaman absensi ke contoh awal (termasuk Dadang Buamona & 10 siswa sampel).
+              Mengosongkan cache lokal dan menyelaraskan ulang data operasional langsung dari Supabase Cloud sebagai sumber data tunggal (SSOT).
             </p>
           </div>
           <button
@@ -1877,7 +1877,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Database Contoh</span>
+            <span>Reset Cache & Sinkron</span>
           </button>
         </div>
       </div>

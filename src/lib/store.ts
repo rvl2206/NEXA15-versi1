@@ -182,8 +182,7 @@ class AppStore {
   public settings: SchoolSettings = DEFAULT_SETTINGS;
   private passwords: Record<string, string> = {
     'usr-admin': 'admin',
-    'usr-kepsek': 'kepsek',
-    'usr-guru': 'piket',
+    'usr-scanner-station': 'scanner123',
   };
   private currentUser: User | null = null;
   private listeners: Array<() => void> = [];
@@ -231,6 +230,16 @@ class AppStore {
         }
       } else {
         this.users = [...INITIAL_USERS];
+      }
+
+      // Purge any legacy dummy seed users immediately
+      const DUMMY_SEED_UIDS = new Set(['usr-piket', 'usr-kepsek', 'usr-wali-x1']);
+      this.users = this.users.filter((u) => !DUMMY_SEED_UIDS.has(u.uid));
+      if (!this.users.some((u) => u.uid === 'usr-admin')) {
+        this.users.unshift(INITIAL_USERS[0]);
+      }
+      if (!this.users.some((u) => u.uid === 'usr-scanner-station') && INITIAL_USERS.length > 1) {
+        this.users.push(INITIAL_USERS[1]);
       }
 
       // Automatically migrate any legacy plain-text passwords to bcrypt hashes
@@ -289,10 +298,21 @@ class AppStore {
           await localforage.setItem(STORAGE_KEYS.TEACHERS, savedTeachers);
         }
       }
+      const DUMMY_TEACHER_IDS = new Set([
+        'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
+        'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
+      ]);
       if (savedTeachers) {
-        this.teachers = JSON.parse(savedTeachers);
+        try {
+          const parsedTeachers = JSON.parse(savedTeachers);
+          this.teachers = Array.isArray(parsedTeachers)
+            ? parsedTeachers.filter((t: Teacher) => !DUMMY_TEACHER_IDS.has(t.id))
+            : [];
+        } catch {
+          this.teachers = [];
+        }
       } else {
-        this.teachers = [...INITIAL_TEACHERS];
+        this.teachers = [];
       }
       let savedTeacherAttendance = await localforage.getItem<string>(STORAGE_KEYS.TEACHER_ATTENDANCE);
       if (!savedTeacherAttendance) {
@@ -1132,40 +1152,50 @@ class AppStore {
       if (!isSupabaseConfigured(config)) return;
 
       const remoteUsers = await fetchUsersFromSupabase(config);
+      const DUMMY_SEED_UIDS = new Set(['usr-piket', 'usr-kepsek', 'usr-wali-x1']);
+
       if (remoteUsers && remoteUsers.length > 0) {
-        // Merge remote users with local users, prioritizing remote updates and ensuring bcrypt hashes
+        // Supabase is Single Source of Truth (SSOT).
+        // Build user map directly from remoteUsers.
         const userMap = new Map<string, User>();
-        // Add existing local users
-        this.users.forEach((u) => {
-          if (u.password && !isHashedPassword(u.password)) {
-            u.password = ensureHashedPassword(u.password);
-          }
-          userMap.set(u.uid, u);
-        });
-        // Upsert remote users
+
         remoteUsers.forEach((ru) => {
-          if (ru.password && !isHashedPassword(ru.password)) {
-            ru.password = ensureHashedPassword(ru.password);
+          if (!DUMMY_SEED_UIDS.has(ru.uid)) {
+            if (ru.password && !isHashedPassword(ru.password)) {
+              ru.password = ensureHashedPassword(ru.password);
+            }
+            userMap.set(ru.uid, ru);
+          } else {
+            // Background cleanup of legacy dummy users from Supabase
+            deleteUserFromSupabase(ru.uid, config).catch(() => {});
           }
-          userMap.set(ru.uid, ru);
         });
 
         // Ensure Master Admin always exists with secure hash
         if (!userMap.has('usr-admin')) {
           userMap.set('usr-admin', INITIAL_USERS[0]);
+          saveUserToSupabase(INITIAL_USERS[0], config).catch(() => {});
+        }
+        // Ensure Scanner Kiosk Account exists
+        if (!userMap.has('usr-scanner-station') && INITIAL_USERS.length > 1) {
+          userMap.set('usr-scanner-station', INITIAL_USERS[1]);
+          saveUserToSupabase(INITIAL_USERS[1], config).catch(() => {});
         }
 
         this.users = Array.from(userMap.values());
         this.saveLocalData(true);
         this.notify();
       } else {
-        // Cloud app_users table is empty -> bootstrap seed initial users to Supabase with bcrypt hashes
-        for (const u of this.users) {
+        // Cloud app_users table is empty -> bootstrap ONLY essential operational accounts
+        for (const u of INITIAL_USERS) {
           if (u.password && !isHashedPassword(u.password)) {
             u.password = ensureHashedPassword(u.password);
           }
           saveUserToSupabase(u, config).catch(() => {});
         }
+        this.users = [...INITIAL_USERS];
+        this.saveLocalData(true);
+        this.notify();
       }
     } catch (err) {
       console.warn('Sync users with Supabase error:', err);
@@ -1247,14 +1277,37 @@ class AppStore {
         }
 
         const remoteTeachers = await fetchTeachersFromSupabase(config);
-        if (remoteTeachers && remoteTeachers.length > 0) {
+        const DUMMY_TEACHER_IDS = new Set([
+          'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
+          'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
+        ]);
+        if (remoteTeachers !== null) {
+          remoteTeachers.forEach((rt) => {
+            if (DUMMY_TEACHER_IDS.has(rt.id)) {
+              deleteTeacherFromSupabase(rt.id, config).catch(() => {});
+            }
+          });
+          const pendingDeleteIds = new Set(
+            this.syncQueue.filter((q) => q.type === 'teacher' && q.action === 'delete').map((q) => q.id)
+          );
+          const pendingUpserts = this.syncQueue.filter(
+            (q) => q.type === 'teacher' && q.action === 'upsert' && q.data
+          );
           const tMap = new Map<string, Teacher>();
-          this.teachers.forEach((t) => tMap.set(t.id || t.nip, t));
-          remoteTeachers.forEach((t) => tMap.set(t.id || t.nip, t));
+          remoteTeachers.forEach((t) => {
+            const key = t.id || t.nip;
+            if (!DUMMY_TEACHER_IDS.has(t.id) && !pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
+              tMap.set(key, t);
+            }
+          });
+          pendingUpserts.forEach((q) => {
+            if (q.data && !DUMMY_TEACHER_IDS.has(q.data.id)) {
+              const key = q.data.id || q.data.nip || q.id;
+              tMap.set(key, q.data);
+            }
+          });
           this.teachers = Array.from(tMap.values());
           this.saveLocalData(true);
-        } else if (this.teachers.length > 0) {
-          saveMultipleTeachersToSupabase(this.teachers, config).catch(() => {});
         }
 
         const remoteAttendance = await fetchAttendanceFromSupabase(config);
@@ -1409,6 +1462,10 @@ class AppStore {
   public async deleteUser(uid: string): Promise<{ success: boolean; message: string }> {
     if (uid === 'usr-admin') {
       return { success: false, message: 'Akun Super Admin Utama (usr-admin) dilindungi dan tidak dapat dihapus.' };
+    }
+
+    if (uid === 'usr-scanner-station') {
+      return { success: false, message: 'Akun Terminal Mesin Scanner Gerbang (usr-scanner-station) dilindungi untuk operasional absensi.' };
     }
 
     if (this.currentUser && this.currentUser.uid === uid) {
@@ -1777,7 +1834,11 @@ class AppStore {
         );
         changed = true;
       }
-      if (remoteTeachers !== null && remoteTeachers.length > 0) {
+      if (remoteTeachers !== null) {
+        const DUMMY_TEACHER_IDS = new Set([
+          'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
+          'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
+        ]);
         const pendingDeleteIds = new Set(
           this.syncQueue.filter((q) => q.type === 'teacher' && q.action === 'delete').map((q) => q.id)
         );
@@ -1787,12 +1848,12 @@ class AppStore {
         const tMap = new Map<string, Teacher>();
         remoteTeachers.forEach((t) => {
           const key = t.id || t.nip;
-          if (!pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
+          if (!DUMMY_TEACHER_IDS.has(t.id) && !pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
             tMap.set(key, t);
           }
         });
         pendingUpserts.forEach((q) => {
-          if (q.data) {
+          if (q.data && !DUMMY_TEACHER_IDS.has(q.data.id)) {
             const key = q.data.id || q.data.nip || q.id;
             tMap.set(key, q.data);
           }
@@ -1848,6 +1909,7 @@ class AppStore {
       }
 
       this.reconcileAttendanceWithLateScans();
+      await this.syncUsersWithSupabase();
       if (changed) {
         this.notify();
       }
@@ -3929,12 +3991,12 @@ class AppStore {
 
   public async resetToSeedData(): Promise<void> {
     await this.clearAllDatabase();
-    this.teachers = [...INITIAL_TEACHERS];
+    this.teachers = [];
     this.users = [...INITIAL_USERS];
     this.saveLocalData(true);
     this.notify();
-    this.addLog('RESET_SEED_DATA', 'Database direset ke data contoh awal (guru dan akun sistem).');
-    toast.success('Database Direset', 'Database berhasil direset dan diisi data contoh guru dan pengguna sistem.');
+    this.addLog('RESET_DATABASE', 'Database lokal dikosongkan. Akun operasional disiapkan.');
+    toast.success('Database Direset', 'Cache lokal berhasil dikosongkan. Siap disinkronkan dari Supabase Cloud (SSOT).');
   }
 
   public getOfflineQueueCount(): number {

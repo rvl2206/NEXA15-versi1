@@ -50,7 +50,7 @@ const UserTableRow = React.memo(({
   handleOpenDeleteModal: (u: any) => void;
 }) => {
   const isCurrent = currentUser?.uid === u.uid;
-  const isProtectedAdmin = u.uid === 'usr-admin';
+  const isProtectedAdmin = u.uid === 'usr-admin' || u.uid === 'usr-scanner-station';
 
   return (
     <tr className="hover:bg-white/5/70 dark:hover:bg-slate-800/30 transition-colors">

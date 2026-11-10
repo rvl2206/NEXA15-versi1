@@ -75,7 +75,7 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
   const handleResetData = () => {
     store.resetToSeedData();
     setSettings(store.getSettings());
-    toast.success('Database Direset', 'Database berhasil direset ke data awal contoh sekolah!');
+    toast.success('Database Direset', 'Cache lokal berhasil dikosongkan. Data diselaraskan dari Supabase Cloud (SSOT).');
   };
 
   const handleClearStudents = () => {
@@ -291,18 +291,18 @@ export const SettingsSecurityAndMaintenance: React.FC<SettingsSecurityAndMainten
 
         <div className="p-4 bg-white/5 backdrop-blur-xl/50 border border-white/10 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Ke Data Awal Contoh</p>
+            <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Cache & Sinkronkan Supabase</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Mengembalikan data siswa dan rekaman absensi ke contoh awal (termasuk Dadang Buamona & 10 siswa sampel).
+              Mengosongkan cache lokal dan menyelaraskan ulang data operasional langsung dari Supabase Cloud sebagai sumber data tunggal (SSOT).
             </p>
           </div>
           <button
             type="button"
             onClick={handleResetData}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Database Contoh</span>
+            <span>Reset Cache & Sinkron</span>
           </button>
         </div>
       </div>
