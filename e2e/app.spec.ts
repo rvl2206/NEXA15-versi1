@@ -6,7 +6,7 @@ test('has title and can see main header', async ({ page }) => {
 
   // Expect a title "to contain" a substring.
   await expect(page).toHaveTitle(/NEXA15/i);
-  
+
   // You can test specific elements like this once the app is loaded.
   // Wait for the app to finish loading or check for a specific header
   // e.g. await expect(page.locator('h1').first()).toBeVisible();

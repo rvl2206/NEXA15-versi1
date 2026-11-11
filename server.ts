@@ -50,13 +50,13 @@ app.use("/api", (req, res, next) => {
 const DB_FILE = path.join(process.cwd(), "nexa15_server_db.json");
 
 interface ServerDatabase {
-  students: any[];
-  attendance: any[];
-  teachers: any[];
-  teacherAttendance: any[];
-  logs: any[];
-  settings: any | null;
-  passwords: any | null;
+  students: Record<string, unknown>[];
+  attendance: Record<string, unknown>[];
+  teachers: Record<string, unknown>[];
+  teacherAttendance: Record<string, unknown>[];
+  logs: Record<string, unknown>[];
+  settings: Record<string, unknown> | null;
+  passwords: Record<string, unknown> | null;
 }
 
 let serverData: ServerDatabase = {

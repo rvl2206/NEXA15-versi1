@@ -1,4 +1,4 @@
-import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
+﻿import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
 import { SettingsSecurityAndMaintenance } from './SettingsSecurityAndMaintenance';
 import { SettingsHolidays } from './SettingsHolidays';
 import { SettingsHealthCheck } from './SettingsHealthCheck';
@@ -85,13 +85,6 @@ interface SettingsPageProps {
 export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }) => {
   const [settings, setSettings] = useState<SchoolSettings>(store.getSettings());
   const [savedSuccess, setSavedSuccess] = useState(false);
-  // Change Password States
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [passError, setPassError] = useState('');
-  const [passSuccess, setPassSuccess] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -343,39 +336,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPassError('');
-    setPassSuccess('');
-
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setPassError('Harap isi semua kolom kata sandi.');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPassError('Konfirmasi kata sandi baru tidak cocok dengan kata sandi baru.');
-      return;
-    }
-
-    if (newPassword.length < 5) {
-      setPassError('Kata sandi baru minimal harus 5 karakter.');
-      return;
-    }
-
-    const result = await store.updateAdminPassword(oldPassword, newPassword);
-    if (!result.success) {
-      setPassError(result.message);
-      return;
-    }
-
-    setPassSuccess(result.message);
-    setOldPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setPassSuccess(''), 4000);
-  };
-
   const handleManualSync = async () => {
     setIsSyncing(true);
     await store.syncAllToServer();
@@ -387,22 +347,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     await store.clearCacheAndRefresh();
     setSettings(store.getSettings());
     setIsClearingCache(false);
-  };
-
-  const handleResetData = () => {
-    store.resetToSeedData();
-    setSettings(store.getSettings());
-    toast.success('Database Direset', 'Cache lokal berhasil dikosongkan. Data diselaraskan dari Supabase Cloud (SSOT).');
-  };
-
-  const handleClearStudents = () => {
-    const studentCount = store.getStudents().length;
-    if (studentCount === 0) {
-      toast.info('Database Kosong', 'Database siswa sudah kosong.');
-      return;
-    }
-    store.deleteAllStudents();
-    toast.success('Siswa Dihapus', `Berhasil menghapus seluruh ${studentCount} data siswa dari database!`);
   };
 
   
@@ -551,7 +495,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     <button
                       type="button"
                       onClick={() => handleRemoveAsset('schoolLogo', 'Logo Sekolah')}
-                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
                       title="Hapus Logo Kustom"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -633,7 +576,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     <button
                       type="button"
                       onClick={() => handleRemoveAsset('provinceLogo', 'Lambang Provinsi')}
-                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
                       title="Hapus Logo Provinsi Kustom"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -716,7 +658,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     <button
                       type="button"
                       onClick={() => handleRemoveAsset('schoolStamp', 'Stempel Resmi')}
-                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
                       title="Hapus Stempel Kustom"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -799,7 +740,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     <button
                       type="button"
                       onClick={() => handleRemoveAsset('headmasterSignature', 'Tanda Tangan')}
-                      className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl transition-all cursor-pointer"
                       title="Hapus Tanda Tangan Kustom"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1022,7 +962,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Jam Mulai Absen Pulang (Jumat — 1 Shift Pendek)
+                Jam Mulai Absen Pulang (Jumat â€” 1 Shift Pendek)
               </label>
               <input
                 type="time"
@@ -1086,7 +1026,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 </div>
                 <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Sabtu Libur:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">✅ Ya (Bebas Alpa)</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">âœ… Ya (Bebas Alpa)</span>
                 </div>
               </div>
 
@@ -1133,12 +1073,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 </div>
                 <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Sabtu Libur:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">❌ Tidak (Hari Sekolah)</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">âŒ Tidak (Hari Sekolah)</span>
                 </div>
               </div>
             </div>
             <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
-              <span className="text-blue-600 font-bold">ℹ️ Info:</span>
+              <span className="text-blue-600 font-bold">â„¹ï¸ Info:</span>
               <span>
                 Pada sistem <b>Sekolah 5 Hari</b>, hari Sabtu otomatis ditetapkan sebagai hari libur akhir pekan, sehingga otopresensi Alpa jam 14:30 dan pemotongan kedisiplinan tidak akan memproses presensi siswa pada hari Sabtu.
               </span>
@@ -1234,10 +1174,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       onClick={() => {
                         setSettings({
                           ...settings,
-                          waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
-                          waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateHadir: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nÃ¢ÂÂ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: âœ… *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateTerlambat: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nÃ¢ÂÂ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: Ã¢ÂÂ° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateIzinSakit: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: ðŸ“„ *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
+                          waTemplateAlpa: 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: Ã¢ÂÅ’ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_',
                         });
                       }}
                       className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
@@ -1258,7 +1198,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateHadir || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: ✅ *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateHadir || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nÃ¢ÂÂ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: âœ… *HADIR (Tepat Waktu)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateHadir: e.target.value })}
                         className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-600 font-sans"
                       />
@@ -1270,7 +1210,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateTerlambat || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\nâ° Waktu Scan: {waktu}\n📌 Status Presensi: â° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateTerlambat || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nÃ¢ÂÂ° Waktu Scan: {waktu}\nðŸ“Œ Status Presensi: Ã¢ÂÂ° *TERLAMBAT* ({terlambat})\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateTerlambat: e.target.value })}
                         className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-amber-600 font-sans"
                       />
@@ -1282,7 +1222,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateIzinSakit || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: 📄 *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateIzinSakit || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: ðŸ“„ *{status}*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateIzinSakit: e.target.value })}
                         className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 font-sans"
                       />
@@ -1294,7 +1234,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       </label>
                       <textarea
                         rows={4}
-                        value={settings.waTemplateAlpa || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\n📅 Tanggal: {tanggal}\n📌 Status Presensi: âŒ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
+                        value={settings.waTemplateAlpa || 'Yth. Orang Tua / Wali murid dari *{nama}* (Kelas {kelas}),\n\nMemberitahukan data presensi sekolah di *{sekolah}*:\nðŸ“… Tanggal: {tanggal}\nðŸ“Œ Status Presensi: Ã¢ÂÅ’ *ALPA (Tanpa Keterangan)*\n\nTerima kasih atas perhatian dan kerja sama Bapak/Ibu.\n_Pesan otomatis dari Sistem Presensi Digital {sekolah}_'}
                         onChange={(e) => setSettings({ ...settings, waTemplateAlpa: e.target.value })}
                         className="w-full p-2.5 text-xs border border-white/10 dark:bg-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-rose-600 font-sans"
                       />
@@ -1663,9 +1603,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   </div>
                   <div className="text-[11px] text-slate-300">
                     {rfidTestResult.type === 'siswa' ? (
-                      <span>Kelas: {rfidTestResult.person.kelas} • NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
+                      <span>Kelas: {rfidTestResult.person.kelas} â€¢ NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
                     ) : (
-                      <span>Jabatan: {rfidTestResult.person.jabatan} • NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
+                      <span>Jabatan: {rfidTestResult.person.jabatan} â€¢ NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
                     )}
                   </div>
                 </div>
@@ -1696,191 +1636,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
       <SettingsHealthCheck />
 
-      {/* Change Password Card for Admin */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-5 transition-colors">
-        <div className="flex items-center justify-between pb-2 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-500/20">
-              <KeyRound className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-white">
-                Ubah Kata Sandi (Role Admin)
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Perbarui password akun Administrator Utama untuk menjaga keamanan sistem.
-              </p>
-            </div>
-          </div>
-
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold">
-            <ShieldCheck className="w-3 h-3" />
-            <span>Keamanan Terenkripsi</span>
-          </span>
-        </div>
-
-        {passSuccess && (
-          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>{passSuccess}</span>
-          </div>
-        )}
-
-        {passError && (
-          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-2xl text-xs font-bold flex items-center gap-2">
-            <span className="text-rose-600 dark:text-rose-400 shrink-0 font-bold">âŒ</span>
-            <span>{passError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleChangePassword} autoComplete="off" className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Kata Sandi Admin Saat Ini
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Masukkan kata sandi lama Admin..."
-                autoComplete="new-password"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                data-lpignore="true"
-                className="w-full pl-10 pr-10 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Kata Sandi Baru
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Password baru (min. 5 karakter)..."
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Konfirmasi Kata Sandi Baru
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ulangi password baru..."
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  data-lpignore="true"
-                  className="w-full pl-10 pr-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              * Password baru akan langsung dienkripsi (bcrypt) dan disinkronkan ke server secara aman.
-            </p>
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Simpan & Sinkronkan Kata Sandi</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Reset & Maintenance Zone */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-black/40 relative overflow-hidden space-y-4 transition-colors">
-        <h4 className="font-bold text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Pemeliharaan Cache & Reset Database</h4>
-        
-        {/* Clear Cache Card */}
-        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p className="font-bold text-xs text-amber-900 dark:text-amber-300">Bersihkan Cache & Force Refresh Server</p>
-            <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
-              Hapus cache penyimpan lokal (localStorage) dan muat ulang data paling baru langsung dari server jika terjadi desinkronisasi tampilan antar role/perangkat.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearCache}
-            disabled={isClearingCache || isSyncing}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm cursor-pointer"
-          >
-            <RotateCcw className={`w-3.5 h-3.5 ${isClearingCache ? 'animate-spin' : ''}`} />
-            <span>{isClearingCache ? 'Clearing Cache...' : 'Bersihkan Cache Lokal'}</span>
-          </button>
-        </div>
-
-        <div className="p-4 bg-red-50/50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p className="font-bold text-xs text-red-900 dark:text-red-300">Kosongkan Khusus Database Siswa</p>
-            <p className="text-[11px] text-red-700 dark:text-red-400 mt-0.5">
-              Menghapus seluruh data siswa di database agar Anda dapat meng-import ulang berkas Excel secara bersih tanpa tercatat ganda.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClearStudents}
-            className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Kosongkan DB Siswa</span>
-          </button>
-        </div>
-
-        <div className="p-4 bg-white/5/50 border border-white/10 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p className="font-bold text-xs text-slate-800 dark:text-slate-200">Reset Cache & Sinkronkan Supabase</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Mengosongkan cache lokal dan menyelaraskan ulang data operasional langsung dari Supabase Cloud sebagai sumber data tunggal (SSOT).
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleResetData}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-2xl transition-all flex items-center gap-1.5 whitespace-nowrap"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Cache & Sinkron</span>
-          </button>
-        </div>
-      </div>
+      <SettingsSecurityAndMaintenance settings={settings} setSettings={setSettings} />
     </div>
   );
 };

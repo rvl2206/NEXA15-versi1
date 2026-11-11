@@ -51,10 +51,24 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   const targetDate = '2026-11-10';
 
+  const mockAtt = (overrides: Partial<AttendanceRecord> & { id: string; tanggal: string; timestamp: string; nisn: string; nama: string; kelas: string; jenis: 'Masuk' | 'Pulang'; status: any }): AttendanceRecord => ({
+    id_qr: overrides.id_qr || `69933068.${overrides.nisn}`,
+    petugas: overrides.petugas || 'Guru Piket',
+    ...overrides,
+  });
+
+  const setStoreAttendance = (records: AttendanceRecord[]) => {
+    (store as any).attendance = records;
+  };
+
+  const getStoreAttendance = (): AttendanceRecord[] => {
+    return (store as any).attendance;
+  };
+
   beforeEach(() => {
     // Reset store internal state
     store.students = [...mockStudents];
-    store.attendance = [];
+    setStoreAttendance([]);
     store.syncQueue = [];
     store.updateSettings({
       cutoffTime: '07:15',
@@ -64,7 +78,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 1: Masuk tepat waktu + Pulang -> Hadir & Lengkap', () => {
     const records: AttendanceRecord[] = [
-      {
+      mockAtt({
         id: 'rec-1m',
         tanggal: targetDate,
         timestamp: `${targetDate}T07:05:00+09:00`,
@@ -73,8 +87,8 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         kelas: 'X-1',
         jenis: 'Masuk',
         status: 'Hadir',
-      },
-      {
+      }),
+      mockAtt({
         id: 'rec-1p',
         tanggal: targetDate,
         timestamp: `${targetDate}T14:00:00+09:00`,
@@ -83,7 +97,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         kelas: 'X-1',
         jenis: 'Pulang',
         status: 'Hadir',
-      },
+      }),
     ];
 
     const paired = calculateRawPairedDailyRecords('harian', '07:15', mockStudents, records, targetDate, 'X-1', '');
@@ -99,7 +113,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 2: Masuk tepat waktu tanpa Pulang -> Hadir & Tanpa Absen Pulang (Bukan Alpa)', () => {
     const records: AttendanceRecord[] = [
-      {
+      mockAtt({
         id: 'rec-2m',
         tanggal: targetDate,
         timestamp: `${targetDate}T07:10:00+09:00`,
@@ -108,7 +122,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         kelas: 'X-1',
         jenis: 'Masuk',
         status: 'Hadir',
-      },
+      }),
     ];
 
     const paired = calculateRawPairedDailyRecords('harian', '07:15', mockStudents, records, targetDate, 'X-1', '');
@@ -123,7 +137,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 3: Masuk terlambat + Pulang -> Terlambat & Lengkap', () => {
     const records: AttendanceRecord[] = [
-      {
+      mockAtt({
         id: 'rec-3m',
         tanggal: targetDate,
         timestamp: `${targetDate}T07:30:00+09:00`,
@@ -133,8 +147,8 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         jenis: 'Masuk',
         status: 'Terlambat',
         terlambatMenit: 15,
-      },
-      {
+      }),
+      mockAtt({
         id: 'rec-3p',
         tanggal: targetDate,
         timestamp: `${targetDate}T14:00:00+09:00`,
@@ -143,7 +157,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         kelas: 'X-1',
         jenis: 'Pulang',
         status: 'Terlambat',
-      },
+      }),
     ];
 
     const paired = calculateRawPairedDailyRecords('harian', '07:15', mockStudents, records, targetDate, 'X-1', '');
@@ -157,7 +171,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 4: Masuk terlambat tanpa Pulang -> Terlambat & Tanpa Absen Pulang (Bukan Alpa)', () => {
     const records: AttendanceRecord[] = [
-      {
+      mockAtt({
         id: 'rec-4m',
         tanggal: targetDate,
         timestamp: `${targetDate}T07:25:00+09:00`,
@@ -167,7 +181,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         jenis: 'Masuk',
         status: 'Terlambat',
         terlambatMenit: 10,
-      },
+      }),
     ];
 
     const paired = calculateRawPairedDailyRecords('harian', '07:15', mockStudents, records, targetDate, 'X-1', '');
@@ -181,7 +195,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 5: Pulang saja (tanpa scan masuk) -> Hadir & Tanpa Absen Masuk / Perlu Verifikasi (Bukan Alpa)', () => {
     const records: AttendanceRecord[] = [
-      {
+      mockAtt({
         id: 'rec-5p',
         tanggal: targetDate,
         timestamp: `${targetDate}T14:05:00+09:00`,
@@ -190,7 +204,7 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         kelas: 'X-1',
         jenis: 'Pulang',
         status: 'Hadir',
-      },
+      }),
     ];
 
     const paired = calculateRawPairedDailyRecords('harian', '07:15', mockStudents, records, targetDate, 'X-1', '');
@@ -205,21 +219,21 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
 
   it('Skenario 6: Hanya siswa tanpa kedua scan yang ditetapkan Alpa saat Tutup Gerbang dijalankan', () => {
     // Siapkan presensi untuk siswa 1 - 5
-    store.attendance = [
+    setStoreAttendance([
       // Siswa 1: Masuk + Pulang
-      { id: '1m', tanggal: targetDate, timestamp: `${targetDate}T07:00:00+09:00`, nisn: '1001', nama: 'S1', kelas: 'X-1', jenis: 'Masuk', status: 'Hadir' },
-      { id: '1p', tanggal: targetDate, timestamp: `${targetDate}T14:00:00+09:00`, nisn: '1001', nama: 'S1', kelas: 'X-1', jenis: 'Pulang', status: 'Hadir' },
+      mockAtt({ id: '1m', tanggal: targetDate, timestamp: `${targetDate}T07:00:00+09:00`, nisn: '1001', nama: 'S1', kelas: 'X-1', jenis: 'Masuk', status: 'Hadir' }),
+      mockAtt({ id: '1p', tanggal: targetDate, timestamp: `${targetDate}T14:00:00+09:00`, nisn: '1001', nama: 'S1', kelas: 'X-1', jenis: 'Pulang', status: 'Hadir' }),
       // Siswa 2: Masuk saja
-      { id: '2m', tanggal: targetDate, timestamp: `${targetDate}T07:10:00+09:00`, nisn: '1002', nama: 'S2', kelas: 'X-1', jenis: 'Masuk', status: 'Hadir' },
+      mockAtt({ id: '2m', tanggal: targetDate, timestamp: `${targetDate}T07:10:00+09:00`, nisn: '1002', nama: 'S2', kelas: 'X-1', jenis: 'Masuk', status: 'Hadir' }),
       // Siswa 3: Masuk terlambat + Pulang
-      { id: '3m', tanggal: targetDate, timestamp: `${targetDate}T07:30:00+09:00`, nisn: '1003', nama: 'S3', kelas: 'X-1', jenis: 'Masuk', status: 'Terlambat' },
-      { id: '3p', tanggal: targetDate, timestamp: `${targetDate}T14:00:00+09:00`, nisn: '1003', nama: 'S3', kelas: 'X-1', jenis: 'Pulang', status: 'Terlambat' },
+      mockAtt({ id: '3m', tanggal: targetDate, timestamp: `${targetDate}T07:30:00+09:00`, nisn: '1003', nama: 'S3', kelas: 'X-1', jenis: 'Masuk', status: 'Terlambat' }),
+      mockAtt({ id: '3p', tanggal: targetDate, timestamp: `${targetDate}T14:00:00+09:00`, nisn: '1003', nama: 'S3', kelas: 'X-1', jenis: 'Pulang', status: 'Terlambat' }),
       // Siswa 4: Masuk terlambat saja
-      { id: '4m', tanggal: targetDate, timestamp: `${targetDate}T07:25:00+09:00`, nisn: '1004', nama: 'S4', kelas: 'X-1', jenis: 'Masuk', status: 'Terlambat' },
+      mockAtt({ id: '4m', tanggal: targetDate, timestamp: `${targetDate}T07:25:00+09:00`, nisn: '1004', nama: 'S4', kelas: 'X-1', jenis: 'Masuk', status: 'Terlambat' }),
       // Siswa 5: Pulang saja
-      { id: '5p', tanggal: targetDate, timestamp: `${targetDate}T14:05:00+09:00`, nisn: '1005', nama: 'S5', kelas: 'X-1', jenis: 'Pulang', status: 'Hadir' },
+      mockAtt({ id: '5p', tanggal: targetDate, timestamp: `${targetDate}T14:05:00+09:00`, nisn: '1005', nama: 'S5', kelas: 'X-1', jenis: 'Pulang', status: 'Hadir' }),
       // Siswa 6: Tidak ada scan sama sekali
-    ];
+    ]);
 
     // Cek kandidat calon Alpa sebelum konfirmasi (Tahap 4)
     const candidates = store.getCandidatesForCloseGate(targetDate, 'X-1');
@@ -233,22 +247,22 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
     expect(result.updatedStudents[0].nisn).toBe('1006');
 
     // Pastikan siswa 6 tercatat Alpa dengan catatan Tutup Gerbang
-    const rec6 = store.attendance.find((a) => a.nisn === '1006' && a.tanggal === targetDate);
+    const rec6 = getStoreAttendance().find((a) => a.nisn === '1006' && a.tanggal === targetDate);
     expect(rec6).toBeDefined();
     expect(rec6?.status).toBe('Alpa');
     expect(rec6?.catatan).toContain('Tutup Gerbang');
 
     // Pastikan siswa 2 (Masuk saja) dan siswa 5 (Pulang saja) TIDAK memiliki record Alpa
-    const rec2Alpa = store.attendance.find((a) => a.nisn === '1002' && a.status === 'Alpa');
-    const rec5Alpa = store.attendance.find((a) => a.nisn === '1005' && a.status === 'Alpa');
+    const rec2Alpa = getStoreAttendance().find((a) => a.nisn === '1002' && a.status === 'Alpa');
+    const rec5Alpa = getStoreAttendance().find((a) => a.nisn === '1005' && a.status === 'Alpa');
     expect(rec2Alpa).toBeUndefined();
     expect(rec5Alpa).toBeUndefined();
   });
 
   it('Skenario 7: Scan terlambat tersinkron setelah Tutup Gerbang -> Alpa otomatis dihapus/tergantikan tanpa data ganda', () => {
     // Siswa 6 awalnya diberi Alpa oleh Tutup Gerbang
-    store.attendance = [
-      {
+    setStoreAttendance([
+      mockAtt({
         id: 'att-autoalpa-1006-test',
         tanggal: targetDate,
         timestamp: `${targetDate}T08:00:00+09:00`,
@@ -258,13 +272,13 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
         jenis: 'Masuk',
         status: 'Alpa',
         catatan: 'Tutup Gerbang (Tanpa Keterangan)',
-      },
-    ];
+      }),
+    ]);
 
-    expect(store.attendance.length).toBe(1);
+    expect(getStoreAttendance().length).toBe(1);
 
     // Siswa 6 kemudian tiba terlambat atau scan tersinkron belakangan
-    const lateRecord: AttendanceRecord = {
+    const lateRecord: AttendanceRecord = mockAtt({
       id: 'rec-late-6',
       tanggal: targetDate,
       timestamp: `${targetDate}T08:15:00+09:00`,
@@ -274,13 +288,13 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
       jenis: 'Masuk',
       status: 'Terlambat',
       terlambatMenit: 60,
-    };
+    });
 
-    store.attendance.push(lateRecord);
+    getStoreAttendance().push(lateRecord);
     store.reconcileAttendanceWithLateScans();
 
     // Rekaman Alpa Tutup Gerbang harus terhapus, hanya menyisakan rekaman Terlambat asli
-    const studentRecords = store.attendance.filter((a) => a.nisn === '1006');
+    const studentRecords = getStoreAttendance().filter((a) => a.nisn === '1006');
     expect(studentRecords.length).toBe(1);
     expect(studentRecords[0].id).toBe('rec-late-6');
     expect(studentRecords[0].status).toBe('Terlambat');

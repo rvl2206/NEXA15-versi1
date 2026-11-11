@@ -206,7 +206,7 @@ export interface AIAnalysisRequest {
 export interface OfflineQueueItem {
   id: string;
   type: 'attendance' | 'attendance_sync' | 'attendance_clear' | 'student' | 'log';
-  data: any;
+  data: Record<string, unknown> | unknown;
   timestamp: string;
   retryCount: number;
 }
