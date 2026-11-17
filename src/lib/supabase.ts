@@ -671,13 +671,14 @@ export async function saveSettingsToSupabase(
       const fallbackPayload: Record<string, any> = {
         id: 'school_config',
         school_name: settings.schoolName || 'SMA NEGERI 15 AMBON',
+        school_npsn: settings.schoolNPSN || '69933068',
         settings_json: settings,
         updated_at: new Date().toISOString(),
       };
       const { error: fallbackErr } = await client.from('school_settings').upsert(fallbackPayload, { onConflict: 'id' });
       if (fallbackErr) {
         // Also try upserting with 'default' id to match legacy databases
-        await client.from('school_settings').upsert({ id: 'default', settings_json: settings, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+        await client.from('school_settings').upsert({ id: 'default', school_name: settings.schoolName || 'SMA NEGERI 15 AMBON', settings_json: settings, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       }
     } else {
       // Also sync to 'default' ID if present to ensure complete cross-table consistency
@@ -710,7 +711,7 @@ export async function fetchSettingsFromSupabase(
         ? JSON.parse(data.settings_json)
         : {};
 
-    const res: Partial<SchoolSettings> = {
+    const rawRes: Partial<SchoolSettings> = {
       schoolName: data.school_name || data.schoolName || jsonSettings.schoolName,
       schoolNPSN: data.school_npsn || data.schoolNPSN || jsonSettings.schoolNPSN,
       schoolLogo: data.school_logo || data.schoolLogo || jsonSettings.schoolLogo,
@@ -733,8 +734,8 @@ export async function fetchSettingsFromSupabase(
       waTemplateIzinSakit: data.wa_template_izin_sakit || data.waTemplateIzinSakit || jsonSettings.waTemplateIzinSakit,
       waTemplateAlpa: data.wa_template_alpa || data.waTemplateAlpa || jsonSettings.waTemplateAlpa,
       waTemplateWaliKelas: data.wa_template_wali_kelas || data.waTemplateWaliKelas || jsonSettings.waTemplateWaliKelas,
-      holidays: Array.isArray(data.holidays) ? data.holidays : Array.isArray(jsonSettings.holidays) ? jsonSettings.holidays : [],
-      homeroomAssignments: data.homeroom_assignments && typeof data.homeroom_assignments === 'object' ? data.homeroom_assignments : (jsonSettings.homeroomAssignments || {}),
+      holidays: Array.isArray(data.holidays) ? data.holidays : Array.isArray(jsonSettings.holidays) ? jsonSettings.holidays : undefined,
+      homeroomAssignments: data.homeroom_assignments && typeof data.homeroom_assignments === 'object' ? data.homeroom_assignments : (jsonSettings.homeroomAssignments || undefined),
       problemThresholdAlpa: data.problem_threshold_alpa ?? data.problemThresholdAlpa ?? jsonSettings.problemThresholdAlpa,
       problemThresholdTerlambat: data.problem_threshold_terlambat ?? data.problemThresholdTerlambat ?? jsonSettings.problemThresholdTerlambat,
       problemThresholdMinRate: data.problem_threshold_min_rate ?? data.problemThresholdMinRate ?? jsonSettings.problemThresholdMinRate,
@@ -745,7 +746,15 @@ export async function fetchSettingsFromSupabase(
       rfidAutoRecord: data.rfid_auto_record ?? data.rfidAutoRecord ?? jsonSettings.rfidAutoRecord,
       rfidAllowUnregisteredCardPrompt: data.rfid_allow_unregistered_card_prompt ?? data.rfidAllowUnregisteredCardPrompt ?? jsonSettings.rfidAllowUnregisteredCardPrompt,
     };
-    return res;
+
+    // Filter out undefined and null values so spreading this object does not wipe valid local values
+    const cleanRes: Partial<SchoolSettings> = {};
+    for (const [key, value] of Object.entries(rawRes)) {
+      if (value !== undefined && value !== null) {
+        (cleanRes as any)[key] = value;
+      }
+    }
+    return cleanRes;
   } catch (err: any) {
     console.warn('Supabase fetchSettings error:', err?.message || err);
     return null;
@@ -1597,13 +1606,19 @@ CREATE TABLE IF NOT EXISTS school_settings (
     school_name VARCHAR(255) NOT NULL,
     school_npsn VARCHAR(50),
     school_logo TEXT,
+    province_name TEXT DEFAULT 'PEMERINTAH PROVINSI MALUKU',
+    province_logo TEXT,
+    school_stamp TEXT,
+    headmaster_signature TEXT,
+    headmaster_name TEXT DEFAULT 'Drs. Johanis Latuheru, M.Pd.',
+    headmaster_nip TEXT DEFAULT '196805121994031007',
     school_address TEXT,
     school_city VARCHAR(100),
     cutoff_time VARCHAR(10) DEFAULT '07:15',
     auto_alpa_cutoff_time VARCHAR(10) DEFAULT '14:30',
     enable_auto_alpa BOOLEAN DEFAULT true,
     school_days INTEGER DEFAULT 6,
-    academic_year VARCHAR(50) DEFAULT '2024/2025',
+    academic_year VARCHAR(50) DEFAULT '2026/2027',
     enable_wa_notif BOOLEAN DEFAULT false,
     wa_template_hadir TEXT,
     wa_template_terlambat TEXT,
@@ -1621,6 +1636,7 @@ CREATE TABLE IF NOT EXISTS school_settings (
     rfid_beep_feedback BOOLEAN DEFAULT true,
     rfid_auto_record BOOLEAN DEFAULT true,
     rfid_allow_unregistered_card_prompt BOOLEAN DEFAULT true,
+    settings_json JSONB,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1179,9 +1179,16 @@ class AppStore {
       try {
         const remoteSettings = await fetchSettingsFromSupabase(config);
         if (remoteSettings && Object.keys(remoteSettings).length > 0) {
+          // Merge only defined remote keys so local user edits are never wiped
+          const cleanRemote: Partial<SchoolSettings> = {};
+          for (const [k, v] of Object.entries(remoteSettings)) {
+            if (v !== undefined && v !== null && v !== '') {
+              (cleanRemote as any)[k] = v;
+            }
+          }
           this.settings = {
             ...this.settings,
-            ...remoteSettings,
+            ...cleanRemote,
             homeroomAssignments: {
               ...(this.settings.homeroomAssignments || {}),
               ...(remoteSettings.homeroomAssignments || {}),

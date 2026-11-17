@@ -335,6 +335,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
+  const handleSaveSchoolIdentity = (e?: React.MouseEvent | React.FormEvent) => {
+    if (e) e.preventDefault();
+    store.updateSettings(settings);
+    setSavedSuccess(true);
+    toast.success(
+      'Identitas Sekolah Berhasil Disimpan',
+      `Data instansi, nama sekolah, dan kepala sekolah (${settings.headmasterName || 'Kepala Sekolah'}) tersimpan di database lokal & cloud.`
+    );
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
+
   const handleManualSync = async () => {
     setIsSyncing(true);
     await store.syncAllToServer();
@@ -779,6 +790,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       jenisKelamin="Laki-laki"
                       agama="Islam"
                       alamat={settings.schoolAddress || 'Kota Ambon'}
+                      schoolName={settings.schoolName}
+                      schoolAddress={settings.schoolAddress}
+                      provinceName={settings.provinceName}
+                      provinceLogo={settings.provinceLogo}
+                      schoolLogo={settings.schoolLogo}
+                      tahunAjaran={settings.academicYear}
                       cardSize="CR80"
                       isSelected={true}
                     />
@@ -795,6 +812,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                       nama="MAULIDAN KAREPESINA"
                       nisn="0102365332"
                       kelas="X-1"
+                      schoolName={settings.schoolName}
+                      headmasterName={settings.headmasterName}
+                      headmasterNIP={settings.headmasterNIP}
+                      schoolCity={settings.schoolCity}
+                      schoolStamp={settings.schoolStamp}
+                      headmasterSignature={settings.headmasterSignature}
                       cardSize="CR80"
                       isSelected={true}
                     />
@@ -806,17 +829,32 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
 
           {/* Form Identitas Sekolah & Data Pejabat */}
           <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 space-y-5">
-            <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
-              <Building2 className="w-4 h-4 text-blue-400" />
-              <span>Data Pokok Identitas Sekolah &amp; Pejabat Penandatangan</span>
-            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div>
+                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-400" />
+                  <span>Data Pokok Identitas Sekolah &amp; Pejabat Penandatangan</span>
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Perubahan pada identitas sekolah dan nama/NIP kepala sekolah langsung tersimpan &amp; terupdate pada seluruh kartu pelajar dan laporan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveSchoolIdentity}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shrink-0"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Simpan Identitas Sekolah</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">Nama Instansi / Pemerintah Daerah</label>
                 <input
                   type="text"
-                  value={settings.provinceName || 'PEMERINTAH PROVINSI MALUKU'}
+                  value={settings.provinceName ?? ''}
                   onChange={(e) => setSettings({ ...settings, provinceName: e.target.value })}
                   placeholder="e.g. PEMERINTAH PROVINSI MALUKU"
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
@@ -829,7 +867,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">Nama Satuan Pendidikan (Sekolah)</label>
                 <input
                   type="text"
-                  value={settings.schoolName}
+                  value={settings.schoolName ?? ''}
                   onChange={(e) => setSettings({ ...settings, schoolName: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
                   required
@@ -843,7 +881,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">NPSN Sekolah</label>
                 <input
                   type="text"
-                  value={settings.schoolNPSN}
+                  value={settings.schoolNPSN ?? ''}
                   onChange={(e) => setSettings({ ...settings, schoolNPSN: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
                   required
@@ -854,7 +892,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">Kota / Kabupaten</label>
                 <input
                   type="text"
-                  value={settings.schoolCity || 'Kota Ambon'}
+                  value={settings.schoolCity ?? ''}
                   onChange={(e) => setSettings({ ...settings, schoolCity: e.target.value })}
                   placeholder="e.g. Kota Ambon"
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
@@ -866,8 +904,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">Tahun Ajaran</label>
                 <input
                   type="text"
-                  value={settings.academicYear}
+                  value={settings.academicYear ?? ''}
                   onChange={(e) => setSettings({ ...settings, academicYear: e.target.value })}
+                  placeholder="e.g. 2026/2027"
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
                   required
                 />
@@ -878,7 +917,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
               <label className="block text-xs font-bold text-slate-300 mb-1">Alamat Lengkap Sekolah</label>
               <input
                 type="text"
-                value={settings.schoolAddress || ''}
+                value={settings.schoolAddress ?? ''}
                 onChange={(e) => setSettings({ ...settings, schoolAddress: e.target.value })}
                 placeholder="e.g. Jl. Ir. M. Putuhena, Kec. Teluk Ambon, Kota Ambon"
                 className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
@@ -891,7 +930,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">Nama Kepala Sekolah (Lengkap dengan Gelar)</label>
                 <input
                   type="text"
-                  value={settings.headmasterName || 'Drs. Johanis Latuheru, M.Pd.'}
+                  value={settings.headmasterName ?? ''}
                   onChange={(e) => setSettings({ ...settings, headmasterName: e.target.value })}
                   placeholder="e.g. Drs. Johanis Latuheru, M.Pd."
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
@@ -903,7 +942,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                 <label className="block text-xs font-bold text-slate-300 mb-1">NIP Kepala Sekolah</label>
                 <input
                   type="text"
-                  value={settings.headmasterNIP || '196805121994031007'}
+                  value={settings.headmasterNIP ?? ''}
                   onChange={(e) => setSettings({ ...settings, headmasterNIP: e.target.value })}
                   placeholder="e.g. 196805121994031007"
                   className="w-full px-3.5 py-2 text-xs border border-white/10 bg-slate-800 text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
@@ -931,14 +970,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tahun Ajaran</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Batas Jam Otomatis Alpa (Cutoff Sore)
+              </label>
               <input
-                type="text"
-                value={settings.academicYear}
-                onChange={(e) => setSettings({ ...settings, academicYear: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600"
-                required
+                type="time"
+                value={settings.autoAlpaCutoffTime || '14:30'}
+                onChange={(e) => setSettings({ ...settings, autoAlpaCutoffTime: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs border border-white/10 dark:bg-slate-800 dark:text-white rounded-2xl focus:ring-2 focus:ring-blue-600 font-mono"
               />
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Siswa tanpa absensi sampai pukul <b>{settings.autoAlpaCutoffTime || '14:30'} WIT</b> otomatis tercatat Alpa jika fitur auto alpa aktif.
+              </p>
             </div>
           </div>
 

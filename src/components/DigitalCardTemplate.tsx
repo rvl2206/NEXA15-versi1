@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { store } from '../lib/store';
 import { Student } from '../types';
 import { printElement } from '../lib/exportUtils';
+import { toast } from '../lib/toast';
 import {
   CreditCard,
   Printer,
@@ -15,6 +16,8 @@ import {
   CheckSquare,
   Square,
   Layers,
+  Building2,
+  Save,
 } from 'lucide-react';
 import {
   OfficialStudentIDCardFront,
@@ -114,6 +117,33 @@ export const DigitalCardTemplate: React.FC = () => {
   const [statusSiswa, setStatusSiswa] = useState<string>('Siswa Aktif');
   const [cardSize, setCardSize] = useState<CardSizeOption>('CR80');
   const [activeSide, setActiveSide] = useState<'both' | 'front' | 'back'>('both');
+  const [layoutStyle, setLayoutStyle] = useState<'side-by-side' | 'classic'>('side-by-side');
+  const [photoSize, setPhotoSize] = useState<'normal' | 'large' | 'compact'>('normal');
+
+  // School Identity & Signatory Official Overrides
+  const currentSettings = store.getSettings();
+  const [overrideSchoolName, setOverrideSchoolName] = useState<string>(currentSettings.schoolName || 'SMA NEGERI 15 AMBON');
+  const [overrideHeadmasterName, setOverrideHeadmasterName] = useState<string>(currentSettings.headmasterName || 'Drs. Johanis Latuheru, M.Pd.');
+  const [overrideHeadmasterNIP, setOverrideHeadmasterNIP] = useState<string>(currentSettings.headmasterNIP || '196805121994031007');
+  const [overrideSchoolCity, setOverrideSchoolCity] = useState<string>(currentSettings.schoolCity || 'Kota Ambon');
+  const [overrideDateStr, setOverrideDateStr] = useState<string>('Juli 2026');
+  const [isSavedToSettings, setIsSavedToSettings] = useState(false);
+
+  const handleSaveToGlobalSettings = () => {
+    store.updateSettings({
+      schoolName: overrideSchoolName,
+      headmasterName: overrideHeadmasterName,
+      headmasterNIP: overrideHeadmasterNIP,
+      schoolCity: overrideSchoolCity,
+      academicYear: tahunAjaran,
+    });
+    setIsSavedToSettings(true);
+    toast.success(
+      'Pengaturan Sekolah Disimpan',
+      `Data kepala sekolah "${overrideHeadmasterName}" dan sekolah "${overrideSchoolName}" berhasil disimpan ke sistem.`
+    );
+    setTimeout(() => setIsSavedToSettings(false), 2500);
+  };
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -589,6 +619,79 @@ export const DigitalCardTemplate: React.FC = () => {
             </div>
           </div>
 
+          {/* Identitas Sekolah & Pejabat Penandatangan (Kartu Sisi Belakang) */}
+          <div className="space-y-3 pt-3 border-t border-white/10 bg-slate-900/50 p-3.5 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Identitas &amp; Pejabat TTD</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleSaveToGlobalSettings}
+                className="px-2.5 py-1 text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-1 cursor-pointer transition-all"
+                title="Simpan perubahan ini ke pengaturan utama aplikasi"
+              >
+                <Save className="w-3 h-3" />
+                <span>{isSavedToSettings ? 'Tersimpan!' : 'Simpan ke Sistem'}</span>
+              </button>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-300 mb-1 block">
+                Nama Satuan Pendidikan:
+              </label>
+              <input
+                type="text"
+                value={overrideSchoolName}
+                onChange={(e) => setOverrideSchoolName(e.target.value)}
+                placeholder="SMA NEGERI 15 AMBON"
+                className="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-300 mb-1 block">
+                Nama Kepala Sekolah (Lengkap Gelar):
+              </label>
+              <input
+                type="text"
+                value={overrideHeadmasterName}
+                onChange={(e) => setOverrideHeadmasterName(e.target.value)}
+                placeholder="Drs. Johanis Latuheru, M.Pd."
+                className="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 mb-1 block">
+                  NIP Kepala Sekolah:
+                </label>
+                <input
+                  type="text"
+                  value={overrideHeadmasterNIP}
+                  onChange={(e) => setOverrideHeadmasterNIP(e.target.value)}
+                  placeholder="196805121994031007"
+                  className="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 mb-1 block">
+                  Kota &amp; Pengesahan:
+                </label>
+                <input
+                  type="text"
+                  value={overrideDateStr}
+                  onChange={(e) => setOverrideDateStr(e.target.value)}
+                  placeholder="Juli 2026"
+                  className="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Side View Selector */}
           <div className="pt-2 border-t border-white/10">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 block">
@@ -628,6 +731,80 @@ export const DigitalCardTemplate: React.FC = () => {
               >
                 Sisi Belakang
               </button>
+            </div>
+          </div>
+
+          {/* Layout Style & Photo Size Customizer */}
+          <div className="pt-2 border-t border-white/10 space-y-3">
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Tata Letak Sisi Depan:
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setLayoutStyle('side-by-side')}
+                  className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer ${
+                    layoutStyle === 'side-by-side'
+                      ? 'bg-emerald-600 text-white shadow-xs font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Foto Kiri (Modern)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLayoutStyle('classic')}
+                  className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer ${
+                    layoutStyle === 'classic'
+                      ? 'bg-blue-600 text-white shadow-xs font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Foto Tengah (Klasik)
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Ukuran Pasfoto 3x4:
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setPhotoSize('compact')}
+                  className={`py-1.5 px-1 text-[10px] font-bold rounded-lg transition-all text-center cursor-pointer ${
+                    photoSize === 'compact'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Kompak
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoSize('normal')}
+                  className={`py-1.5 px-1 text-[10px] font-bold rounded-lg transition-all text-center cursor-pointer ${
+                    photoSize === 'normal'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Standar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoSize('large')}
+                  className={`py-1.5 px-1 text-[10px] font-bold rounded-lg transition-all text-center cursor-pointer ${
+                    photoSize === 'large'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Besar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -690,9 +867,12 @@ export const DigitalCardTemplate: React.FC = () => {
                     alamat={values.alamat}
                     foto={values.foto}
                     tahunAjaran={values.tahun}
+                    schoolName={overrideSchoolName}
                     statusSiswa={values.status}
                     qrValue={values.qrValue}
                     cardSize={cardSize}
+                    layoutStyle={layoutStyle}
+                    photoSize={photoSize}
                   />
                 </div>
               )}
@@ -711,6 +891,11 @@ export const DigitalCardTemplate: React.FC = () => {
                     kelas={values.kelas}
                     qrValue={values.qrValue}
                     cardSize={cardSize}
+                    schoolName={overrideSchoolName}
+                    headmasterName={overrideHeadmasterName}
+                    headmasterNIP={overrideHeadmasterNIP}
+                    schoolCity={overrideSchoolCity}
+                    dateStr={overrideDateStr}
                   />
                 </div>
               )}
@@ -771,9 +956,12 @@ export const DigitalCardTemplate: React.FC = () => {
                                     alamat={s.alamat || 'Kota Ambon'}
                                     foto={s.foto}
                                     tahunAjaran={tahunAjaran || '2024/2025'}
+                                    schoolName={overrideSchoolName}
                                     statusSiswa={statusSiswa || 'Siswa Aktif'}
                                     qrValue={qrVal}
                                     cardSize={cardSize}
+                                    layoutStyle={layoutStyle}
+                                    photoSize={photoSize}
                                   />
                                 )}
                                 {(activeSide === 'both' || activeSide === 'back') && (
@@ -783,6 +971,11 @@ export const DigitalCardTemplate: React.FC = () => {
                                     kelas={s.kelas}
                                     qrValue={qrVal}
                                     cardSize={cardSize}
+                                    schoolName={overrideSchoolName}
+                                    headmasterName={overrideHeadmasterName}
+                                    headmasterNIP={overrideHeadmasterNIP}
+                                    schoolCity={overrideSchoolCity}
+                                    dateStr={overrideDateStr}
                                   />
                                 )}
                               </div>

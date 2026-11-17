@@ -56,9 +56,14 @@ export interface CardFrontProps {
   tahunAjaran?: string;
   schoolName?: string;
   schoolAddress?: string;
+  provinceName?: string;
+  provinceLogo?: string;
+  schoolLogo?: string;
   statusSiswa?: string;
   qrValue?: string;
   cardSize?: CardSizeOption;
+  layoutStyle?: 'side-by-side' | 'classic';
+  photoSize?: 'normal' | 'large' | 'compact';
   isSelected?: boolean;
   onClick?: () => void;
   showCheckbox?: boolean;
@@ -74,6 +79,9 @@ export interface CardBackProps {
   schoolName?: string;
   headmasterName?: string;
   headmasterNIP?: string;
+  schoolCity?: string;
+  schoolStamp?: string;
+  headmasterSignature?: string;
   dateStr?: string;
   isSelected?: boolean;
   onClick?: () => void;
@@ -110,7 +118,14 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
   foto,
   schoolName,
   schoolAddress,
+  provinceName,
+  provinceLogo,
+  schoolLogo,
+  statusSiswa = 'Siswa Aktif',
+  tahunAjaran = '2024/2025',
   cardSize = 'CR80',
+  layoutStyle = 'side-by-side',
+  photoSize = 'normal',
   isSelected = true,
   onClick,
   showCheckbox = false,
@@ -120,11 +135,20 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
   const settings = store.getSettings();
   const activeSchoolName = schoolName || settings.schoolName || 'SMA NEGERI 15 AMBON';
   const activeSchoolAddress = schoolAddress || settings.schoolAddress || 'Jl. Ir. M. Putuhena, Kec. Teluk Ambon, Kota Ambon';
+  const activeProvinceName = (provinceName !== undefined && provinceName !== '') ? provinceName : (settings.provinceName || 'PEMERINTAH PROVINSI MALUKU');
+  const activeProvinceLogo = provinceLogo !== undefined ? provinceLogo : settings.provinceLogo;
+  const activeSchoolLogo = schoolLogo !== undefined ? schoolLogo : settings.schoolLogo;
 
   const cleanNama = (nama || 'MAULIDAN KAREPESINA').trim();
   const cleanNisn = (nisn || '0102365332').trim();
   const cleanNis = (nis || cleanNisn).trim();
   const initials = getInitials(cleanNama);
+
+  const photoDimensions = {
+    compact: { width: '68px', height: '90px' },
+    normal: { width: '76px', height: '102px' },
+    large: { width: '84px', height: '112px' },
+  }[photoSize || 'normal'];
 
   // Formatting gender
   const formattedGender =
@@ -191,20 +215,20 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
               width: '26px',
               height: '26px',
               borderRadius: '50%',
-              backgroundColor: settings.provinceLogo ? '#ffffff' : 'rgba(255, 255, 255, 0.15)',
+              backgroundColor: activeProvinceLogo ? '#ffffff' : 'rgba(255, 255, 255, 0.15)',
               border: '1.5px solid rgba(255, 255, 255, 0.7)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
               overflow: 'hidden',
-              padding: settings.provinceLogo ? '2px' : 0,
+              padding: activeProvinceLogo ? '2px' : 0,
               boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
           >
-            {settings.provinceLogo ? (
+            {activeProvinceLogo ? (
               <img
-                src={settings.provinceLogo}
+                src={activeProvinceLogo}
                 alt="Logo Provinsi"
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
@@ -229,7 +253,7 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
                 lineHeight: 1.15,
               }}
             >
-              {settings.provinceName || 'PEMERINTAH PROVINSI MALUKU'}
+              {activeProvinceName}
             </p>
             <h2
               style={{
@@ -273,13 +297,13 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
               justifyContent: 'center',
               flexShrink: 0,
               overflow: 'hidden',
-              padding: settings.schoolLogo ? '2px' : 0,
+              padding: activeSchoolLogo ? '2px' : 0,
               boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
           >
-            {settings.schoolLogo ? (
+            {activeSchoolLogo ? (
               <img
-                src={settings.schoolLogo}
+                src={activeSchoolLogo}
                 alt="Logo Sekolah"
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
@@ -294,221 +318,540 @@ export const OfficialStudentIDCardFront: React.FC<CardFrontProps> = ({
       </div>
 
       {/* MIDDLE BODY CONTENT */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flex: 1,
-          paddingTop: '5px',
-          paddingBottom: '3px',
-        }}
-      >
-        {/* SUBHEADER BADGE: KARTU PELAJAR WITH HORIZONTAL ACCENT LINES */}
-        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', paddingLeft: '14px', paddingRight: '14px', marginBottom: '2px' }}>
-          <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
-          <span
-            style={{
-              padding: '1.5px 10px',
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              color: '#1d4ed8',
-              fontSize: '8px',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              borderRadius: '9999px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            KARTU PELAJAR
-          </span>
-          <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
-        </div>
-
-        {/* STUDENT PORTRAIT PHOTO - PAS FOTO 3X4 (84px x 112px, RASIO 3:4) */}
+      {layoutStyle === 'side-by-side' ? (
+        /* ================================================================
+           LAYOUT MODERN (FOTO DI KIRI, BIODATA DI KANAN)
+           ================================================================ */
         <div
           style={{
-            width: '84px',
-            height: '112px',
-            borderRadius: '12px',
-            border: '2px solid #2563eb',
-            overflow: 'hidden',
-            backgroundColor: '#1d4ed8',
-            position: 'relative',
-            boxShadow: '0 3px 8px rgba(37, 99, 235, 0.25)',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            margin: '2px 0',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            flex: 1,
+            paddingTop: '4px',
+            paddingBottom: '3px',
+            paddingLeft: '8px',
+            paddingRight: '8px',
+            width: '100%',
           }}
         >
-          {foto ? (
-            <img
-              src={foto}
-              alt={cleanNama}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
+          {/* SUBHEADER BADGE: KARTU PELAJAR */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '3px' }}>
+            <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
+            <span
+              style={{
+                padding: '1px 8px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                color: '#1d4ed8',
+                fontSize: '7.5px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                borderRadius: '9999px',
+                whiteSpace: 'nowrap',
               }}
-            />
-          ) : (
+            >
+              KARTU PELAJAR
+            </span>
+            <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
+          </div>
+
+          {/* TWO COLUMNS: FOTO DI KIRI, IDENTITAS DI KANAN */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: '8px',
+              width: '100%',
+            }}
+          >
+            {/* KOLOM KIRI: PASFOTO SISWA (3X4) + NISN PILL */}
             <div
               style={{
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 60%, #1e40af 100%)',
-                position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                overflow: 'hidden',
+                flexShrink: 0,
               }}
             >
-              {/* Initials badge in top-right */}
-              <span
+              <div
                 style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '4px',
-                  fontSize: '6.5px',
-                  fontWeight: 900,
-                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  color: '#ffffff',
-                  padding: '1.5px 4px',
-                  borderRadius: '3px',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.02em',
+                  width: photoDimensions.width,
+                  height: photoDimensions.height,
+                  borderRadius: '10px',
+                  border: '2px solid #2563eb',
+                  overflow: 'hidden',
+                  backgroundColor: '#1d4ed8',
+                  position: 'relative',
+                  boxShadow: '0 3px 8px rgba(37, 99, 235, 0.22)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                {initials}
-              </span>
+                {foto ? (
+                  <img
+                    src={foto}
+                    alt={cleanNama}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 60%, #1e40af 100%)',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Initials badge in top-right */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '3px',
+                        right: '3px',
+                        fontSize: '6px',
+                        fontWeight: 900,
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                        color: '#ffffff',
+                        padding: '1px 3px',
+                        borderRadius: '3px',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {initials}
+                    </span>
 
-              {/* Student in uniform illustration (3x4 ratio: 84x112) */}
-              <svg viewBox="0 0 84 112" style={{ width: '100%', height: '100%' }}>
-                {/* Head */}
-                <ellipse cx="42" cy="36" rx="15" ry="17" fill="#fde68a" />
-                {/* Peci / Hair */}
-                <path d="M26 28 C26 14, 58 14, 58 28 Z" fill="#0f172a" />
-                {/* Collar & White shirt */}
-                <path d="M12 112 L18 64 L28 54 L42 68 L56 54 L66 64 L72 112 Z" fill="#ffffff" />
-                {/* Navy Tie */}
-                <polygon points="42,68 37,90 42,106 47,90" fill="#0f172a" />
-                {/* Golden OSIS Badge on chest */}
-                <circle cx="58" cy="80" r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
-              </svg>
+                    {/* Student in uniform illustration */}
+                    <svg viewBox="0 0 84 112" style={{ width: '100%', height: '100%' }}>
+                      <ellipse cx="42" cy="36" rx="15" ry="17" fill="#fde68a" />
+                      <path d="M26 28 C26 14, 58 14, 58 28 Z" fill="#0f172a" />
+                      <path d="M12 112 L18 64 L28 54 L42 68 L56 54 L66 64 L72 112 Z" fill="#ffffff" />
+                      <polygon points="42,68 37,90 42,106 47,90" fill="#0f172a" />
+                      <circle cx="58" cy="80" r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              {/* NISN Pill below photo */}
+              <div
+                style={{
+                  marginTop: '3px',
+                  padding: '1.5px 4px',
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  fontSize: '6.5px',
+                  fontFamily: 'monospace',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  width: photoDimensions.width,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {cleanNisn}
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* STUDENT NAME */}
-        <h3
-          style={{
-            fontSize: '11.5px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            color: '#0f172a',
-            textAlign: 'center',
-            margin: '2px 0 1px 0',
-            letterSpacing: '-0.01em',
-            paddingLeft: '6px',
-            paddingRight: '6px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '100%',
-            lineHeight: 1.2,
-          }}
-        >
-          {cleanNama}
-        </h3>
+            {/* KOLOM KANAN: IDENTITAS UTAMA SISWA & BIODATA RINGKAS */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+              }}
+            >
+              {/* Nama Siswa */}
+              <h3
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  color: '#0f172a',
+                  margin: '0 0 3px 0',
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.15,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+                title={cleanNama}
+              >
+                {cleanNama}
+              </h3>
 
-        {/* NISN & NIS / KELAS PILL */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3px' }}>
+              {/* Badges: Kelas & NIS */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '3px',
+                  marginBottom: '4px',
+                }}
+              >
+                {kelas && (
+                  <span
+                    style={{
+                      padding: '1px 5px',
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      fontSize: '7px',
+                      fontWeight: 900,
+                      borderRadius: '4px',
+                    }}
+                  >
+                    {kelas}
+                  </span>
+                )}
+                <span
+                  style={{
+                    padding: '1px 5px',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#475569',
+                    fontSize: '7px',
+                    fontWeight: 700,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  NIS: {cleanNis}
+                </span>
+              </div>
+
+              {/* Mini Biodata Table */}
+              <div
+                style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '7px',
+                  padding: '3px 4px',
+                  fontSize: '7px',
+                  lineHeight: 1.25,
+                }}
+              >
+                <div style={{ display: 'flex', marginBottom: '1.5px' }}>
+                  <span style={{ width: '42px', color: '#64748b', fontWeight: 600, flexShrink: 0 }}>TTL</span>
+                  <span style={{ width: '5px', color: '#94a3b8' }}>:</span>
+                  <span style={{ fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tempatLahir}, {tanggalLahir}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', marginBottom: '1.5px' }}>
+                  <span style={{ width: '42px', color: '#64748b', fontWeight: 600, flexShrink: 0 }}>Kelamin</span>
+                  <span style={{ width: '5px', color: '#94a3b8' }}>:</span>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                    {formattedGender}
+                  </span>
+                </div>
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '42px', color: '#64748b', fontWeight: 600, flexShrink: 0 }}>Agama</span>
+                  <span style={{ width: '5px', color: '#94a3b8' }}>:</span>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                    {agama}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* BOTTOM SECTION: ALAMAT LENGKAP BOX */}
           <div
             style={{
-              padding: '2px 8px',
-              backgroundColor: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              fontSize: '8px',
-              fontFamily: 'monospace',
-              fontWeight: 800,
-              color: '#1e293b',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
+              width: '100%',
+              backgroundColor: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '3px 6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              marginTop: '3px',
             }}
           >
-            <span>NISN: {cleanNisn}</span>
-            <span style={{ color: '#94a3b8' }}>·</span>
-            <span>NIS: {cleanNis}</span>
-            {kelas && (
-              <>
-                <span style={{ color: '#94a3b8' }}>·</span>
-                <span style={{ color: '#1863E5', fontFamily: 'sans-serif', fontWeight: 800 }}>{kelas}</span>
-              </>
-            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <tbody style={{ fontSize: '7px', lineHeight: 1.25 }}>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ width: '58px', padding: '1.5px 0', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Alamat
+                  </td>
+                  <td style={{ width: '5px', padding: '1.5px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '1.5px 0 1.5px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {alamat}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ width: '58px', padding: '1.5px 0', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Status Siswa
+                  </td>
+                  <td style={{ width: '5px', padding: '1.5px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '1.5px 0 1.5px 2px', fontWeight: 800, color: '#16a34a' }}>
+                    {statusSiswa} ({tahunAjaran})
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* SIGNATURE / CARDHOLDER FOOTER STRIP */}
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1px 2px',
+              marginTop: '1px',
+            }}
+          >
+            <span style={{ fontSize: '6px', color: '#94a3b8', fontFamily: 'monospace' }}>
+              NEXA15 · ID RESMI
+            </span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '6px', color: '#64748b', fontStyle: 'italic' }}>
+                Pemegang Kartu,
+              </span>
+              <div style={{ width: '50px', borderBottom: '0.8px dashed #cbd5e1', marginTop: '10px' }} />
+            </div>
           </div>
         </div>
-
-        {/* BIODATA TABLE CONTAINER - DISESUAIKAN AGAR LEBIH JELAS & PROPORSIONAL */}
+      ) : (
+        /* ================================================================
+           LAYOUT KLASIK (FOTO DI TENGAH)
+           ================================================================ */
         <div
           style={{
-            width: 'calc(100% - 14px)',
-            backgroundColor: '#ffffff',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '10px',
-            overflow: 'hidden',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            marginBottom: '3px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flex: 1,
+            paddingTop: '5px',
+            paddingBottom: '3px',
           }}
         >
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <tbody style={{ fontSize: '8px', lineHeight: 1.25 }}>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
-                  Tempat, Tgl Lahir
-                </td>
-                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {tempatLahir}, {tanggalLahir}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
-                  Jenis Kelamin
-                </td>
-                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
-                  {formattedGender}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
-                  Agama
-                </td>
-                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
-                  {agama}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
-                  Alamat
-                </td>
-                <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
-                <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {alamat}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          {/* SUBHEADER BADGE: KARTU PELAJAR WITH HORIZONTAL ACCENT LINES */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', paddingLeft: '14px', paddingRight: '14px', marginBottom: '2px' }}>
+            <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
+            <span
+              style={{
+                padding: '1.5px 10px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                color: '#1d4ed8',
+                fontSize: '8px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                borderRadius: '9999px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              KARTU PELAJAR
+            </span>
+            <div style={{ height: '1px', backgroundColor: '#cbd5e1', flex: 1 }} />
+          </div>
+
+          {/* STUDENT PORTRAIT PHOTO - PAS FOTO 3X4 (84px x 112px, RASIO 3:4) */}
+          <div
+            style={{
+              width: photoDimensions.width,
+              height: photoDimensions.height,
+              borderRadius: '12px',
+              border: '2px solid #2563eb',
+              overflow: 'hidden',
+              backgroundColor: '#1d4ed8',
+              position: 'relative',
+              boxShadow: '0 3px 8px rgba(37, 99, 235, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              margin: '2px 0',
+            }}
+          >
+            {foto ? (
+              <img
+                src={foto}
+                alt={cleanNama}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 60%, #1e40af 100%)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Initials badge in top-right */}
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    fontSize: '6.5px',
+                    fontWeight: 900,
+                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    color: '#ffffff',
+                    padding: '1.5px 4px',
+                    borderRadius: '3px',
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  {initials}
+                </span>
+
+                {/* Student in uniform illustration (3x4 ratio: 84x112) */}
+                <svg viewBox="0 0 84 112" style={{ width: '100%', height: '100%' }}>
+                  {/* Head */}
+                  <ellipse cx="42" cy="36" rx="15" ry="17" fill="#fde68a" />
+                  {/* Peci / Hair */}
+                  <path d="M26 28 C26 14, 58 14, 58 28 Z" fill="#0f172a" />
+                  {/* Collar & White shirt */}
+                  <path d="M12 112 L18 64 L28 54 L42 68 L56 54 L66 64 L72 112 Z" fill="#ffffff" />
+                  {/* Navy Tie */}
+                  <polygon points="42,68 37,90 42,106 47,90" fill="#0f172a" />
+                  {/* Golden OSIS Badge on chest */}
+                  <circle cx="58" cy="80" r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          {/* STUDENT NAME */}
+          <h3
+            style={{
+              fontSize: '11.5px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              color: '#0f172a',
+              textAlign: 'center',
+              margin: '2px 0 1px 0',
+              letterSpacing: '-0.01em',
+              paddingLeft: '6px',
+              paddingRight: '6px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%',
+              lineHeight: 1.2,
+            }}
+          >
+            {cleanNama}
+          </h3>
+
+          {/* NISN & NIS / KELAS PILL */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3px' }}>
+            <div
+              style={{
+                padding: '2px 8px',
+                backgroundColor: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '8px',
+                fontFamily: 'monospace',
+                fontWeight: 800,
+                color: '#1e293b',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>NISN: {cleanNisn}</span>
+              <span style={{ color: '#94a3b8' }}>·</span>
+              <span>NIS: {cleanNis}</span>
+              {kelas && (
+                <>
+                  <span style={{ color: '#94a3b8' }}>·</span>
+                  <span style={{ color: '#1863E5', fontFamily: 'sans-serif', fontWeight: 800 }}>{kelas}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* BIODATA TABLE CONTAINER - DISESUAIKAN AGAR LEBIH JELAS & PROPORSIONAL */}
+          <div
+            style={{
+              width: 'calc(100% - 14px)',
+              backgroundColor: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              marginBottom: '3px',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <tbody style={{ fontSize: '8px', lineHeight: 1.25 }}>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Tempat, Tgl Lahir
+                  </td>
+                  <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {tempatLahir}, {tanggalLahir}
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Jenis Kelamin
+                  </td>
+                  <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
+                    {formattedGender}
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Agama
+                  </td>
+                  <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a' }}>
+                    {agama}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ width: '74px', padding: '3px 4px 3px 6px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                    Alamat
+                  </td>
+                  <td style={{ width: '6px', padding: '3px 0', fontWeight: 700, color: '#94a3b8' }}>:</td>
+                  <td style={{ padding: '3px 6px 3px 2px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {alamat}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* BOTTOM FOOTER SECTION - ROYAL BLUE */}
       <div
@@ -554,7 +897,10 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
   schoolName,
   headmasterName,
   headmasterNIP,
-  dateStr = 'Juli 2024',
+  schoolCity,
+  schoolStamp,
+  headmasterSignature,
+  dateStr = 'Juli 2026',
   isSelected = true,
   onClick,
   showCheckbox = false,
@@ -569,8 +915,17 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
   const cleanNisn = (nisn || '0102365332').trim();
   const computedQr = qrValue || `${schoolNpsn}.${cleanNisn}.${cleanNama}`;
 
-  const activeHeadmasterName = headmasterName || (settings as any).headmasterName || 'Drs. Johanis Latuheru, M.Pd.';
-  const activeHeadmasterNIP = headmasterNIP || (settings as any).headmasterNIP || '196805121994031007';
+  const activeHeadmasterName = (headmasterName !== undefined && headmasterName.trim() !== '')
+    ? headmasterName
+    : ((settings as any).headmasterName || 'Drs. Johanis Latuheru, M.Pd.');
+  const activeHeadmasterNIP = (headmasterNIP !== undefined && headmasterNIP.trim() !== '')
+    ? headmasterNIP
+    : ((settings as any).headmasterNIP || '196805121994031007');
+  const activeSchoolCity = (schoolCity !== undefined && schoolCity.trim() !== '')
+    ? schoolCity
+    : (settings.schoolCity || 'Ambon');
+  const activeSchoolStamp = schoolStamp !== undefined ? schoolStamp : settings.schoolStamp;
+  const activeHeadmasterSignature = headmasterSignature !== undefined ? headmasterSignature : settings.headmasterSignature;
 
   return (
     <div
@@ -776,7 +1131,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
         }}
       >
         {/* Left: Official Circular Stamp Watermark */}
-        {settings.schoolStamp ? (
+        {activeSchoolStamp ? (
           <div
             style={{
               width: '44px',
@@ -789,7 +1144,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
             }}
           >
             <img
-              src={settings.schoolStamp}
+              src={activeSchoolStamp}
               alt="Stempel Resmi Sekolah"
               style={{
                 maxWidth: '44px',
@@ -832,16 +1187,16 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
         {/* Right: Headmaster Signature & NIP */}
         <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
           <p style={{ fontSize: '6px', fontWeight: 500, color: '#64748b', margin: 0 }}>
-            {settings.schoolCity || 'Ambon'}, {dateStr}
+            {activeSchoolCity}, {dateStr}
           </p>
           <p style={{ fontSize: '6.5px', fontWeight: 700, color: '#334155', margin: '0.5px 0' }}>
             Kepala Sekolah,
           </p>
           {/* Signature Image or Spacer */}
-          {settings.headmasterSignature ? (
+          {activeHeadmasterSignature ? (
             <div style={{ height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', margin: '-2px 0' }}>
               <img
-                src={settings.headmasterSignature}
+                src={activeHeadmasterSignature}
                 alt="Tanda Tangan Kepala Sekolah"
                 style={{ maxHeight: '24px', maxWidth: '85px', objectFit: 'contain' }}
               />
