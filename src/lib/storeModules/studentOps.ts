@@ -197,14 +197,6 @@ export const studentOps = {
       store.enqueueSync({ id: existing.id, type: 'student', action: 'upsert', data: { ...existing, rfid_uid: null } });
     }
 
-    // 2. Cross-Entity Check: Check if a teacher previously had this RFID UID
-    const existingTeacher = store.getTeacherByRfidUid(cleanUid);
-    if (existingTeacher) {
-      existingTeacher.rfid_uid = undefined;
-      store.enqueueSync({ id: existingTeacher.id, type: 'teacher', action: 'upsert', data: { ...existingTeacher, rfid_uid: null } });
-      store.addLog('UNBIND_RFID_GURU', `Kartu RFID [${cleanUid}] dilepas dari Guru ${existingTeacher.nama} karena dialihkan ke Siswa.`);
-    }
-
     student.rfid_uid = cleanUid;
     store.notify();
     store.enqueueSync({ id: student.id, type: 'student', action: 'upsert', data: student });

@@ -44,8 +44,8 @@ export function registerServiceWorker() {
         document.body.appendChild(promptDiv);
       },
       onOfflineReady() {
-        // App is ready to work offline, no aggressive UI needed for now.
-        console.log('NEXA15 is ready for offline use.');
+        // Online-only architecture: Service worker only caches static assets for shell loading.
+        console.log('NEXA15 service worker registered (online-only architecture).');
       },
     });
   }

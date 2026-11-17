@@ -10,8 +10,6 @@ import {
   Settings,
   ShieldAlert,
   CreditCard,
-  Briefcase,
-  UserCheck,
   X,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +22,7 @@ import {
   Wifi,
   WifiOff,
   Menu,
+  UserCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -74,14 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           roles: ['Admin', 'Guru', 'Kepala Sekolah'],
         },
         {
-          id: 'teacher-recap',
-          label: 'Log Presensi Guru',
-          icon: UserCheck,
-          roles: ['Admin', 'Guru', 'Kepala Sekolah'],
-          badge: 'Guru',
-          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
-        },
-        {
           id: 'wali-kelas-dispatch',
           label: 'Disposisi Siswa ke Wali Kelas',
           icon: ShieldAlert,
@@ -99,14 +90,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Database Siswa',
           icon: Users,
           roles: ['Admin', 'Guru', 'Kepala Sekolah'],
-        },
-        {
-          id: 'teachers',
-          label: 'Database Guru (NIP)',
-          icon: Briefcase,
-          roles: ['Admin', 'Guru', 'Kepala Sekolah'],
-          badge: 'NIP',
-          badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-400/30',
         },
         {
           id: 'card-template',

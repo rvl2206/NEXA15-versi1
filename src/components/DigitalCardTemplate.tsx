@@ -666,7 +666,9 @@ export const DigitalCardTemplate: React.FC = () => {
           {(mode !== 'student' || printType === 'single') && (
             <div
               id="printable-id-card-area"
-              className="flex flex-wrap items-center justify-center gap-8 py-2 z-10 w-full my-auto"
+              className={`flex ${
+                activeSide === 'both' ? 'flex-col' : 'flex-wrap'
+              } items-center justify-center gap-6 py-2 z-10 w-full my-auto`}
             >
               {/* FRONT CARD */}
               {(activeSide === 'both' || activeSide === 'front') && (
@@ -751,7 +753,11 @@ export const DigitalCardTemplate: React.FC = () => {
                               <div className="text-[10px] font-bold text-amber-400 mb-2 uppercase tracking-wide print:hidden">
                                 {s.nama} ({s.kelas})
                               </div>
-                              <div className="flex flex-wrap items-center justify-center gap-3">
+                              <div
+                                className={`flex ${
+                                  activeSide === 'both' ? 'flex-col' : 'flex-wrap'
+                                } items-center justify-center gap-3`}
+                              >
                                 {(activeSide === 'both' || activeSide === 'front') && (
                                   <OfficialStudentIDCardFront
                                     nama={s.nama}

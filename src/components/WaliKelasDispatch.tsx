@@ -35,7 +35,7 @@ import {
   Info,
   ChevronDown,
 } from 'lucide-react';
-import { Student, Teacher, ProblematicStudentDispatch, SchoolSettings, AttendanceRecord } from '../types';
+import { Student, ProblematicStudentDispatch, SchoolSettings, AttendanceRecord } from '../types';
 import { store } from '../lib/store';
 import { toast } from '../lib/toast';
 import {
@@ -48,7 +48,6 @@ import {
 
 interface WaliKelasDispatchProps {
   students: Student[];
-  teachers: Teacher[];
   attendance: AttendanceRecord[];
   settings: SchoolSettings;
   currentUserRole?: string;
@@ -56,7 +55,6 @@ interface WaliKelasDispatchProps {
 
 export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
   students,
-  teachers,
   attendance,
   settings,
   currentUserRole = 'Admin',
@@ -102,19 +100,16 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
   const [tempTerlambatThreshold, setTempTerlambatThreshold] = useState<number>(settings.problemThresholdTerlambat || 3);
   const [tempMinRateThreshold, setTempMinRateThreshold] = useState<number>(settings.problemThresholdMinRate || 75);
 
-  // Get available classes from student data and teacher assignments
+  // Get available classes from student data
   const allClasses = useMemo(() => {
     const classSet = new Set<string>();
     students.forEach((s) => {
       if (s.kelas && s.kelas.trim()) classSet.add(s.kelas.trim());
     });
-    teachers.forEach((t) => {
-      if (t.wali_kelas && t.wali_kelas.trim()) classSet.add(t.wali_kelas.trim());
-    });
     const arr = Array.from(classSet);
     arr.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     return arr.length > 0 ? arr : ['X-1', 'X-2', 'XI IPA 1', 'XI IPA 2', 'XI IPS 1', 'XI IPS 2', 'XII MIPA 1', 'XII MIPA 2'];
-  }, [students, teachers]);
+  }, [students]);
 
   // Available months from attendance logs
   const availableMonths = useMemo(() => {
@@ -140,7 +135,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
       minTerlambat: tempTerlambatThreshold,
       maxAttendanceRate: tempMinRateThreshold,
     });
-  }, [selectedClass, selectedMonth, selectedRisk, searchQuery, tempAlpaThreshold, tempTerlambatThreshold, tempMinRateThreshold, students, attendance, teachers, settings]);
+  }, [selectedClass, selectedMonth, selectedRisk, searchQuery, tempAlpaThreshold, tempTerlambatThreshold, tempMinRateThreshold, students, attendance, settings]);
 
   // Filter by issue type
   const filteredList = useMemo(() => {
@@ -1277,7 +1272,7 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                         Kelas {cls}
                       </span>
                       <span className="text-[11px] text-slate-400 font-medium">
-                        Sumber: {assigned.source === 'teacher_db' ? 'Data Guru' : assigned.source === 'settings_map' ? 'Pemetaan Khusus' : 'Belum Ditentukan'}
+                        Sumber: {assigned.source === 'settings_map' ? 'Pemetaan Khusus' : 'Belum Ditentukan'}
                       </span>
                     </div>
 
@@ -1285,28 +1280,15 @@ export const WaliKelasDispatch: React.FC<WaliKelasDispatchProps> = ({
                       <div className="space-y-3 pt-2">
                         <div>
                           <label className="text-[11px] font-bold text-slate-200 dark:text-slate-300 block mb-1">
-                            Pilih dari Database Guru:
+                            NIP Wali Kelas:
                           </label>
-                          <select
+                          <input
+                            type="text"
                             value={mappingTeacherNip}
-                            onChange={(e) => {
-                              const selNip = e.target.value;
-                              setMappingTeacherNip(selNip);
-                              const found = teachers.find((t) => t.nip === selNip);
-                              if (found) {
-                                setMappingTeacherName(found.nama);
-                                if (found.no_hp) setMappingPhone(found.no_hp);
-                              }
-                            }}
+                            onChange={(e) => setMappingTeacherNip(e.target.value)}
+                            placeholder="Contoh: 198501012010011001"
                             className="w-full px-3 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-xs"
-                          >
-                            <option value="">-- Pilih Guru --</option>
-                            {teachers.map((t) => (
-                              <option key={t.id} value={t.nip}>
-                                {t.nama} (NIP: {t.nip})
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </div>
 
                         <div>

@@ -12,7 +12,7 @@ interface StudentRfidBindModalProps {
   handleStartNfcScan: () => void;
   hexFormatted: string;
   decFormatted: string;
-  rfidConflict: { type: 'siswa' | 'guru', student?: Student, teacher?: any } | null;
+  rfidConflict: { type: 'siswa', student?: Student } | null;
   handleUnbindRfid: () => void;
   handleSaveRfidBind: (e?: React.FormEvent) => void;
 }
@@ -181,10 +181,7 @@ export function StudentRfidBindModal({
               </div>
               <p className="text-[11px] leading-relaxed">
                 Kartu UID <strong>[{rfidInputVal}]</strong> saat ini sedang ditautkan ke{' '}
-                <strong>
-                  {rfidConflict.type === 'siswa' ? rfidConflict.student?.nama : rfidConflict.teacher?.nama}
-                </strong>{' '}
-                ({rfidConflict.type === 'siswa' ? `Siswa Kelas ${rfidConflict.student?.kelas}` : `Guru - ${rfidConflict.teacher?.jabatan}`}).
+                <strong>{rfidConflict.student?.nama}</strong> (Siswa Kelas {rfidConflict.student?.kelas}).
               </p>
               <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-900/50 p-2 rounded-lg">
                 ⚡ Jika Anda melanjutkan penyimpanan, kepemilikan kartu RFID ini akan otomatis dialihkan secara eksklusif ke <strong>{rfidBindStudent.nama}</strong>.

@@ -685,7 +685,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
               size={112}
               level="M"
               includeMargin={false}
-              fgColor="#0f172a"
+              fgColor="#000000"
               bgColor="#ffffff"
             />
           </div>

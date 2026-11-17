@@ -26,20 +26,25 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
   onConfirmExit,
 }) => {
   const [queueDetails, setQueueDetails] = useState(store.getSyncQueueDetails());
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState<boolean>(() => store.isOnline());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      store.setNetworkOnline(true);
+      setIsOnline(true);
+    };
+    const handleOffline = () => {
+      store.setNetworkOnline(false);
+      setIsOnline(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     const unsubscribe = store.subscribe(() => {
+      setIsOnline(store.isOnline());
       const current = store.getSyncQueueDetails();
       setQueueDetails(current);
       if (current.total === 0 && isSyncing) {
@@ -85,28 +90,12 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
         icon: GraduationCap,
       };
     }
-    if (item.type === 'teacher_attendance') {
-      const data = item.data || {};
-      return {
-        title: `${data.nama || 'Guru'}`,
-        subtitle: `Presensi Guru ${data.jenis || ''} (${data.status || ''})`,
-        icon: User,
-      };
-    }
     if (item.type === 'student') {
       const data = item.data || {};
       return {
         title: `Data Siswa: ${data.nama || item.id}`,
         subtitle: `Kelas ${data.kelas || '-'} (${item.action})`,
         icon: GraduationCap,
-      };
-    }
-    if (item.type === 'teacher') {
-      const data = item.data || {};
-      return {
-        title: `Data Guru: ${data.nama || item.id}`,
-        subtitle: `${data.mapel || data.nip || '-'} (${item.action})`,
-        icon: User,
       };
     }
     return {
@@ -200,12 +189,6 @@ export const ExitUnsyncedDataModal: React.FC<ExitUnsyncedDataModalProps> = ({
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                   <GraduationCap className="w-4 h-4 text-amber-600" />
                   <span>Presensi Siswa: {queueDetails.attendanceCount}</span>
-                </span>
-              )}
-              {queueDetails.teacherCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700">
-                  <User className="w-4 h-4 text-purple-600" />
-                  <span>Presensi Guru: {queueDetails.teacherCount}</span>
                 </span>
               )}
               <span

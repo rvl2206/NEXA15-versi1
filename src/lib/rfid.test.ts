@@ -39,10 +39,9 @@ describe('RFID Architecture and Functionality Tests', () => {
     });
   });
 
-  describe('Cross-Entity RFID Binding & Conflict Resolution', () => {
+  describe('RFID Binding & Conflict Resolution', () => {
     let student1Id: string;
     let student2Id: string;
-    let teacher1Id: string;
 
     beforeEach(async () => {
       // Clean and populate fresh test entities
@@ -63,54 +62,6 @@ describe('RFID Architecture and Functionality Tests', () => {
         status: 'aktif',
       });
       student2Id = s2.id;
-
-      const t1 = await store.addTeacher({
-        nip: '198501012010011001',
-        nama: 'Guru Uji Coba 1',
-        jabatan: 'Guru Fisika',
-        status: 'aktif',
-      });
-      teacher1Id = t1.id;
-    });
-
-    it('unbounds teacher when the same RFID is assigned to a student', () => {
-      const testRfid = 'A1B2C3D4';
-
-      // 1. Assign RFID to teacher
-      store.assignRfidToTeacher(teacher1Id, testRfid);
-      let updatedTeacher = store.getTeachers().find((t) => t.id === teacher1Id);
-      expect(updatedTeacher?.rfid_uid).toBe(testRfid);
-
-      // 2. Assign the same RFID to student
-      const assignSuccess = store.assignRfidToStudent(student1Id, testRfid);
-      expect(assignSuccess).toBe(true);
-
-      // 3. Verify student has the RFID and teacher has been unbound
-      const updatedStudent = store.getStudents().find((s) => s.id === student1Id);
-      updatedTeacher = store.getTeachers().find((t) => t.id === teacher1Id);
-
-      expect(updatedStudent?.rfid_uid).toBe(testRfid);
-      expect(updatedTeacher?.rfid_uid).toBeUndefined();
-    });
-
-    it('unbounds student when the same RFID is assigned to a teacher', () => {
-      const testRfid = 'E5F6A7B8';
-
-      // 1. Assign RFID to student
-      store.assignRfidToStudent(student1Id, testRfid);
-      let updatedStudent = store.getStudents().find((s) => s.id === student1Id);
-      expect(updatedStudent?.rfid_uid).toBe(testRfid);
-
-      // 2. Assign the same RFID to teacher
-      const assignSuccess = store.assignRfidToTeacher(teacher1Id, testRfid);
-      expect(assignSuccess).toBe(true);
-
-      // 3. Verify teacher has the RFID and student has been unbound
-      const updatedTeacher = store.getTeachers().find((t) => t.id === teacher1Id);
-      updatedStudent = store.getStudents().find((s) => s.id === student1Id);
-
-      expect(updatedTeacher?.rfid_uid).toBe(testRfid);
-      expect(updatedStudent?.rfid_uid).toBeUndefined();
     });
 
     it('unbounds previous student when reassigning to another student', () => {

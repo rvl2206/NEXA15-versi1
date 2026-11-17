@@ -403,7 +403,7 @@ export const AttendanceRecap: React.FC<AttendanceRecapProps> = ({ currentOfficer
       if (res.total > 0) {
         toast.success(
           'Revisi Alpa Sabtu Selesai',
-          `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (Siswa: ${res.deletedStudents}, Guru: ${res.deletedTeachers}).`
+          `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (${res.deletedStudents} siswa).`
         );
       } else {
         toast.info('Data Sudah Bersih', 'Tidak ada data presensi hari Sabtu yang berstatus Alpa.');

@@ -317,6 +317,26 @@ describe('Manual Gate Attendance & Auto-Alpa Deactivation (Tahap 1-7)', () => {
     expect(queueCount).toBeGreaterThan(0);
   });
 
+  it('Skenario 9: Presensi saat offline tetap dapat dicatat dan otomatis masuk ke antrean sinkronisasi (Offline Queue)', async () => {
+    // Simulasikan browser offline
+    const originalOnLine = navigator.onLine;
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+
+    try {
+      const scanRes = store.recordScan('1001');
+      expect(scanRes.success).toBe(true);
+      expect(scanRes.isOffline).toBe(true);
+      expect(scanRes.message).toContain('antrean offline');
+
+      // Pastikan masuk ke daftar antrean sinkronisasi
+      const queue = store.getSyncQueue();
+      const itemInQueue = queue.find((q) => q.type === 'attendance' && q.data?.nisn === '1001');
+      expect(itemInQueue).toBeDefined();
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true });
+    }
+  });
+
   it('Auto-Alpa otomatis tidak berjalan sendiri saat proses dimulai', () => {
     // Panggilan processAutoAlpa tidak menambahkan Alpa otomatis secara mandiri
     const res = store.processAutoAlpa(targetDate);

@@ -57,7 +57,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const filteredItems = navItems.filter((item) => item.roles.includes(userRole));
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/85 dark:bg-slate-950/85 backdrop-blur-2xl border-t border-white/10 text-slate-300 px-1 py-1.5 shadow-2xl safe-area-pb">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-white/10 text-slate-300 px-1 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-2xl">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {filteredItems.map((item) => {
           const Icon = item.icon;

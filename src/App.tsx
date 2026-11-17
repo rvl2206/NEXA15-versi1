@@ -1,5 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { WifiOff, RefreshCw } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { User, SchoolSettings, UserRole } from './types';
 import { store } from './lib/store';
 import { toast } from './lib/toast';
@@ -10,6 +12,7 @@ import { BottomNav } from './components/BottomNav';
 import { LoginModal } from './components/LoginModal';
 import { Dashboard } from './components/Dashboard';
 import { QRScanner } from './components/QRScanner';
+import { KioskScanner } from './components/KioskScanner';
 import { ToastContainer } from './components/ToastContainer';
 import { UnsyncedDataWarning } from './components/UnsyncedDataWarning';
 import { ExitUnsyncedDataModal } from './components/ExitUnsyncedDataModal';
@@ -20,8 +23,6 @@ import { ForceChangePasswordModal } from './components/ForceChangePasswordModal'
 const StudentManagement = lazy(() => import('./components/StudentManagement').then((m) => ({ default: m.StudentManagement })));
 const DigitalCardTemplate = lazy(() => import('./components/DigitalCardTemplate').then((m) => ({ default: m.DigitalCardTemplate })));
 const AttendanceRecap = lazy(() => import('./components/AttendanceRecap').then((m) => ({ default: m.AttendanceRecap })));
-const TeacherManagement = lazy(() => import('./components/TeacherManagement').then((m) => ({ default: m.TeacherManagement })));
-const TeacherAttendanceRecap = lazy(() => import('./components/TeacherAttendanceRecap').then((m) => ({ default: m.TeacherAttendanceRecap })));
 const WaliKelasDispatch = lazy(() => import('./components/WaliKelasDispatch').then((m) => ({ default: m.WaliKelasDispatch })));
 const ActivityLogs = lazy(() => import('./components/ActivityLogs').then((m) => ({ default: m.ActivityLogs })));
 const SettingsPage = lazy(() => import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
@@ -48,9 +49,47 @@ export function App() {
   });
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isKioskMode, setIsKioskMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (
+        params.get('mode') === 'kiosk' ||
+        params.get('kiosk') === 'true' ||
+        window.location.hash === '#kiosk'
+      ) {
+        return true;
+      }
+    }
+    // Launch directly into ultra-fast Kiosk Scanner when opened in Android APK
+    try {
+      if (Capacitor.isNativePlatform()) {
+        return true;
+      }
+    } catch {}
+    return false;
+  });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  });
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      store.fetchFromServer().catch(() => {});
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [settings, setSettings] = useState<SchoolSettings>(() => {
     try {
       return store.getSettings();
@@ -125,9 +164,9 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return;
     const rolePermissions: Record<UserRole, string[]> = {
-      Admin: ['dashboard', 'users', 'scan', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template', 'logs', 'settings'],
-      Guru: ['scan', 'dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'card-template'],
-      'Kepala Sekolah': ['dashboard', 'recap', 'teacher-recap', 'wali-kelas-dispatch', 'students', 'teachers', 'logs', 'settings'],
+      Admin: ['dashboard', 'users', 'scan', 'recap', 'wali-kelas-dispatch', 'students', 'card-template', 'logs', 'settings'],
+      Guru: ['scan', 'dashboard', 'recap', 'wali-kelas-dispatch', 'students', 'card-template'],
+      'Kepala Sekolah': ['dashboard', 'recap', 'wali-kelas-dispatch', 'students', 'logs', 'settings'],
     };
 
     const allowed = rolePermissions[currentUser.role] || rolePermissions.Admin;
@@ -245,11 +284,31 @@ export function App() {
     store.addLog('LOGIN', `Pengguna ${user.name} (${user.role}) berhasil masuk.`);
   };
 
+  if (isKioskMode) {
+    return (
+      <KioskScanner
+        onExitKiosk={() => {
+          setIsKioskMode(false);
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('mode');
+            url.searchParams.delete('kiosk');
+            window.history.replaceState({}, '', url.pathname);
+          } catch {}
+        }}
+        officerName={currentUser?.name || 'Petugas Gerbang'}
+      />
+    );
+  }
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
         <ToastContainer />
-        <LoginModal onLogin={handleLoginSuccess} />
+        <LoginModal
+          onLogin={handleLoginSuccess}
+          onOpenKiosk={() => setIsKioskMode(true)}
+        />
       </div>
     );
   }
@@ -264,19 +323,14 @@ export function App() {
         return <QRScanner currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'students':
         return <StudentManagement userRole={currentUser?.role} />;
-      case 'teachers':
-        return <TeacherManagement userRole={currentUser?.role} />;
       case 'card-template':
         return <DigitalCardTemplate />;
       case 'recap':
         return <AttendanceRecap currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
-      case 'teacher-recap':
-        return <TeacherAttendanceRecap userRole={currentUser?.role} currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
       case 'wali-kelas-dispatch':
         return (
           <WaliKelasDispatch
             students={store.getStudents()}
-            teachers={store.getTeachers()}
             attendance={store.getAttendance()}
             settings={settings}
             currentUserRole={currentUser?.role}
@@ -309,6 +363,32 @@ export function App() {
           }}
         />
       )}
+      {/* Global Offline Warning Banner */}
+      {!isOnline && (
+        <div className="bg-gradient-to-r from-rose-950 via-red-950 to-rose-950 border-b-2 border-rose-500 text-rose-100 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs z-[9999] sticky top-0 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-rose-900/60 rounded-xl border border-rose-500/40 text-rose-300 animate-pulse shrink-0">
+              <WifiOff className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-extrabold text-white text-xs sm:text-sm tracking-wide">
+                KONEKSI INTERNET TERPUTUS • MODE ONLINE AKTIF
+              </p>
+              <p className="text-[11px] text-rose-200 mt-0.5 leading-relaxed">
+                Aplikasi NEXA15 berjalan dalam mode online penuh (Single Database). Seluruh presensi dan perubahan data dinonaktifkan sementara agar tidak ada data yang tertinggal dan data tetap akurat.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white rounded-xl text-xs font-bold shrink-0 transition-all shadow-md cursor-pointer flex items-center gap-1.5 self-end sm:self-center"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Muat Ulang Halaman</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Navbar */}
       <Navbar
         currentUser={currentUser}
@@ -319,6 +399,7 @@ export function App() {
         isMobileSidebarOpen={isMobileSidebarOpen}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         onStartTour={startTourManually}
+        onOpenKiosk={() => setIsKioskMode(true)}
       />
 
       {/* Main Body */}

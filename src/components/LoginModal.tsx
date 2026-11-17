@@ -18,15 +18,17 @@ import {
   Mail,
   Send,
   AlertCircle,
+  Zap,
 } from 'lucide-react';
 
 gsap.registerPlugin(useGSAP);
 
 interface LoginModalProps {
   onLogin: (user: User) => void;
+  onOpenKiosk?: () => void;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onOpenKiosk }) => {
   const container = useRef<HTMLDivElement>(null);
 
   const [identifier, setIdentifier] = useState('');
@@ -159,7 +161,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
   };
 
   return (
-    <div ref={container} className="min-h-screen w-full bg-[#050505] flex items-center justify-center lg:justify-between p-6 lg:p-24 overflow-hidden relative font-sans selection:bg-blue-500 selection:text-white">
+    <div
+      ref={container}
+      className="min-h-screen min-h-[100dvh] w-full bg-[#050505] flex items-center justify-center lg:justify-between p-4 sm:p-6 lg:p-24 overflow-y-auto overflow-x-hidden relative font-sans selection:bg-blue-500 selection:text-white"
+    >
       {/* Background Orbs */}
       <div className="gsap-bg-orb absolute top-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-blue-600/15 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
       <div className="gsap-bg-orb absolute bottom-[-20%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-600/10 blur-[100px] rounded-full pointer-events-none mix-blend-screen" />
@@ -177,28 +182,28 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
       </div>
 
       {/* Form Container */}
-      <div className="gsap-form-container w-full max-w-md lg:max-w-[480px] relative z-20">
-        <div className="bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[2rem] p-8 sm:p-12 shadow-2xl">
+      <div className="gsap-form-container w-full max-w-md lg:max-w-[480px] relative z-20 my-auto">
+        <div className="bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-3xl sm:rounded-[2rem] p-5 sm:p-8 lg:p-12 shadow-2xl">
           
-          <div className="lg:hidden mb-10 text-center flex flex-col items-center">
-            <SchoolLogo className="w-16 h-16 mb-6 opacity-90" />
-            <h2 className="text-3xl font-black text-white tracking-tight">NEXA15</h2>
-            <p className="text-xs text-slate-400 mt-1">SMA Negeri 15 Ambon</p>
+          <div className="lg:hidden mb-6 text-center flex flex-col items-center">
+            <SchoolLogo className="w-14 h-14 mb-3 opacity-90" />
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">NEXA15</h2>
+            <p className="text-xs text-slate-400 mt-0.5">SMA Negeri 15 Ambon</p>
           </div>
 
-          <div className="mb-10 hidden lg:block">
+          <div className="mb-6 hidden lg:block">
             <h2 className="text-3xl font-bold text-white tracking-tight">Masuk ke Sistem</h2>
             <p className="text-sm text-slate-400 mt-2">Gunakan kredensial akun petugas atau guru Anda.</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 text-sm bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-2xl flex items-start gap-3">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 text-xs sm:text-sm bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-2xl flex items-start gap-2.5">
               <span className="font-bold text-rose-400 mt-0.5">⚠️</span>
               <span className="leading-relaxed font-medium">{error}</span>
             </div>
           )}
 
-          <form onSubmit={handlePasswordLogin} autoComplete="off" className="space-y-6">
+          <form onSubmit={handlePasswordLogin} autoComplete="off" className="space-y-4 sm:space-y-6">
             <div className="group">
               <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/5 group-focus-within:border-blue-500/50 transition-colors duration-500">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-blue-400 transition-colors duration-500">
@@ -303,6 +308,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
               </>
             )}
           </button>
+
+          {onOpenKiosk && (
+            <div className="pt-4 border-t border-white/10 text-center">
+              <button
+                type="button"
+                onClick={onOpenKiosk}
+                className="w-full py-3 px-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 text-emerald-400" />
+                <span>⚡ Buka Mode Scanner Gerbang (Khusus HP / Petugas Piket)</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

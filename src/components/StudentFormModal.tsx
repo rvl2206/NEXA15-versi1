@@ -162,18 +162,12 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
 
     const cleanRfid = formData.rfid_uid?.trim().toUpperCase() || '';
 
-    // Check if another student or teacher already uses this RFID UID
+    // Check if another student already uses this RFID UID
     if (cleanRfid) {
       const match = store.findByRfidUid(cleanRfid);
-      if (match) {
-        if (match.type === 'siswa' && match.student?.id !== editingStudent?.id) {
-          toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh Siswa ${match.student?.nama} (${match.student?.kelas}).`);
-          return;
-        }
-        if (match.type === 'guru') {
-          toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh Guru ${match.teacher?.nama} (${match.teacher?.jabatan}).`);
-          return;
-        }
+      if (match && match.student?.id !== editingStudent?.id) {
+        toast.error('UID RFID Sudah Dipakai', `Kartu RFID [${cleanRfid}] sudah digunakan oleh Siswa ${match.student?.nama} (${match.student?.kelas}).`);
+        return;
       }
     }
 

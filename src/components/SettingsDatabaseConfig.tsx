@@ -7,7 +7,6 @@ import { store } from '../lib/store';
 import {
   testSupabaseConnection,
   getSupabaseSchemaSQL,
-  getSupabaseTeacherOnlySchemaSQL,
   getPostgresSelfHostedSchemaSQL,
   getDockerComposePostgresYAML,
   generateFullSqlBackupDump,
@@ -26,8 +25,6 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
   const [supabaseTestStatus, setSupabaseTestStatus] = useState<{ success?: boolean; message?: string; missingTables?: string[] } | null>(null);  const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
   const [showSupabaseSchema, setShowSupabaseSchema] = useState(false);
   const [copiedSupabaseSchema, setCopiedSupabaseSchema] = useState(false);
-  const [copiedTeacherSchema, setCopiedTeacherSchema] = useState(false);
-  const [activeSchemaTab, setActiveSchemaTab] = useState<'all' | 'teachers'>('teachers');
   const [syncQueueInfo, setSyncQueueInfo] = useState(store.getSyncQueueDetails());
 
 
@@ -76,7 +73,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
       if (res.success) {
         toast.success(
           'Sinkronisasi Supabase Sukses',
-          'Seluruh data (Akun Pengguna, Pengaturan & Pemetaan Wali Kelas, Disposisi Siswa Bermasalah, Data Siswa/Guru, Presensi & Log) telah tersimpan aman di Supabase Cloud.'
+          'Seluruh data (Akun Pengguna, Pengaturan & Pemetaan Wali Kelas, Disposisi Siswa Bermasalah, Data Siswa, Presensi & Log) telah tersimpan aman di Supabase Cloud.'
         );
       } else {
         toast.error('Gagal Sinkronisasi', res.message);
@@ -114,12 +111,10 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
     try {
       const students = store.getStudents();
       const attendance = store.getAttendance();
-      const teachers = store.getTeachers();
-      const teacherAttendance = store.getTeacherAttendance();
       const logs = store.getLogs();
       const currentSettings = store.getSettings();
 
-      const dumpSql = generateFullSqlBackupDump(students, attendance, teachers, teacherAttendance, logs, currentSettings);
+      const dumpSql = generateFullSqlBackupDump(students, attendance, logs, currentSettings);
       const blob = new Blob([dumpSql], { type: 'text/sql;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -159,14 +154,6 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
     setCopiedSupabaseSchema(true);
     toast.success('SQL Schema Disalin', 'Perintah DDL SQL untuk seluruh tabel Supabase berhasil disalin.');
     setTimeout(() => setCopiedSupabaseSchema(false), 3000);
-  };
-
-  const handleCopyTeacherSchema = () => {
-    const sql = getSupabaseTeacherOnlySchemaSQL();
-    navigator.clipboard.writeText(sql);
-    setCopiedTeacherSchema(true);
-    toast.success('SQL Guru Disalin', 'Perintah SQL khusus tabel Guru (teachers & teacher_attendance) berhasil disalin.');
-    setTimeout(() => setCopiedTeacherSchema(false), 3000);
   };
 
 
@@ -370,7 +357,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0 ring-2 ring-blue-400/30" />
                       <div className="flex-1 min-w-0">
                         <span className="font-bold text-white block truncate">Storage: nexa-photos (Opsi B)</span>
-                        <span className="text-[10px] text-slate-400 block truncate">Bucket Foto Profil Siswa & Guru Aktif</span>
+                        <span className="text-[10px] text-slate-400 block truncate">Bucket Foto Profil Siswa Aktif</span>
                       </div>
                     </div>
                   </div>
@@ -451,7 +438,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                       <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
                         <span className="text-slate-400 block text-[10px]">Presensi Siswa:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.attendanceCount} item</span>
@@ -459,10 +446,6 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                       <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
                         <span className="text-slate-400 block text-[10px]">Master Siswa:</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.studentCount} item</span>
-                      </div>
-                      <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
-                        <span className="text-slate-400 block text-[10px]">Data & Presensi Guru:</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{syncQueueInfo.teacherCount} item</span>
                       </div>
                       <div className="p-2 bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-lg border border-white/10">
                         <span className="text-slate-400 block text-[10px]">Log Aktivitas / Hapus:</span>
@@ -606,14 +589,14 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                     <div className="p-3 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-1">
                       <span className="font-bold text-white block">1. Express REST API Backend</span>
                       <p className="text-[11px] text-slate-400">
-                        Memiliki endpoint native <code>/api/attendance</code>, <code>/api/students</code>, <code>/api/teachers</code>, dan <code>/api/logs</code>.
+                        Memiliki endpoint native <code>/api/attendance</code>, <code>/api/students</code>, dan <code>/api/logs</code>.
                       </p>
                     </div>
 
                     <div className="p-3 bg-white/5 backdrop-blur-xl/60 rounded-xl border border-white/10 space-y-1">
-                      <span className="font-bold text-white block">2. Server JSON Persistence</span>
+                      <span className="font-bold text-white block">2. Neon Postgres SSOT</span>
                       <p className="text-[11px] text-slate-400">
-                        Menyimpan snapshot data secara otomatis ke file <code>nexa15_server_db.json</code> di dalam container Cloud Run.
+                        Menyimpan seluruh data secara terpusat langsung ke database cloud Neon Postgres dengan fitur Realtime.
                       </p>
                     </div>
 
@@ -648,7 +631,7 @@ export const SettingsDatabaseConfig: React.FC<Props> = ({ settings, setSettings 
                       <div className="text-xs">
                         <span className="font-bold text-white block">Langkah 1: Unduh Backup Snapshot Data (SQL Dump)</span>
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          Klik tombol <b>"Unduh SQL Dump (.sql)"</b> di kanan atas atau tombol di bawah untuk membuat file SQL lengkap yang berisi perintah DDL pembuatan tabel dan seluruh <code>INSERT</code> data siswa, presensi, guru, dan log aktivitas saat ini.
+                          Klik tombol <b>"Unduh SQL Dump (.sql)"</b> di kanan atas atau tombol di bawah untuk membuat file SQL lengkap yang berisi perintah DDL pembuatan tabel dan seluruh <code>INSERT</code> data siswa, presensi, dan log aktivitas saat ini.
                         </p>
                       </div>
                     </div>

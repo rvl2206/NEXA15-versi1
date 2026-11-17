@@ -35,9 +35,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
   compact = false,
 }) => {
   const [queueDetails, setQueueDetails] = useState(store.getSyncQueueDetails());
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState<boolean>(() => store.isOnline());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
@@ -46,11 +44,15 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
 
   useEffect(() => {
     const handleOnline = () => {
+      store.setNetworkOnline(true);
       setIsOnline(true);
       // Auto sync when coming back online
       store.syncAllPendingToDatabase(false).catch(() => {});
     };
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => {
+      store.setNetworkOnline(false);
+      setIsOnline(false);
+    };
 
     // Custom event to open piket modal directly from Navbar or Scanner
     const handleOpenModal = () => {
@@ -62,6 +64,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
     window.addEventListener('open-unsynced-modal', handleOpenModal);
 
     const unsubscribe = store.subscribe(() => {
+      setIsOnline(store.isOnline());
       const current = store.getSyncQueueDetails();
       setQueueDetails(current);
     });
@@ -114,28 +117,12 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
         icon: GraduationCap,
       };
     }
-    if (item.type === 'teacher_attendance') {
-      const data = item.data || {};
-      return {
-        title: `${data.nama || 'Guru'}`,
-        subtitle: `Presensi Guru ${data.jenis || ''} (${data.status || ''}) | ${data.tanggal || '-'}`,
-        icon: User,
-      };
-    }
     if (item.type === 'student') {
       const data = item.data || {};
       return {
         title: `Data Siswa: ${data.nama || item.id}`,
         subtitle: `Kelas: ${data.kelas || '-'} | NISN: ${data.nisn || '-'} (${item.action})`,
         icon: GraduationCap,
-      };
-    }
-    if (item.type === 'teacher') {
-      const data = item.data || {};
-      return {
-        title: `Data Guru: ${data.nama || item.id}`,
-        subtitle: `NIP/Mata Pelajaran: ${data.nip || data.mapel || '-'} (${item.action})`,
-        icon: User,
       };
     }
     return {
@@ -202,12 +189,6 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                       <GraduationCap className="w-4 h-4 text-amber-600" />
                       <span>Presensi Siswa: {queueDetails.attendanceCount}</span>
-                    </span>
-                  )}
-                  {queueDetails.teacherCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700">
-                      <User className="w-4 h-4 text-purple-600" />
-                      <span>Presensi Guru: {queueDetails.teacherCount}</span>
                     </span>
                   )}
                   <span
@@ -296,7 +277,7 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                   STATUS DATABASE 100% AMAN!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
-                  Semua data presensi siswa dan guru telah berhasil tersimpan di Database Cloud/Server. Tidak ada data yang tersangkut di browser. Petugas piket dapat mematikan laptop atau logout dengan aman.
+                  Semua data presensi siswa telah berhasil tersimpan di Database Cloud/Server. Tidak ada data yang tersangkut di browser. Petugas piket dapat mematikan laptop atau logout dengan aman.
                 </p>
                 <div className="mt-6">
                   <button
@@ -393,12 +374,6 @@ export const UnsyncedDataWarning: React.FC<UnsyncedDataWarningProps> = ({
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80">
                         <GraduationCap className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                         <span>Presensi Siswa: {queueDetails.attendanceCount}</span>
-                      </span>
-                    )}
-                    {queueDetails.teacherCount > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700/80">
-                        <User className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                        <span>Presensi Guru: {queueDetails.teacherCount}</span>
                       </span>
                     )}
                     {queueDetails.studentCount > 0 && (

@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Smartphone,
   Download,
+  Zap,
 } from 'lucide-react';
 import { SchoolLogo } from './SchoolLogo';
 import { store } from '../lib/store';
@@ -34,6 +35,7 @@ interface NavbarProps {
   onToggleMobileSidebar?: () => void;
   isMobileSidebarOpen?: boolean;
   onStartTour?: () => void;
+  onOpenKiosk?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,17 +47,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleMobileSidebar,
   isMobileSidebarOpen,
   onStartTour,
+  onOpenKiosk,
 }) => {
   const [time, setTime] = useState<string>('');
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState<boolean>(() => store.isOnline());
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(store.getOfflineQueueCount());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      store.setNetworkOnline(true);
+      setIsOnline(true);
+      store.checkRealInternetConnection().then((online) => setIsOnline(online));
+    };
+    const handleOffline = () => {
+      store.setNetworkOnline(false);
+      setIsOnline(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -69,6 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
     const unsubscribe = store.subscribe(() => {
+      setIsOnline(store.isOnline());
       setOfflineQueueCount(store.getOfflineQueueCount());
     });
 
@@ -167,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white shadow-lg border-b border-slate-800/80 sticky top-0 z-30 transition-colors w-full max-w-full overflow-hidden">
+    <header className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white shadow-lg border-b border-slate-800/80 sticky top-0 z-30 transition-colors w-full max-w-full overflow-hidden pt-[max(env(safe-area-inset-top),0px)]">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-2">
           {/* Brand Logo & Mobile Sidebar Toggle */}
@@ -225,10 +236,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Sync & Network Status */}
             <div className="flex items-center gap-0.5 sm:gap-1">
-               {/* Online Indicator Dot */}
-              <div
-                className="flex items-center justify-center w-7 h-7 rounded-full"
-                title={isOnline ? 'Sistem terhubung ke server (Online)' : 'Mode Offline'}
+               {/* Online Indicator Dot & Label */}
+              <button
+                type="button"
+                onClick={async () => {
+                  const connected = await store.checkRealInternetConnection();
+                  setIsOnline(connected);
+                  if (connected) {
+                    toast.success('Koneksi Normal', 'Perangkat berhasil terhubung ke Single Database.');
+                  } else {
+                    toast.warning('Koneksi Terputus', 'Perangkat masih offline atau tidak ada akses internet.');
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border cursor-pointer active:scale-95 transition-all ${
+                  isOnline
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-rose-500/15 text-rose-300 border-rose-500/30 animate-pulse'
+                }`}
+                title={isOnline ? 'Sistem terhubung online. Klik untuk tes koneksi.' : 'Koneksi terputus. Klik untuk coba hubungkan kembali.'}
               >
                 <span className="relative flex h-2 w-2">
                   {isOnline ? (
@@ -238,12 +263,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                      </>
                   ) : (
                      <>
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                      </>
                   )}
                 </span>
-              </div>
+                <span className="hidden sm:inline">
+                  {isOnline ? 'Online' : 'Offline - Terkunci'}
+                </span>
+              </button>
 
               {/* Sync Button */}
               <button
@@ -267,7 +295,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* Install PWA Button on Android/Desktop */}
+            {/* Kiosk Mode Button */}
+            {onOpenKiosk && (
+              <button
+                type="button"
+                onClick={onOpenKiosk}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 text-emerald-300 border border-emerald-400/40 rounded-xl text-[11px] font-extrabold shadow-sm transition-all cursor-pointer btn-press"
+                title="Buka Mode Pemindai Cepat Kiosk Gerbang"
+              >
+                <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Kiosk Gerbang</span>
+                <span className="sm:hidden">Kiosk</span>
+              </button>
+            )}
             {isInstallable && (
               <button
                 type="button"

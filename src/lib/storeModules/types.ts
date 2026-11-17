@@ -1,15 +1,12 @@
 import { 
   Student, 
-  Teacher, 
   ActivityLog, 
-  SchoolSettings,
-  AttendanceRecord,
-  TeacherAttendanceRecord
+  SchoolSettings, 
+  AttendanceRecord 
 } from '../../types';
 
 export interface StoreContext {
   students: Student[];
-  teachers: Teacher[];
   logs: ActivityLog[];
   syncQueue: any[];
   settings: SchoolSettings;
@@ -21,11 +18,8 @@ export interface StoreContext {
   addLog: (action: string, detail: string) => void;
   triggerAutoBackup?: () => void;
   
-  // Methods that modules might call on each other
-  getTeacherById?: (id: string) => Teacher | undefined;
-  getTeacherByRfidUid?: (uid: string) => Teacher | undefined;
+  // Methods that modules might call
   findStudentByScannedCode?: (scannedText: string) => Student | undefined;
-  findTeacherByScannedCode?: (scannedText: string) => Teacher | undefined;
   getStudentById?: (id: string) => Student | undefined;
   getStudentByNisn?: (nisn: string) => Student | undefined;
   getStudentByRfidUid?: (uid: string) => Student | undefined;

@@ -1,20 +1,17 @@
 import localforage from 'localforage';
+import { Network } from '@capacitor/network';
 
 localforage.config({
   name: 'NEXA_APP',
   storeName: 'nexa_data'
 });
 
-import { teacherOps } from './storeModules/teacherOps';
 import { studentOps } from './storeModules/studentOps';
 import {
   Student,
   AttendanceRecord,
   AttendanceType,
   AttendanceStatus,
-  Teacher,
-  TeacherAttendanceRecord,
-  TeacherAttendanceStatus,
   ActivityLog,
   SchoolSettings,
   User,
@@ -24,24 +21,17 @@ import {
   HomeroomAssignment,
 } from '../types';
 import { toast } from './toast';
-import { INITIAL_TEACHERS } from './seedData';
 import { MASTER_STUDENTS_DATA } from './masterStudentData';
 import {
   isSupabaseConfigured,
   syncStudentsToSupabase,
   syncAttendanceToSupabase,
-  syncTeachersToSupabase,
-  syncTeacherAttendanceToSupabase,
   syncLogsToSupabase,
   fetchStudentsFromSupabase,
   fetchAttendanceFromSupabase,
-  fetchTeachersFromSupabase,
-  fetchTeacherAttendanceFromSupabase,
   fetchLogsFromSupabase,
   deleteStudentFromSupabase,
   deleteAttendanceFromSupabase,
-  deleteTeacherFromSupabase,
-  deleteTeacherAttendanceFromSupabase,
   deleteLogFromSupabase,
   getSupabaseClient,
   purgeSaturdayAlpaFromSupabase,
@@ -57,12 +47,8 @@ import {
   syncDispatchesToSupabase,
   saveStudentToSupabase,
   saveMultipleStudentsToSupabase,
-  saveTeacherToSupabase,
-  saveMultipleTeachersToSupabase,
   saveAttendanceToSupabase,
   saveMultipleAttendanceToSupabase,
-  saveTeacherAttendanceToSupabase,
-  saveMultipleTeacherAttendanceToSupabase,
   saveLogToSupabase,
   subscribeToSupabaseRealtime,
   uploadProfilePhotoToSupabase,
@@ -89,7 +75,6 @@ import {
 } from './dateUtils';
 import {
   formatScanLogDetails,
-  formatTeacherScanLogDetails,
 } from './auditLogUtils';
 import {
   calculateLateMinutes,
@@ -114,7 +99,6 @@ import {
   DEFAULT_SETTINGS,
   isGenericQrCode,
   isMatchingNisn,
-  isMatchingNip,
   isMatchingRfidUid,
 } from './constants';
 
@@ -124,7 +108,6 @@ export {
   DEFAULT_SETTINGS,
   isGenericQrCode,
   isMatchingNisn,
-  isMatchingNip,
   isMatchingRfidUid,
   evaluateScanEligibility,
   getDayScheduleStatus,
@@ -142,7 +125,7 @@ export type {
 
 export interface SyncQueueItem {
   id: string;
-  type: 'attendance' | 'teacher_attendance' | 'student' | 'teacher' | 'log';
+  type: 'attendance' | 'student' | 'log';
   action: 'upsert' | 'delete';
   data: any;
   timestamp: number;
@@ -175,8 +158,6 @@ class AppStore {
   private users: User[] = [];
   public students: Student[] = [];
   private attendance: AttendanceRecord[] = [];
-  public teachers: Teacher[] = [];
-  private teacherAttendance: TeacherAttendanceRecord[] = [];
   public logs: ActivityLog[] = [];
   private dispatches: ProblematicStudentDispatch[] = [];
   public settings: SchoolSettings = DEFAULT_SETTINGS;
@@ -190,6 +171,8 @@ class AppStore {
   private isSyncingQueue = false;
   private realtimeUnsubscribe: (() => void) | null = null;
   private isRealtimeConnected = false;
+  private isNetworkOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  private isForceOffline = false;
 
   constructor() {
     this.init();
@@ -291,51 +274,12 @@ class AppStore {
       if (savedAttendance) {
         this.attendance = JSON.parse(savedAttendance);
       }
-      let savedTeachers = await localforage.getItem<string>(STORAGE_KEYS.TEACHERS);
-      if (!savedTeachers) {
-        savedTeachers = localStorage.getItem(STORAGE_KEYS.TEACHERS);
-        if (savedTeachers) {
-          await localforage.setItem(STORAGE_KEYS.TEACHERS, savedTeachers);
-        }
-      }
-      const DUMMY_TEACHER_IDS = new Set([
-        'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
-        'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
-      ]);
-      if (savedTeachers) {
-        try {
-          const parsedTeachers = JSON.parse(savedTeachers);
-          this.teachers = Array.isArray(parsedTeachers)
-            ? parsedTeachers.filter((t: Teacher) => !DUMMY_TEACHER_IDS.has(t.id))
-            : [];
-        } catch {
-          this.teachers = [];
-        }
-      } else {
-        this.teachers = [];
-      }
-      let savedTeacherAttendance = await localforage.getItem<string>(STORAGE_KEYS.TEACHER_ATTENDANCE);
-      if (!savedTeacherAttendance) {
-        savedTeacherAttendance = localStorage.getItem(STORAGE_KEYS.TEACHER_ATTENDANCE);
-        if (savedTeacherAttendance) {
-          await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, savedTeacherAttendance);
-        }
-      }
-      if (savedTeacherAttendance) {
-        this.teacherAttendance = JSON.parse(savedTeacherAttendance);
-      }
 
       // Purge any Saturday Alpa records immediately from memory & local storage
       const hadSatAlpa = this.attendance.some((a) => isSaturdayAlpaRecord(a));
       if (hadSatAlpa) {
         this.attendance = this.attendance.filter((a) => !isSaturdayAlpaRecord(a));
         await localforage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(this.attendance));
-      }
-
-      const hadSatTeacherAlpa = this.teacherAttendance.some((ta) => isSaturdayAlpaRecord(ta));
-      if (hadSatTeacherAlpa) {
-        this.teacherAttendance = this.teacherAttendance.filter((ta) => !isSaturdayAlpaRecord(ta));
-        await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(this.teacherAttendance));
       }
       let savedLogs = await localforage.getItem<string>(STORAGE_KEYS.LOGS);
       if (!savedLogs) {
@@ -374,18 +318,53 @@ class AppStore {
 
     // Set up network & visibility listeners to ensure zero data is lost
     if (typeof window !== 'undefined') {
+      // Native Capacitor Network status listener
+      try {
+        Network.getStatus().then((status) => {
+          if (status.connectionType === 'none') {
+            this.setNetworkOnline(false);
+          } else if (status.connected || status.connectionType === 'wifi' || status.connectionType === 'cellular') {
+            this.setNetworkOnline(true);
+          }
+        }).catch(() => {});
+
+        Network.addListener('networkStatusChange', (status) => {
+          const hasNet = status.connected || (status.connectionType && status.connectionType !== 'none');
+          if (status.connectionType === 'none') {
+            this.setNetworkOnline(false);
+          } else if (hasNet) {
+            this.setNetworkOnline(true);
+            if (!this.isForceOffline) {
+              this.processPendingSyncQueue().catch(() => {});
+            }
+          }
+        });
+      } catch {}
+
+      // Startup reachability check
+      this.checkRealInternetConnection().catch(() => {});
+
       window.addEventListener('online', async () => {
+        this.setNetworkOnline(true);
+        await this.checkRealInternetConnection();
         await this.processPendingSyncQueue();
         await this.fetchFromServer();
       });
+      window.addEventListener('offline', () => {
+        this.setNetworkOnline(false);
+      });
       window.addEventListener('focus', () => {
+        this.checkRealInternetConnection().catch(() => {});
         if (this.syncQueue.length > 0) {
           this.processPendingSyncQueue();
         }
       });
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && this.syncQueue.length > 0) {
-          this.processPendingSyncQueue();
+        if (!document.hidden) {
+          this.checkRealInternetConnection().catch(() => {});
+          if (this.syncQueue.length > 0) {
+            this.processPendingSyncQueue();
+          }
         }
       });
       window.addEventListener('beforeunload', () => {
@@ -421,7 +400,7 @@ class AppStore {
   }
 
   /**
-   * Sanitizes in-memory and local student/teacher data to ensure every student
+   * Sanitizes in-memory and local student data to ensure every student
    * has a distinct, non-generic ID_QR structure (NPSN.NISN.NAMA) so that
    * no two students share the same QR string or generic placeholder.
    */
@@ -445,22 +424,6 @@ class AppStore {
       });
     }
 
-    if (this.teachers && this.teachers.length > 0) {
-      this.teachers.forEach((t) => {
-        if (t.nip) {
-          const cleanNip = String(t.nip).trim();
-          if (t.nip !== cleanNip) {
-            t.nip = cleanNip;
-            changed = true;
-          }
-          if (isGenericQrCode(t.id_qr)) {
-            t.id_qr = `${schoolNpsn}.${cleanNip}.${(t.nama || '').trim()}`;
-            changed = true;
-          }
-        }
-      });
-    }
-
     if (changed) {
       this.saveLocalData(true);
     }
@@ -469,9 +432,96 @@ class AppStore {
   private backgroundRetryInterval: any = null;
 
   /**
-   * Starts the automatic background retry timer that attempts to flush
-   * queued attendance records to the server every 30 seconds if online.
+   * Evaluates network connectivity status using native Capacitor Network + Active Ping + Navigator fallback + Force Offline flag
    */
+  public isOnline(): boolean {
+    if (this.isForceOffline) return false;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+    return this.isNetworkOnline;
+  }
+
+  public setForceOffline(force: boolean): void {
+    this.isForceOffline = force;
+    this.notify();
+  }
+
+  public getForceOffline(): boolean {
+    return this.isForceOffline;
+  }
+
+  public setNetworkOnline(online: boolean): void {
+    if (this.isNetworkOnline !== online) {
+      this.isNetworkOnline = online;
+      this.notify();
+    }
+  }
+
+  public async checkRealInternetConnection(): Promise<boolean> {
+    if (this.isForceOffline) {
+      this.setNetworkOnline(false);
+      return false;
+    }
+
+    // 1. Native Capacitor Network query: check if completely disconnected
+    try {
+      const status = await Network.getStatus();
+      if (status.connectionType === 'none') {
+        this.setNetworkOnline(false);
+        return false;
+      }
+      if (status.connected) {
+        this.setNetworkOnline(true);
+      }
+    } catch {}
+
+    // 2. Standard navigator.onLine check
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.setNetworkOnline(false);
+      return false;
+    }
+
+    // 3. Active reachability probe to cloud Supabase / Internet
+    try {
+      const config = this.getSupabaseConfig();
+      if (config?.url) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        await fetch(`${config.url}/rest/v1/`, {
+          method: 'HEAD',
+          headers: { apikey: config.key },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        this.setNetworkOnline(true);
+        return true;
+      }
+    } catch {
+      // Supabase probe failed, try Google 204 fallback
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        await fetch('https://www.google.com/generate_204', {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        this.setNetworkOnline(true);
+        return true;
+      } catch {}
+    }
+
+    // If browser says we are online, keep online state rather than falsely shutting down
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      this.setNetworkOnline(true);
+      return true;
+    }
+
+    this.setNetworkOnline(false);
+    return false;
+  }
+
   public startBackgroundAttendanceRetry(intervalMs = 30000): void {
     if (typeof window === 'undefined') return;
 
@@ -527,14 +577,6 @@ class AppStore {
           attendanceToSave = [...attendanceToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
         }
         await localforage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceToSave));
-        
-        await localforage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(this.teachers));
-        
-        let teacherAttToSave = this.teacherAttendance;
-        if (teacherAttToSave.length > 2000) {
-          teacherAttToSave = [...teacherAttToSave].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()).slice(0, 2000);
-        }
-        await localforage.setItem(STORAGE_KEYS.TEACHER_ATTENDANCE, JSON.stringify(teacherAttToSave));
         
         await localforage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(this.logs));
         await localforage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
@@ -634,24 +676,7 @@ class AppStore {
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 2. Process teacher attendance items
-      const teacherAttQueueItems = queueSnapshot
-        .filter((q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data)
-        .slice(0, 400);
-      const teacherAttUpserts = teacherAttQueueItems.map((q) => q.data as TeacherAttendanceRecord);
-
-      if (teacherAttUpserts.length > 0) {
-        if (hasSupabase) {
-          const res = await syncTeacherAttendanceToSupabase(teacherAttUpserts, config);
-          if (res.success) {
-            teacherAttQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-            processedCount += teacherAttUpserts.length;
-          }
-        }
-      }
-      this.lastSyncQueueTimestamp = Date.now();
-
-      // 3. Process student items
+      // 2. Process student items
       const studentQueueItems = queueSnapshot
         .filter((q) => q.type === 'student' && q.action === 'upsert' && q.data)
         .slice(0, 400);
@@ -668,24 +693,7 @@ class AppStore {
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 4. Process teacher items
-      const teacherQueueItems = queueSnapshot
-        .filter((q) => q.type === 'teacher' && q.action === 'upsert' && q.data)
-        .slice(0, 400);
-      const teacherUpserts = teacherQueueItems.map((q) => q.data as Teacher);
-
-      if (teacherUpserts.length > 0) {
-        if (hasSupabase) {
-          const res = await syncTeachersToSupabase(teacherUpserts, config);
-          if (res.success) {
-            teacherQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
-            processedCount += teacherUpserts.length;
-          }
-        }
-      }
-      this.lastSyncQueueTimestamp = Date.now();
-
-      // 5. Process log items
+      // 3. Process log items
       const logQueueItems = queueSnapshot
         .filter((q) => q.type === 'log' && q.action === 'upsert' && q.data);
       const logUpserts = logQueueItems.map((q) => q.data as ActivityLog);
@@ -703,7 +711,7 @@ class AppStore {
       }
       this.lastSyncQueueTimestamp = Date.now();
 
-      // 6. Process delete actions
+      // 4. Process delete actions
       const deleteItems = queueSnapshot.filter((q) => q.action === 'delete');
       for (const item of deleteItems) {
         this.lastSyncQueueTimestamp = Date.now();
@@ -716,14 +724,6 @@ class AppStore {
           } else if (item.type === 'attendance') {
             if (hasSupabase) {
               ok = await deleteAttendanceFromSupabase(item.id, config);
-            }
-          } else if (item.type === 'teacher') {
-            if (hasSupabase) {
-              ok = await deleteTeacherFromSupabase(item.id, config);
-            }
-          } else if (item.type === 'teacher_attendance') {
-            if (hasSupabase) {
-              ok = await deleteTeacherAttendanceFromSupabase(item.id, config);
             }
           } else if (item.type === 'log') {
             if (hasSupabase) {
@@ -844,7 +844,6 @@ class AppStore {
     total: number;
     attendanceCount: number;
     studentCount: number;
-    teacherCount: number;
     logCount: number;
     deleteCount: number;
     items: SyncQueueItem[];
@@ -852,14 +851,12 @@ class AppStore {
     const total = this.syncQueue.length;
     const attendanceCount = this.syncQueue.filter((q) => q.type === 'attendance' && q.action === 'upsert').length;
     const studentCount = this.syncQueue.filter((q) => q.type === 'student' && q.action === 'upsert').length;
-    const teacherCount = this.syncQueue.filter((q) => (q.type === 'teacher' || q.type === 'teacher_attendance') && q.action === 'upsert').length;
     const logCount = this.syncQueue.filter((q) => q.type === 'log' && q.action === 'upsert').length;
     const deleteCount = this.syncQueue.filter((q) => q.action === 'delete').length;
     return {
       total,
       attendanceCount,
       studentCount,
-      teacherCount,
       logCount,
       deleteCount,
       items: [...this.syncQueue].reverse(),
@@ -952,30 +949,6 @@ class AppStore {
               this.notify();
             }
           },
-          onTeacherAttendanceInsert: (record) => {
-            const exists = this.teacherAttendance.some((ta) => ta.id === record.id);
-            if (!exists) {
-              this.teacherAttendance = [record, ...this.teacherAttendance];
-              this.saveLocalData();
-              this.notify();
-            }
-          },
-          onTeacherAttendanceUpdate: (record) => {
-            const idx = this.teacherAttendance.findIndex((ta) => ta.id === record.id);
-            if (idx !== -1) {
-              this.teacherAttendance[idx] = { ...this.teacherAttendance[idx], ...record };
-              this.saveLocalData();
-              this.notify();
-            }
-          },
-          onTeacherAttendanceDelete: (id) => {
-            const before = this.teacherAttendance.length;
-            this.teacherAttendance = this.teacherAttendance.filter((ta) => ta.id !== id);
-            if (this.teacherAttendance.length !== before) {
-              this.saveLocalData();
-              this.notify();
-            }
-          },
           onStatusChange: (status) => {
             this.isRealtimeConnected = status === 'SUBSCRIBED';
             this.notify();
@@ -1015,22 +988,6 @@ class AppStore {
       return { success: true, url: res.publicUrl };
     }
     return { success: false, error: res.error || 'Gagal mengunggah foto profil siswa.' };
-  }
-
-  public async uploadTeacherPhoto(teacherId: string, fileOrBase64: File | Blob | string): Promise<{ success: boolean; url?: string; error?: string }> {
-    const teacher = this.getTeacherById(teacherId);
-    if (!teacher) {
-      return { success: false, error: 'Guru tidak ditemukan.' };
-    }
-    const res = await uploadProfilePhotoToSupabase(fileOrBase64, 'guru', teacher.nip, this.getSupabaseConfig());
-    if (res.success && res.publicUrl) {
-      teacher.foto = res.publicUrl;
-      this.enqueueSync({ id: teacher.id, type: 'teacher', action: 'upsert', data: teacher });
-      this.saveLocalData(true);
-      this.notify();
-      return { success: true, url: res.publicUrl };
-    }
-    return { success: false, error: res.error || 'Gagal mengunggah foto profil guru.' };
   }
 
   public getHolidays(): Holiday[] {
@@ -1207,7 +1164,7 @@ class AppStore {
   }
 
   /**
-   * Synchronize all persistent collections (Users, Settings/Homeroom, Dispatches, Students, Teachers, Attendance, Logs)
+   * Synchronize all persistent collections (Users, Settings/Homeroom, Dispatches, Students, Attendance, Logs)
    * with Supabase Cloud PostgreSQL Database.
    */
   public async syncAllWithSupabase(): Promise<void> {
@@ -1263,7 +1220,7 @@ class AppStore {
         console.warn('Sync dispatches with Supabase notice:', e);
       }
 
-      // 4. Sync Students & Teachers with Supabase if cloud has records or local needs backup
+      // 4. Sync Students with Supabase if cloud has records or local needs backup
       try {
         const remoteStudents = await fetchStudentsFromSupabase(config);
         if (remoteStudents && remoteStudents.length > 0) {
@@ -1276,40 +1233,6 @@ class AppStore {
           saveMultipleStudentsToSupabase(this.students, config).catch(() => {});
         }
 
-        const remoteTeachers = await fetchTeachersFromSupabase(config);
-        const DUMMY_TEACHER_IDS = new Set([
-          'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
-          'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
-        ]);
-        if (remoteTeachers !== null) {
-          remoteTeachers.forEach((rt) => {
-            if (DUMMY_TEACHER_IDS.has(rt.id)) {
-              deleteTeacherFromSupabase(rt.id, config).catch(() => {});
-            }
-          });
-          const pendingDeleteIds = new Set(
-            this.syncQueue.filter((q) => q.type === 'teacher' && q.action === 'delete').map((q) => q.id)
-          );
-          const pendingUpserts = this.syncQueue.filter(
-            (q) => q.type === 'teacher' && q.action === 'upsert' && q.data
-          );
-          const tMap = new Map<string, Teacher>();
-          remoteTeachers.forEach((t) => {
-            const key = t.id || t.nip;
-            if (!DUMMY_TEACHER_IDS.has(t.id) && !pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
-              tMap.set(key, t);
-            }
-          });
-          pendingUpserts.forEach((q) => {
-            if (q.data && !DUMMY_TEACHER_IDS.has(q.data.id)) {
-              const key = q.data.id || q.data.nip || q.id;
-              tMap.set(key, q.data);
-            }
-          });
-          this.teachers = Array.from(tMap.values());
-          this.saveLocalData(true);
-        }
-
         const remoteAttendance = await fetchAttendanceFromSupabase(config);
         if (remoteAttendance && remoteAttendance.length > 0) {
           const aMap = new Map<string, AttendanceRecord>();
@@ -1319,17 +1242,6 @@ class AppStore {
           this.saveLocalData(true);
         } else if (this.attendance.length > 0) {
           saveMultipleAttendanceToSupabase(this.attendance.slice(0, 300), config).catch(() => {});
-        }
-
-        const remoteTeacherAtt = await fetchTeacherAttendanceFromSupabase(config);
-        if (remoteTeacherAtt && remoteTeacherAtt.length > 0) {
-          const taMap = new Map<string, TeacherAttendanceRecord>();
-          this.teacherAttendance.forEach((ta) => taMap.set(ta.id, ta));
-          remoteTeacherAtt.forEach((ta) => taMap.set(ta.id, ta));
-          this.teacherAttendance = Array.from(taMap.values());
-          this.saveLocalData(true);
-        } else if (this.teacherAttendance.length > 0) {
-          saveMultipleTeacherAttendanceToSupabase(this.teacherAttendance.slice(0, 300), config).catch(() => {});
         }
 
         this.notify();
@@ -1779,11 +1691,9 @@ class AppStore {
       const config = this.getSupabaseConfig();
       if (!isSupabaseConfigured(config)) return;
 
-      const [remoteStudents, remoteAttendance, remoteTeachers, remoteTeacherAttendance, remoteLogs] = await Promise.all([
+      const [remoteStudents, remoteAttendance, remoteLogs] = await Promise.all([
         fetchStudentsFromSupabase(config),
         fetchAttendanceFromSupabase(config),
-        fetchTeachersFromSupabase(config),
-        fetchTeacherAttendanceFromSupabase(config),
         fetchLogsFromSupabase(config),
       ]);
 
@@ -1834,56 +1744,6 @@ class AppStore {
         );
         changed = true;
       }
-      if (remoteTeachers !== null) {
-        const DUMMY_TEACHER_IDS = new Set([
-          'tch-01', 'tch-02', 'tch-03', 'tch-04', 'tch-05', 'tch-06',
-          'tch-07', 'tch-08', 'tch-09', 'tch-10', 'tch-11', 'tch-12'
-        ]);
-        const pendingDeleteIds = new Set(
-          this.syncQueue.filter((q) => q.type === 'teacher' && q.action === 'delete').map((q) => q.id)
-        );
-        const pendingUpserts = this.syncQueue.filter(
-          (q) => q.type === 'teacher' && q.action === 'upsert' && q.data
-        );
-        const tMap = new Map<string, Teacher>();
-        remoteTeachers.forEach((t) => {
-          const key = t.id || t.nip;
-          if (!DUMMY_TEACHER_IDS.has(t.id) && !pendingDeleteIds.has(t.id) && !pendingDeleteIds.has(key)) {
-            tMap.set(key, t);
-          }
-        });
-        pendingUpserts.forEach((q) => {
-          if (q.data && !DUMMY_TEACHER_IDS.has(q.data.id)) {
-            const key = q.data.id || q.data.nip || q.id;
-            tMap.set(key, q.data);
-          }
-        });
-        this.teachers = Array.from(tMap.values());
-        changed = true;
-      }
-      if (remoteTeacherAttendance !== null && remoteTeacherAttendance.length > 0) {
-        const pendingDeleteIds = new Set(
-          this.syncQueue.filter((q) => q.type === 'teacher_attendance' && q.action === 'delete').map((q) => q.id)
-        );
-        const pendingUpserts = this.syncQueue.filter(
-          (q) => q.type === 'teacher_attendance' && q.action === 'upsert' && q.data
-        );
-        const taMap = new Map<string, TeacherAttendanceRecord>();
-        remoteTeacherAttendance.forEach((ta) => {
-          if (!pendingDeleteIds.has(ta.id)) {
-            taMap.set(ta.id, ta);
-          }
-        });
-        pendingUpserts.forEach((q) => {
-          if (q.data) {
-            taMap.set(q.data.id || q.id, q.data);
-          }
-        });
-        this.teacherAttendance = Array.from(taMap.values()).sort(
-          (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
-        );
-        changed = true;
-      }
       if (remoteLogs !== null && remoteLogs.length > 0) {
         const pendingDeleteIds = new Set(
           this.syncQueue.filter((q) => q.type === 'log' && q.action === 'delete').map((q) => q.id)
@@ -1925,25 +1785,21 @@ class AppStore {
         return { success: false, message: 'Supabase URL atau Key belum dikonfigurasi di Pengaturan.', remainingQueue: this.syncQueue.length };
       }
 
-      const [sRes, aRes, tRes, taRes, lRes] = await Promise.all([
+      const [sRes, aRes, lRes] = await Promise.all([
         syncStudentsToSupabase(this.students, config),
         syncAttendanceToSupabase(this.attendance, config),
-        syncTeachersToSupabase(this.teachers, config),
-        syncTeacherAttendanceToSupabase(this.teacherAttendance, config),
         syncLogsToSupabase(this.logs, config),
       ]);
 
       const errors: string[] = [];
       if (!sRes.success) errors.push(`Siswa: ${sRes.error || 'Gagal'}`);
       if (!aRes.success) errors.push(`Presensi Siswa: ${aRes.error || 'Gagal'}`);
-      if (!tRes.success) errors.push(`Guru: ${tRes.error || 'Gagal'}`);
-      if (!taRes.success) errors.push(`Presensi Guru: ${taRes.error || 'Gagal'}`);
       if (!lRes.success) errors.push(`Log: ${lRes.error || 'Gagal'}`);
 
       if (errors.length === 0) {
         const remainingQueue = this.syncQueue.length;
         const queueMsg = remainingQueue > 0 ? ` (${remainingQueue} antrian tetap tersimpan untuk sinkronisasi)` : ' (0 antrian tersisa)';
-        const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi siswa, ${tRes.count} guru, ${taRes.count} presensi guru, dan ${lRes.count} log ke Supabase Cloud PostgreSQL${queueMsg}.`;
+        const msg = `Berhasil menyelaraskan ${sRes.count} siswa, ${aRes.count} presensi siswa, dan ${lRes.count} log ke Supabase Cloud PostgreSQL${queueMsg}.`;
         this.updateSettings({ lastSupabaseSync: new Date().toISOString() });
         return { success: true, message: msg, remainingQueue };
       }
@@ -1965,7 +1821,6 @@ class AppStore {
 
       const config = this.getSupabaseConfig();
       const records = (await fetchAttendanceFromSupabase(startDate, endDate, config)) || [];
-      const teacherRecords = (await fetchTeacherAttendanceFromSupabase(startDate, endDate, config)) || [];
 
       if (records.length > 0) {
         const aMap = new Map<string, AttendanceRecord>();
@@ -1974,16 +1829,9 @@ class AppStore {
         this.attendance = Array.from(aMap.values()).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
       }
 
-      if (teacherRecords.length > 0) {
-        const taMap = new Map<string, TeacherAttendanceRecord>();
-        this.teacherAttendance.forEach((ta) => taMap.set(ta.id, ta));
-        teacherRecords.forEach((ta) => taMap.set(ta.id, ta));
-        this.teacherAttendance = Array.from(taMap.values()).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-      }
-
       this.saveLocalData(true);
       this.notify();
-      return records.length + teacherRecords.length;
+      return records.length;
     } catch (e) {
       console.warn('Gagal menarik riwayat presensi cloud:', e);
       return 0;
@@ -2041,448 +1889,20 @@ class AppStore {
     return studentOps.findStudentByScannedCode(this, scannedText);
   }
 
-  public getTeachers(): Teacher[] {
-    return teacherOps.getTeachers(this);
+  public findByRfidUid(rfidUid: string): { type: 'siswa'; student?: Student } | undefined {
+    const student = studentOps.getStudentByRfidUid(this, rfidUid);
+    if (student) return { type: 'siswa', student };
+    return undefined;
   }
 
-  public getTeacherByNip(nip: string): Teacher | undefined {
-    return teacherOps.getTeacherByNip(this, nip);
-  }
-
-  public getTeacherById(id: string): Teacher | undefined {
-    return teacherOps.getTeacherById(this, id);
-  }
-
-  public getTeacherByRfidUid(rfidUid: string): Teacher | undefined {
-    return teacherOps.getTeacherByRfidUid(this, rfidUid);
-  }
-
-  public assignRfidToTeacher(teacherId: string, rfidUid: string): boolean {
-    return teacherOps.assignRfidToTeacher(this, teacherId, rfidUid);
-  }
-
-  public findByRfidUid(rfidUid: string): { type: 'siswa' | 'guru'; student?: Student; teacher?: Teacher } | undefined {
-    return teacherOps.findByRfidUid(this, rfidUid);
-  }
-
-  public findPersonByRfidOrCode(codeOrUid: string): { type: 'siswa' | 'guru'; student?: Student; teacher?: Teacher } | undefined {
-    return teacherOps.findPersonByRfidOrCode(this, codeOrUid);
-  }
-
-  public findTeacherByScannedCode(scannedText: string): Teacher | undefined {
-    return teacherOps.findTeacherByScannedCode(this, scannedText);
-  }
-
-  public async addTeacher(teacherData: Omit<Teacher, 'id' | 'createdAt'>): Promise<Teacher> {
-    return teacherOps.addTeacher(this, teacherData);
-  }
-
-  public async updateTeacher(id: string, teacherData: Partial<Teacher>): Promise<boolean> {
-    return teacherOps.updateTeacher(this, id, teacherData);
-  }
-
-  public async deleteTeacher(id: string): Promise<boolean> {
-    return teacherOps.deleteTeacher(this, id);
-  }
-
-  public async deleteMultipleTeachers(ids: string[]): Promise<boolean> {
-    return teacherOps.deleteMultipleTeachers(this, ids);
-  }
-
-  public async deleteAllTeachers(): Promise<boolean> {
-    return teacherOps.deleteAllTeachers(this);
-  }
-
-  public async importTeachers(
-    importList: Omit<Teacher, 'id' | 'createdAt'>[],
-    mode: 'append' | 'replace' = 'append'
-  ): Promise<boolean> {
-    return teacherOps.importTeachers(this, importList, mode);
-  }
-
-  public getTeacherAttendance(): TeacherAttendanceRecord[] {
-    return [...this.teacherAttendance];
-  }
-
-  public isTeacherRecordForDate(r: TeacherAttendanceRecord, targetYyyyMmDd: string): boolean {
-    return isRecordForDate(r, targetYyyyMmDd);
-  }
-
-  public isTeacherRecordForToday(r: TeacherAttendanceRecord): boolean {
-    return isRecordForToday(r);
+  public findPersonByRfidOrCode(codeOrUid: string): { type: 'siswa'; student?: Student } | undefined {
+    const student = studentOps.getStudentByRfidUid(this, codeOrUid) || studentOps.findStudentByScannedCode(this, codeOrUid);
+    if (student) return { type: 'siswa', student };
+    return undefined;
   }
 
   public formatRecordTimeWIT(isoString?: string): string {
     return formatRecordTimeWIT(isoString);
-  }
-
-  public recordTeacherScan(
-    scannedText: string,
-    rawQR?: string,
-    rawCode?: string,
-    officerEmail = 'Petugas Piket',
-    forcedType?: AttendanceType | 'Auto'
-  ): {
-    success: boolean;
-    isDuplicate?: boolean;
-    record?: TeacherAttendanceRecord;
-    teacher?: Teacher;
-    message: string;
-    type?: AttendanceType;
-    status?: TeacherAttendanceStatus;
-    isLate?: boolean;
-    lateMinutes?: number;
-  } {
-    const cleanText = (scannedText || rawQR || rawCode || '').trim();
-    if (!cleanText) {
-      return { success: false, message: 'Kode QR Guru tidak terbaca atau kosong.' };
-    }
-
-    // Match teacher accurately using strict hierarchical lookup without false collisions
-    const matchedTeacher = this.findTeacherByScannedCode(cleanText);
-
-    if (!matchedTeacher) {
-      return {
-        success: false,
-        message: `Guru dengan NIP / Kode "${cleanText}" tidak ditemukan di database guru.`,
-      };
-    }
-
-    if (matchedTeacher.status === 'nonaktif') {
-      return {
-        success: false,
-        teacher: matchedTeacher,
-        message: `Guru ${matchedTeacher.nama} berstatus nonaktif di sistem.`,
-      };
-    }
-
-    const todayStr = this.getTodayFormatted();
-    const now = new Date();
-    const nowISO = now.toISOString();
-
-    // Determine current hour in WIT (UTC+9)
-    let currentHourWIT = now.getHours();
-    let currentMinuteWIT = now.getMinutes();
-    try {
-      const witTimeParts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Jayapura',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).formatToParts(now);
-      const hPart = witTimeParts.find((p) => p.type === 'hour');
-      const mPart = witTimeParts.find((p) => p.type === 'minute');
-      if (hPart) currentHourWIT = parseInt(hPart.value, 10);
-      if (mPart) currentMinuteWIT = parseInt(mPart.value, 10);
-    } catch {
-      // Fallback
-    }
-
-    // Check existing scans today for this teacher strictly by NIP or unique ID_QR
-    const teacherTodayRecords = this.teacherAttendance.filter((a) => {
-      if (!this.isTeacherRecordForToday(a)) return false;
-
-      if (matchedTeacher.nip && a.nip) {
-        if (isMatchingNip(matchedTeacher.nip, a.nip)) return true;
-        return false;
-      }
-
-      if (
-        matchedTeacher.id_qr &&
-        a.id_qr &&
-        !isGenericQrCode(matchedTeacher.id_qr) &&
-        !isGenericQrCode(a.id_qr)
-      ) {
-        if (matchedTeacher.id_qr.trim().toLowerCase() === a.id_qr.trim().toLowerCase()) return true;
-        return false;
-      }
-
-      return a.nama.trim().toLowerCase() === matchedTeacher.nama.trim().toLowerCase();
-    });
-
-    const dayOfWeekWIT = getDayOfWeekWIT(now);
-    const pulangConfig = {
-      normalTime: this.settings.pulangStartTimeNormal || '13:30',
-      fridayTime: this.settings.pulangStartTimeFriday || '10:00',
-    };
-    const eligibility = evaluateScanEligibility(
-      teacherTodayRecords,
-      forcedType,
-      currentHourWIT,
-      currentMinuteWIT,
-      dayOfWeekWIT,
-      pulangConfig
-    );
-
-    if (!eligibility.allowed) {
-      const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
-      const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
-
-      if (eligibility.reason === 'BOTH_COMPLETED') {
-        return {
-          success: false,
-          isDuplicate: true,
-          teacher: matchedTeacher,
-          record: eligibility.conflictingRecord,
-          type: 'Pulang',
-          status: eligibility.conflictingRecord?.status,
-          message: `DITOLAK: Guru ${matchedTeacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini. Scan ganda ditolak!`,
-        };
-      }
-
-      if (eligibility.reason === 'ALREADY_MASUK') {
-        return {
-          success: false,
-          isDuplicate: true,
-          teacher: matchedTeacher,
-          record: eligibility.conflictingRecord,
-          type: 'Masuk',
-          status: eligibility.conflictingRecord?.status,
-          message: `DITOLAK: Guru ${matchedTeacher.nama} SUDAH SCAN MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}). Scan ganda langsung ditolak!`,
-        };
-      }
-
-      return {
-        success: false,
-        isDuplicate: true,
-        teacher: matchedTeacher,
-        record: eligibility.conflictingRecord,
-        type: 'Pulang',
-        status: eligibility.conflictingRecord?.status,
-        message: `DITOLAK: Guru ${matchedTeacher.nama} SUDAH SCAN PULANG hari ini pada pukul ${pTime}. Scan ganda langsung ditolak!`,
-      };
-    }
-
-    const jenis = eligibility.targetJenis;
-    const masukRecord = eligibility.masukRecord;
-
-    // Calculate late status if Masuk
-    let status: TeacherAttendanceStatus = 'Hadir';
-    let isLate = false;
-    let lateMinutes = 0;
-
-    if (jenis === 'Masuk') {
-      const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
-      if (lateCalc.isLate) {
-        status = 'Terlambat';
-        isLate = true;
-        lateMinutes = lateCalc.lateMinutes;
-      }
-    } else if (jenis === 'Pulang') {
-      if (masukRecord) {
-        status = masukRecord.status;
-      }
-    }
-
-    const isRfidScan = !!(matchedTeacher.rfid_uid && isMatchingRfidUid(matchedTeacher.rfid_uid, cleanText));
-
-    const newRecord: TeacherAttendanceRecord = {
-      id: `tch-att-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      tanggal: todayStr,
-      timestamp: nowISO,
-      nip: matchedTeacher.nip,
-      nama: matchedTeacher.nama,
-      jabatan: matchedTeacher.jabatan,
-      id_qr: matchedTeacher.id_qr || `69933068.${matchedTeacher.nip}`,
-      rfid_uid: matchedTeacher.rfid_uid,
-      scan_method: isRfidScan ? 'RFID' : 'QR',
-      jenis,
-      status,
-      petugas: formatPetugasRole(officerEmail),
-      catatan: jenis === 'Pulang' ? `Selesai Tugas / Pulang${isRfidScan ? ' (Tap RFID)' : ''}` : isLate ? `Terlambat ${lateMinutes} menit${isRfidScan ? ' (Tap RFID)' : ''}` : `Tepat Waktu${isRfidScan ? ' (Tap RFID)' : ''}`,
-      terlambatMenit: lateMinutes,
-    };
-
-    this.teacherAttendance.unshift(newRecord);
-    this.notify();
-
-    this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
-
-    const logDetails = formatTeacherScanLogDetails({
-      nama: matchedTeacher.nama,
-      jabatan: matchedTeacher.jabatan,
-      status,
-      jenis,
-      isRfidScan,
-      lateMinutes,
-      officer: formatPetugasRole(officerEmail),
-    });
-
-    this.addLog(`SCAN_GURU_${jenis.toUpperCase()}`, logDetails);
-
-    const timeFormatted = this.formatRecordTimeWIT(nowISO);
-    const msg =
-      jenis === 'Pulang'
-        ? `Presensi PULANG berhasil dicatat untuk Bapak/Ibu ${matchedTeacher.nama} pada ${timeFormatted}.`
-        : isLate
-        ? `Presensi MASUK (TERLAMBAT ${lateMinutes} Mnt) dicatat untuk Bapak/Ibu ${matchedTeacher.nama} pada ${timeFormatted}.`
-        : `Presensi MASUK (TEPAT WAKTU) dicatat untuk Bapak/Ibu ${matchedTeacher.nama} pada ${timeFormatted}.`;
-
-    return {
-      success: true,
-      isDuplicate: false,
-      record: newRecord,
-      teacher: matchedTeacher,
-      message: msg,
-      type: jenis,
-      status,
-      isLate,
-      lateMinutes,
-    };
-  }
-
-  public async addManualTeacherAttendance(
-    data: Partial<TeacherAttendanceRecord> & { nip: string; nama: string; jabatan: string }
-  ): Promise<TeacherAttendanceRecord> {
-    const targetTanggal = data.tanggal || this.getTodayFormatted();
-    const targetJenis = data.jenis || 'Masuk';
-
-    const normTarget = this.normalizeToYyyyMmDd(targetTanggal);
-    const existingIdx = this.teacherAttendance.findIndex(
-      (a) =>
-        a.nip === data.nip &&
-        (this.normalizeToYyyyMmDd(a.tanggal) === normTarget || a.tanggal === targetTanggal) &&
-        a.jenis === targetJenis
-    );
-
-    if (existingIdx !== -1) {
-      const existing = this.teacherAttendance[existingIdx];
-      const updated: TeacherAttendanceRecord = {
-        ...existing,
-        ...data,
-        tanggal: targetTanggal,
-        timestamp: data.timestamp || existing.timestamp || new Date().toISOString(),
-        jenis: targetJenis,
-        status: data.status || existing.status,
-        terlambatMenit: data.terlambatMenit !== undefined ? data.terlambatMenit : existing.terlambatMenit,
-        petugas: data.petugas || existing.petugas,
-        catatan: data.catatan || existing.catatan,
-      };
-      this.teacherAttendance[existingIdx] = updated;
-      this.notify();
-      this.enqueueSync({ id: updated.id, type: 'teacher_attendance', action: 'upsert', data: updated });
-      this.addLog('PRESENSI_MANUAL_GURU', `Memperbarui presensi guru: ${updated.nama} (${updated.jabatan}) - ${updated.status}`);
-      return updated;
-    }
-
-    const newRecord: TeacherAttendanceRecord = {
-      id: `tch-att-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      tanggal: targetTanggal,
-      timestamp: data.timestamp || new Date().toISOString(),
-      nip: data.nip,
-      nama: data.nama,
-      jabatan: data.jabatan,
-      id_qr: data.id_qr || `69933068.${data.nip}`,
-      jenis: targetJenis,
-      status: data.status || 'Hadir',
-      petugas: data.petugas ? formatPetugasRole(data.petugas) : 'Petugas Piket',
-      catatan: data.catatan || '',
-      terlambatMenit: data.terlambatMenit || 0,
-    };
-
-    this.teacherAttendance.unshift(newRecord);
-    this.notify();
-
-    this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
-    this.addLog('PRESENSI_MANUAL_GURU', `Menambahkan presensi manual guru: ${newRecord.nama} (${newRecord.jabatan}) - ${newRecord.status}`);
-    return newRecord;
-  }
-
-  public async updateTeacherAttendanceRecord(id: string, data: Partial<TeacherAttendanceRecord>): Promise<boolean> {
-    const idx = this.teacherAttendance.findIndex((a) => a.id === id);
-    if (idx === -1) return false;
-
-    const updated = { ...this.teacherAttendance[idx], ...data };
-    this.teacherAttendance[idx] = updated;
-    this.notify();
-
-    this.enqueueSync({ id: updated.id, type: 'teacher_attendance', action: 'upsert', data: updated });
-    this.addLog('EDIT_PRESENSI_GURU', `Memperbarui rekaman presensi guru ID: ${id} (${updated.nama})`);
-    return true;
-  }
-
-  public async deleteTeacherAttendanceRecord(id: string): Promise<boolean> {
-    const target = this.teacherAttendance.find((a) => a.id === id);
-    this.teacherAttendance = this.teacherAttendance.filter((a) => !id || a.id !== id);
-    this.notify();
-
-    if (target) {
-      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
-      this.addLog('HAPUS_PRESENSI_GURU', `Menghapus rekaman presensi guru: ${target.nama} (${target.tanggal})`);
-    }
-    return true;
-  }
-
-  public async deleteMultipleTeacherAttendance(ids: string[]): Promise<boolean> {
-    const idSet = new Set(ids);
-    this.teacherAttendance = this.teacherAttendance.filter((a) => !idSet.has(a.id));
-    this.notify();
-    ids.forEach((id) => {
-      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
-    });
-    this.addLog('HAPUS_MASSAL_PRESENSI_GURU', `Menghapus ${ids.length} rekaman presensi guru.`);
-    return true;
-  }
-
-  public async clearTeacherAttendance(): Promise<boolean> {
-    const count = this.teacherAttendance.length;
-    const oldIds = this.teacherAttendance.map((a) => a.id);
-    this.teacherAttendance = [];
-    this.notify();
-    oldIds.forEach((id) => {
-      this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
-    });
-    this.addLog('RESET_PRESENSI_GURU', `Menghapus seluruh ${count} rekap presensi guru.`);
-    return true;
-  }
-
-  public async importTeacherAttendanceRecords(
-    records: Omit<TeacherAttendanceRecord, 'id'>[],
-    mode: 'append' | 'replace' = 'append'
-  ): Promise<boolean> {
-    if (mode === 'replace') {
-      const oldIds = this.teacherAttendance.map((a) => a.id);
-      const formatted: TeacherAttendanceRecord[] = records.map((r, idx) => ({
-        ...r,
-        id: `tch-att-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-      }));
-      this.teacherAttendance = formatted;
-      this.notify();
-      oldIds.forEach((id) => {
-        this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
-      });
-      formatted.forEach((r) => {
-        this.enqueueSync({ id: r.id, type: 'teacher_attendance', action: 'upsert', data: r });
-      });
-    } else {
-      const map = new Map<string, TeacherAttendanceRecord>();
-      this.teacherAttendance.forEach((a) => {
-        const key = buildAttendanceCompositeKey(a.nip, a.tanggal, a.jenis);
-        map.set(key, a);
-      });
-
-      records.forEach((r, idx) => {
-        const key = buildAttendanceCompositeKey(r.nip, r.tanggal, r.jenis);
-        const existing = map.get(key);
-        if (existing) {
-          map.set(key, { ...existing, ...r, id: existing.id });
-        } else {
-          map.set(key, {
-            ...r,
-            id: `tch-att-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-          });
-        }
-      });
-
-      this.teacherAttendance = Array.from(map.values());
-      this.notify();
-      this.teacherAttendance.forEach((r) => {
-        this.enqueueSync({ id: r.id, type: 'teacher_attendance', action: 'upsert', data: r });
-      });
-    }
-
-    this.addLog('IMPORT_PRESENSI_GURU', `Mengimpor ${records.length} data rekap presensi guru tanpa duplikasi.`);
-    return true;
   }
 
   public getTodayFormatted(): string {
@@ -2540,6 +1960,7 @@ class AppStore {
     status?: AttendanceStatus;
     isLate?: boolean;
     lateMinutes?: number;
+    isOffline?: boolean;
   } {
     const cleanText = (scannedText || rawQR || rawCode || '').trim();
     if (!cleanText) {
@@ -2741,17 +2162,23 @@ class AppStore {
 
     this.addLog(`SCAN_${jenis.toUpperCase()}`, logDetails);
 
+    const isCurrentlyOnline = this.isOnline();
     const timeFormatted = this.formatRecordTimeWIT(nowISO);
-    const msg =
+    let msg =
       jenis === 'Pulang'
         ? `Presensi PULANG berhasil dicatat untuk ${matchedStudent.nama} pada ${timeFormatted}.`
         : isLate
         ? `Presensi MASUK (TERLAMBAT ${lateMinutes} Mnt) berhasil dicatat untuk ${matchedStudent.nama} pada ${timeFormatted}.`
         : `Presensi MASUK (TEPAT WAKTU) berhasil dicatat untuk ${matchedStudent.nama} pada ${timeFormatted}.`;
 
+    if (!isCurrentlyOnline) {
+      msg += ' (Tersimpan di antrean offline, akan otomatis disinkronkan saat online)';
+    }
+
     return {
       success: true,
       isDuplicate: false,
+      isOffline: !isCurrentlyOnline,
       record: newRecord,
       student: matchedStudent,
       message: msg,
@@ -2797,15 +2224,15 @@ class AppStore {
 
 
   /**
-   * Fitur Presensi Lupa Kartu untuk Siswa atau Guru & Tenaga Kependidikan.
+   * Fitur Presensi Lupa Kartu untuk Siswa.
    * Memudahkan petugas piket dan admin mencatat presensi tanpa kartu fisik (RFID/QR).
    * Menandai metode scan sebagai 'Manual', melampirkan alasan lupa kartu, dan mencatat petugas pencatat.
    */
   public recordLupaKartu(params: {
-    targetType: 'siswa' | 'guru';
+    targetType?: 'siswa';
     targetId: string;
     jenis?: AttendanceType | 'Auto';
-    statusOverride?: AttendanceStatus | TeacherAttendanceStatus;
+    statusOverride?: AttendanceStatus;
     alasan: string;
     catatanTambahan?: string;
     officer?: string;
@@ -2813,15 +2240,22 @@ class AppStore {
     success: boolean;
     isDuplicate?: boolean;
     record?: AttendanceRecord;
-    teacherRecord?: TeacherAttendanceRecord;
     student?: Student;
-    teacher?: Teacher;
     message: string;
     type?: AttendanceType;
-    status?: AttendanceStatus | TeacherAttendanceStatus;
+    status?: AttendanceStatus;
     isLate?: boolean;
     lateMinutes?: number;
+    isOffline?: boolean;
   } {
+    // Mode online tunggal: Tolak presensi lupa kartu jika perangkat offline
+    if (!this.isOnline()) {
+      return {
+        success: false,
+        message: 'Koneksi internet terputus (mode offline). Presensi Lupa Kartu hanya dapat dicatat saat perangkat online agar data sinkron dan akurat.',
+      };
+    }
+
     const todayStr = this.getTodayFormatted();
     const now = new Date();
     const nowISO = now.toISOString();
@@ -2848,128 +2282,7 @@ class AppStore {
       // Fallback
     }
 
-    if (params.targetType === 'guru') {
-      const teacher = this.teachers.find(
-        (t) =>
-          t.id === params.targetId ||
-          (t.nip && t.nip.trim() === params.targetId.trim()) ||
-          t.nama.toLowerCase() === params.targetId.toLowerCase()
-      );
-
-      if (!teacher) {
-        return { success: false, message: 'Data guru tidak ditemukan di database.' };
-      }
-
-      if (teacher.status === 'nonaktif') {
-        return { success: false, teacher, message: `Guru ${teacher.nama} berstatus nonaktif di sistem.` };
-      }
-
-      const teacherDayRecords = this.teacherAttendance.filter(
-        (a) =>
-          this.isTeacherRecordForToday(a) &&
-          ((teacher.nip && a.nip && a.nip.trim() === teacher.nip.trim()) || a.nama.trim().toLowerCase() === teacher.nama.trim().toLowerCase())
-      );
-
-      const eligibility = evaluateScanEligibility(teacherDayRecords, params.jenis);
-
-      if (!eligibility.allowed) {
-        const mTime = eligibility.masukRecord ? this.formatRecordTimeWIT(eligibility.masukRecord.timestamp) : '';
-        const pTime = eligibility.pulangRecord ? this.formatRecordTimeWIT(eligibility.pulangRecord.timestamp) : '';
-
-        if (eligibility.reason === 'BOTH_COMPLETED') {
-          return {
-            success: false,
-            isDuplicate: true,
-            teacher,
-            teacherRecord: eligibility.conflictingRecord,
-            type: 'Pulang',
-            status: eligibility.conflictingRecord?.status,
-            message: `DITOLAK: Guru ${teacher.nama} sudah LENGKAP presensi Masuk (${mTime}) dan Pulang (${pTime}) hari ini.`,
-          };
-        }
-
-        if (eligibility.reason === 'ALREADY_MASUK') {
-          return {
-            success: false,
-            isDuplicate: true,
-            teacher,
-            teacherRecord: eligibility.conflictingRecord,
-            type: 'Masuk',
-            status: eligibility.conflictingRecord?.status,
-            message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI MASUK hari ini pada pukul ${mTime} (${eligibility.conflictingRecord?.status}).`,
-          };
-        }
-
-        return {
-          success: false,
-          isDuplicate: true,
-          teacher,
-          teacherRecord: eligibility.conflictingRecord,
-          type: 'Pulang',
-          status: eligibility.conflictingRecord?.status,
-          message: `DITOLAK: Guru ${teacher.nama} SUDAH PRESENSI PULANG hari ini pada pukul ${pTime}.`,
-        };
-      }
-
-      const jenis = eligibility.targetJenis;
-      const masukRecord = eligibility.masukRecord;
-
-      let status: TeacherAttendanceStatus = (params.statusOverride as TeacherAttendanceStatus) || 'Hadir';
-      let isLate = false;
-      let lateMinutes = 0;
-
-      if (jenis === 'Masuk' && !params.statusOverride) {
-        const lateCalc = calculateLateMinutes(currentHourWIT, currentMinuteWIT, this.settings.cutoffTime || '07:15');
-        if (lateCalc.isLate) {
-          status = 'Terlambat';
-          isLate = true;
-          lateMinutes = lateCalc.lateMinutes;
-        }
-      } else if (jenis === 'Pulang' && !params.statusOverride && masukRecord) {
-        status = masukRecord.status;
-      }
-
-      const newRecord: TeacherAttendanceRecord = {
-        id: `att-t-lk-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        tanggal: todayStr,
-        timestamp: nowISO,
-        nip: teacher.nip,
-        nama: teacher.nama,
-        jabatan: teacher.jabatan,
-        id_qr: teacher.id_qr || `NEXA15.GURU.${teacher.nip}.${teacher.nama}`,
-        rfid_uid: teacher.rfid_uid,
-        scan_method: 'Manual',
-        jenis,
-        status,
-        petugas: officerName,
-        catatan: fullNote,
-        terlambatMenit: lateMinutes,
-      };
-
-      this.teacherAttendance.unshift(newRecord);
-      this.notify();
-      this.enqueueSync({ id: newRecord.id, type: 'teacher_attendance', action: 'upsert', data: newRecord });
-
-      const logDetails = `Presensi Lupa Kartu Guru [${jenis.toUpperCase()}-${status.toUpperCase()}]: ${teacher.nama} (${teacher.jabatan}) - Alasan: ${alasanClean} oleh ${officerName}`;
-      this.addLog(`LUPA_KARTU_GURU_${jenis.toUpperCase()}`, logDetails);
-
-      const timeFormatted = this.formatRecordTimeWIT(nowISO);
-      const msg = `Presensi LUPA KARTU (${jenis.toUpperCase()} - ${status.toUpperCase()}) berhasil dicatat untuk ${teacher.nama} pada ${timeFormatted}.`;
-
-      return {
-        success: true,
-        isDuplicate: false,
-        teacherRecord: newRecord,
-        teacher,
-        message: msg,
-        type: jenis,
-        status,
-        isLate,
-        lateMinutes,
-      };
-    } else {
-      // Siswa
-      const student = this.students.find(
+    const student = this.students.find(
         (s) =>
           s.id === params.targetId ||
           (s.nisn && s.nisn.trim() === params.targetId.trim()) ||
@@ -3096,7 +2409,6 @@ class AppStore {
         isLate,
         lateMinutes,
       };
-    }
   }
 
   /**
@@ -3104,7 +2416,6 @@ class AppStore {
    */
   public getTodayLupaKartuList(): {
     students: Array<{ record: AttendanceRecord; student?: Student }>;
-    teachers: Array<{ record: TeacherAttendanceRecord; teacher?: Teacher }>;
     total: number;
   } {
     const todayYmd = this.getTodayYyyyMmDd();
@@ -3113,26 +2424,15 @@ class AppStore {
         this.isRecordForDate(a, todayYmd) &&
         (a.scan_method === 'Manual' || (a.catatan && a.catatan.includes('[LUPA KARTU]')))
     );
-    const teacherRecords = this.teacherAttendance.filter(
-      (a) =>
-        this.isTeacherRecordForToday(a) &&
-        (a.scan_method === 'Manual' || (a.catatan && a.catatan.includes('[LUPA KARTU]')))
-    );
 
     const students = studentRecords.map((r) => ({
       record: r,
       student: this.students.find((s) => s.nisn === r.nisn || s.nama.toLowerCase() === r.nama.toLowerCase()),
     }));
 
-    const teachers = teacherRecords.map((r) => ({
-      record: r,
-      teacher: this.teachers.find((t) => t.nip === r.nip || t.nama.toLowerCase() === r.nama.toLowerCase()),
-    }));
-
     return {
       students,
-      teachers,
-      total: students.length + teachers.length,
+      total: students.length,
     };
   }
 
@@ -3382,6 +2682,11 @@ class AppStore {
   }
 
   public async addManualAttendance(data: Partial<AttendanceRecord> & { nisn: string; nama: string; kelas: string }): Promise<AttendanceRecord> {
+    if (!this.isOnline()) {
+      toast.error('Offline - Ditolak', 'Aplikasi NEXA15 mewajibkan koneksi online aktif. Presensi manual tidak dapat dicatat saat offline.');
+      throw new Error('Koneksi internet terputus (mode offline). Presensi manual hanya dapat dicatat saat perangkat online.');
+    }
+
     const targetTanggal = data.tanggal ? (this.normalizeToYyyyMmDd(data.tanggal) || data.tanggal) : this.getTodayYyyyMmDd();
     const targetJenis = data.jenis || 'Masuk';
     const normTarget = this.normalizeToYyyyMmDd(targetTanggal);
@@ -3463,6 +2768,10 @@ class AppStore {
   }
 
   public async updateAttendance(id: string, data: Partial<AttendanceRecord>): Promise<boolean> {
+    if (!this.isOnline()) {
+      toast.error('Offline', 'Pembaruan rekaman presensi dinonaktifkan saat offline.');
+      return false;
+    }
     const idx = this.attendance.findIndex((a) => a.id === id);
     if (idx === -1) return false;
 
@@ -3486,6 +2795,10 @@ class AppStore {
   }
 
   public async deleteAttendance(id: string): Promise<boolean> {
+    if (!this.isOnline()) {
+      toast.error('Offline', 'Penghapusan rekaman presensi dinonaktifkan saat offline.');
+      return false;
+    }
     const target = this.attendance.find((a) => a.id === id);
     this.attendance = this.attendance.filter((a) => !id || a.id !== id);
     this.notify();
@@ -3539,35 +2852,26 @@ class AppStore {
   /**
    * Hitung berapa banyak presensi Alpa pada hari Sabtu yang masih ada di memori saat ini
    */
-  public getSaturdayAlpaCount(): { studentAlpa: number; teacherAlpa: number; total: number } {
+  public getSaturdayAlpaCount(): { studentAlpa: number; total: number } {
     const studentAlpa = this.attendance.filter((a) => isSaturdayAlpaRecord(a)).length;
-    const teacherAlpa = this.teacherAttendance.filter((ta) => isSaturdayAlpaRecord(ta)).length;
-    return { studentAlpa, teacherAlpa, total: studentAlpa + teacherAlpa };
+    return { studentAlpa, total: studentAlpa };
   }
 
   /**
    * Revisi & Hapus Seluruh Presensi Hari Sabtu yang Berstatus ALPA
    * Menghapus secara komprehensif dari:
-   * 1. State memori aplikasi (this.attendance & this.teacherAttendance)
+   * 1. State memori aplikasi (this.attendance)
    * 2. Browser LocalStorage
    * 3. Supabase Cloud Database (jika terhubung)
    */
   public async purgeSaturdayAlpaAttendance(silent = false): Promise<{
     deletedStudents: number;
-    deletedTeachers: number;
     total: number;
   }> {
     // 1. Identify local student attendance records on Saturday marked as Alpa
     const studentRecordsToDelete = this.attendance.filter((a) => isSaturdayAlpaRecord(a));
-
-    // 2. Identify local teacher attendance records on Saturday marked as Alpa
-    const teacherRecordsToDelete = this.teacherAttendance.filter((ta) => isSaturdayAlpaRecord(ta));
-
     const studentIds = studentRecordsToDelete.map((a) => a.id);
-    const teacherIds = teacherRecordsToDelete.map((ta) => ta.id);
-
     let deletedStudents = studentIds.length;
-    let deletedTeachers = teacherIds.length;
 
     // Remove from in-memory arrays
     if (studentIds.length > 0) {
@@ -3578,19 +2882,11 @@ class AppStore {
       });
     }
 
-    if (teacherIds.length > 0) {
-      const teacherIdSet = new Set(teacherIds);
-      this.teacherAttendance = this.teacherAttendance.filter((ta) => !teacherIdSet.has(ta.id));
-      teacherIds.forEach((id) => {
-        this.enqueueSync({ id, type: 'teacher_attendance', action: 'delete' });
-      });
-    }
-
     // Save directly to localStorage immediately
     this.saveLocalData(true);
     this.notify();
 
-    // 3. Purge from Supabase if connected
+    // 2. Purge from Supabase if connected
     try {
       const config = this.getSupabaseConfig();
       if (isSupabaseConfigured(config)) {
@@ -3598,24 +2894,21 @@ class AppStore {
         if (supabaseResult.deletedStudents > deletedStudents) {
           deletedStudents = supabaseResult.deletedStudents;
         }
-        if (supabaseResult.deletedTeachers > deletedTeachers) {
-          deletedTeachers = supabaseResult.deletedTeachers;
-        }
       }
     } catch (err) {
       console.warn('Error purging Saturday Alpa from Supabase:', err);
     }
 
-    const total = deletedStudents + deletedTeachers;
+    const total = deletedStudents;
 
     if (total > 0 || !silent) {
       this.addLog(
         'REVISI_ALPA_SABTU',
-        `Revisi Presensi: Menghapus ${total} data presensi hari Sabtu yang berstatus ALPA (Siswa: ${deletedStudents}, Guru: ${deletedTeachers}).`
+        `Revisi Presensi: Menghapus ${total} data presensi hari Sabtu yang berstatus ALPA (Siswa: ${deletedStudents}).`
       );
     }
 
-    return { deletedStudents, deletedTeachers, total };
+    return { deletedStudents, total };
   }
 
   public async importAttendanceRecords(
@@ -3954,14 +3247,10 @@ class AppStore {
   public async clearAllDatabase(): Promise<void> {
     const studentIds = this.students.map((s) => s.id);
     const attendanceIds = this.attendance.map((a) => a.id);
-    const teacherIds = this.teachers.map((t) => t.id);
-    const teacherAttIds = this.teacherAttendance.map((a) => a.id);
     const logIds = this.logs.map((l) => l.id);
 
     this.students = [];
     this.attendance = [];
-    this.teachers = [];
-    this.teacherAttendance = [];
     this.logs = [];
     this.syncQueue = [];
     try {
@@ -3976,12 +3265,6 @@ class AppStore {
     if (attendanceIds.length > 0) {
       await Promise.all(attendanceIds.map((id) => deleteAttendanceFromSupabase(id)));
     }
-    if (teacherIds.length > 0) {
-      await Promise.all(teacherIds.map((id) => deleteTeacherFromSupabase(id, this.getSupabaseConfig())));
-    }
-    if (teacherAttIds.length > 0) {
-      await Promise.all(teacherAttIds.map((id) => deleteTeacherAttendanceFromSupabase(id, this.getSupabaseConfig())));
-    }
     if (logIds.length > 0) {
       await Promise.all(logIds.map((id) => deleteLogFromSupabase(id)));
     }
@@ -3991,7 +3274,6 @@ class AppStore {
 
   public async resetToSeedData(): Promise<void> {
     await this.clearAllDatabase();
-    this.teachers = [];
     this.users = [...INITIAL_USERS];
     this.saveLocalData(true);
     this.notify();
@@ -4115,61 +3397,24 @@ class AppStore {
    * Cari Wali Kelas untuk kelas tertentu
    */
   public getHomeroomTeacherForClass(kelas: string): {
-    teacher?: Teacher;
     name: string;
     nip?: string;
     phone?: string;
-    source: 'teacher_db' | 'settings_map' | 'none';
+    source: 'settings_map' | 'none';
   } {
     if (!kelas) {
       return { name: 'Wali Kelas', source: 'none' };
     }
 
     const cleanKelas = String(kelas).trim().toLowerCase();
-
-    // 1. Cek dari database guru yang memiliki field wali_kelas sesuai
-    const matchByField = this.teachers.find(
-      (t) => t.status !== 'nonaktif' && t.wali_kelas && t.wali_kelas.trim().toLowerCase() === cleanKelas
-    );
-    if (matchByField) {
-      return {
-        teacher: matchByField,
-        name: matchByField.nama,
-        nip: matchByField.nip,
-        phone: matchByField.no_hp || '',
-        source: 'teacher_db',
-      };
-    }
-
-    // 2. Cek dari database guru yang jabatan-nya mengandung "Wali Kelas [kelas]"
-    const matchByJabatan = this.teachers.find(
-      (t) =>
-        t.status !== 'nonaktif' &&
-        t.jabatan &&
-        t.jabatan.toLowerCase().includes('wali kelas') &&
-        t.jabatan.toLowerCase().includes(cleanKelas)
-    );
-    if (matchByJabatan) {
-      return {
-        teacher: matchByJabatan,
-        name: matchByJabatan.nama,
-        nip: matchByJabatan.nip,
-        phone: matchByJabatan.no_hp || '',
-        source: 'teacher_db',
-      };
-    }
-
-    // 3. Cek dari settings homeroomAssignments
     const assignments = this.settings.homeroomAssignments || {};
     const directKey = Object.keys(assignments).find((k) => k.toLowerCase() === cleanKelas);
     if (directKey && assignments[directKey]) {
       const assigned = assignments[directKey];
-      const matchTeacher = assigned.teacherNip ? this.getTeacherByNip(assigned.teacherNip) : undefined;
       return {
-        teacher: matchTeacher,
         name: assigned.teacherName || 'Wali Kelas ' + kelas,
         nip: assigned.teacherNip,
-        phone: assigned.phone || matchTeacher?.no_hp || '',
+        phone: assigned.phone || '',
         source: 'settings_map',
       };
     }
@@ -4190,14 +3435,6 @@ class AppStore {
     const currentAssignments = { ...(this.settings.homeroomAssignments || {}) };
     currentAssignments[kelas] = data;
     this.updateSettings({ homeroomAssignments: currentAssignments });
-
-    // Jika guru ada di database, update juga field wali_kelas di guru tersebut
-    if (data.teacherNip) {
-      const teacher = this.getTeacherByNip(data.teacherNip);
-      if (teacher) {
-        this.updateTeacher(teacher.id, { wali_kelas: kelas });
-      }
-    }
   }
 
   /**

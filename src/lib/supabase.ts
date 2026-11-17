@@ -3,8 +3,6 @@ import {
   Student, 
   AttendanceRecord, 
   ActivityLog, 
-  Teacher, 
-  TeacherAttendanceRecord,
   User,
   SchoolSettings,
   ProblematicStudentDispatch
@@ -56,10 +54,10 @@ export function getSupabaseCredentials(): SupabaseConfig {
 
   if (!url) {
     const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
-    url = sanitizeSupabaseUrl(envUrl) || DEFAULT_SUPABASE_URL;
+    url = sanitizeSupabaseUrl(envUrl);
   }
   if (!key) {
-    key = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_SUPABASE_KEY || '').trim() || DEFAULT_SUPABASE_KEY;
+    key = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_SUPABASE_KEY || '').trim();
   }
 
   return { url: sanitizeSupabaseUrl(url), key };
@@ -199,8 +197,6 @@ export async function testSupabaseConnection(customConfig?: SupabaseConfig): Pro
       'students',
       'attendance',
       'activity_logs',
-      'teachers',
-      'teacher_attendance',
       'app_users',
       'school_settings',
       'problematic_student_dispatches'
@@ -443,209 +439,6 @@ export async function deleteAttendanceFromSupabase(id: string, customConfig?: Su
   if (!client || !id) return false;
   try {
     const { error } = await client.from('attendance').delete().eq('id', id);
-    return !error;
-  } catch {
-    return false;
-  }
-}
-
-// Teachers sync and fetch
-
-export async function syncTeachersToSupabase(
-  teachers: Teacher[],
-  customConfig?: SupabaseConfig
-): Promise<{ success: boolean; count: number; error?: string }> {
-  const client = getSupabaseClient(customConfig);
-  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
-  if (teachers.length === 0) return { success: true, count: 0 };
-
-  try {
-    const records = teachers
-      .map((t) => ({
-        id: t.id || `tch-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        nip: t.nip ? t.nip.trim() : '',
-        nama: t.nama ? t.nama.trim() : 'Guru',
-        jabatan: t.jabatan ? t.jabatan.trim() : 'Guru',
-        id_qr: t.id_qr || `69933068.${t.nip}`,
-        rfid_uid: t.rfid_uid ? String(t.rfid_uid).trim().toUpperCase() : null,
-        wali_kelas: t.wali_kelas || '',
-        status: t.status || 'aktif',
-        no_hp: t.no_hp || '',
-        foto: t.foto || '',
-        created_at: toValidIsoTimestamp(t.createdAt),
-      }))
-      .filter((r) => r.nip && r.nip.length > 0);
-
-    if (records.length === 0) return { success: true, count: 0 };
-
-    const chunks = chunkArray(records, 150);
-    await parallelBatchExecution(
-      chunks,
-      async (chunk) => {
-        const { error } = await client.from('teachers').upsert(chunk, { onConflict: 'nip' });
-        if (error) throw error;
-      },
-      5
-    );
-
-    return { success: true, count: records.length };
-  } catch (err: any) {
-    console.warn('Supabase teachers sync notice:', err?.message || err);
-    return {
-      success: false,
-      count: 0,
-      error: err?.message || 'Gagal menyimpan tabel teachers ke Supabase',
-    };
-  }
-}
-
-export async function fetchTeachersFromSupabase(customConfig?: SupabaseConfig): Promise<Teacher[] | null> {
-  const client = getSupabaseClient(customConfig);
-  if (!client) return null;
-  try {
-    const { data, error } = await client.from('teachers').select('*').order('nama', { ascending: true });
-    if (error) {
-      console.warn('Supabase teachers fetch notice:', error.message);
-      return null;
-    }
-    if (!data) return [];
-    return data.map((row) => ({
-      id: row.id || `tch-${row.nip}`,
-      nip: row.nip || '',
-      nama: row.nama || '',
-      jabatan: row.jabatan || '',
-      wali_kelas: row.wali_kelas || undefined,
-      id_qr: row.id_qr || `69933068.${row.nip}`,
-      rfid_uid: row.rfid_uid ? String(row.rfid_uid).trim().toUpperCase() : undefined,
-      status: (row.status as any) || 'aktif',
-      no_hp: row.no_hp || '',
-      foto: row.foto || '',
-      createdAt: row.created_at || new Date().toISOString(),
-    }));
-  } catch (err: any) {
-    console.warn('Supabase fetch teachers error:', err?.message || err);
-    return null;
-  }
-}
-
-export async function deleteTeacherFromSupabase(identifier: string, customConfig?: SupabaseConfig): Promise<boolean> {
-  const client = getSupabaseClient(customConfig);
-  if (!client || !identifier) return false;
-
-  try {
-    const { error } = await client
-      .from('teachers')
-      .delete()
-      .or(`nip.eq.${identifier},id.eq.${identifier}`);
-    return !error;
-  } catch {
-    return false;
-  }
-}
-
-// Teacher attendance sync and fetch
-
-export async function syncTeacherAttendanceToSupabase(
-  attendance: TeacherAttendanceRecord[],
-  customConfig?: SupabaseConfig
-): Promise<{ success: boolean; count: number; error?: string }> {
-  const client = getSupabaseClient(customConfig);
-  if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
-  if (attendance.length === 0) return { success: true, count: 0 };
-
-  try {
-    const records = attendance.map((a) => {
-      const validTimestamp = toValidIsoTimestamp(a.timestamp, a.tanggal);
-      let tanggal = a.tanggal || '';
-      if (!tanggal) {
-        const d = new Date(validTimestamp);
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        tanggal = `${day}-${month}-${year}`;
-      }
-
-      return {
-        id: a.id || `tch-att-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        tanggal,
-        timestamp: validTimestamp,
-        nip: a.nip ? String(a.nip).trim() : '',
-        nama: a.nama ? String(a.nama).trim() : 'Guru',
-        jabatan: a.jabatan ? String(a.jabatan).trim() : 'Guru',
-        id_qr: a.id_qr || `69933068.${a.nip}`,
-        rfid_uid: a.rfid_uid ? String(a.rfid_uid).trim().toUpperCase() : null,
-        scan_method: a.scan_method || (a.rfid_uid ? 'RFID' : 'QR'),
-        jenis: a.jenis || 'Masuk',
-        status: a.status || 'Hadir',
-        petugas: a.petugas ? String(a.petugas).trim() : 'Sistem',
-        catatan: a.catatan || '',
-        terlambat_menit: typeof a.terlambatMenit === 'number' && !isNaN(a.terlambatMenit) ? Math.max(0, Math.floor(a.terlambatMenit)) : 0,
-      };
-    });
-
-    const chunks = chunkArray(records, 150);
-    await parallelBatchExecution(
-      chunks,
-      async (chunk) => {
-        const { error } = await client.from('teacher_attendance').upsert(chunk, { onConflict: 'id' });
-        if (error) throw error;
-      },
-      5
-    );
-
-    return { success: true, count: records.length };
-  } catch (err: any) {
-    console.warn('Supabase teacher attendance sync notice:', err?.message || err);
-    return { success: false, count: 0, error: err?.message || 'Gagal menyimpan tabel teacher_attendance ke Supabase' };
-  }
-}
-
-export async function fetchTeacherAttendanceFromSupabase(
-  startDateOrConfig?: string | SupabaseConfig,
-  endDate?: string,
-  customConfig?: SupabaseConfig
-): Promise<TeacherAttendanceRecord[] | null> {
-  const config = typeof startDateOrConfig === 'object' ? startDateOrConfig : customConfig;
-  const client = getSupabaseClient(config);
-  if (!client) return null;
-  try {
-    let q = client.from('teacher_attendance').select('*').order('timestamp', { ascending: false });
-    if (typeof startDateOrConfig === 'string' && startDateOrConfig && endDate) {
-      q = q.gte('tanggal', startDateOrConfig).lte('tanggal', endDate);
-    }
-    const { data, error } = await q;
-    if (error) {
-      console.warn('Supabase teacher attendance fetch notice:', error.message);
-      return null;
-    }
-    if (!data) return [];
-    return data.map((row) => ({
-      id: row.id || `tch-att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      tanggal: row.tanggal || '',
-      timestamp: row.timestamp || new Date().toISOString(),
-      nip: row.nip || '',
-      nama: row.nama || '',
-      jabatan: row.jabatan || '',
-      id_qr: row.id_qr || '',
-      rfid_uid: row.rfid_uid ? String(row.rfid_uid).trim().toUpperCase() : undefined,
-      scan_method: (row.scan_method as any) || (row.rfid_uid ? 'RFID' : 'QR'),
-      jenis: (row.jenis as any) || 'Masuk',
-      status: (row.status as any) || 'Hadir',
-      petugas: row.petugas || 'Sistem',
-      catatan: row.catatan || '',
-      terlambatMenit: row.terlambat_menit || 0,
-    }));
-  } catch (err: any) {
-    console.warn('Supabase fetch teacher attendance error:', err?.message || err);
-    return null;
-  }
-}
-
-export async function deleteTeacherAttendanceFromSupabase(id: string, customConfig?: SupabaseConfig): Promise<boolean> {
-  const client = getSupabaseClient(customConfig);
-  if (!client || !id) return false;
-  try {
-    const { error } = await client.from('teacher_attendance').delete().eq('id', id);
     return !error;
   } catch {
     return false;
@@ -1094,16 +887,6 @@ export async function saveMultipleStudentsToSupabase(students: Student[], custom
   return res.success;
 }
 
-export async function saveTeacherToSupabase(teacher: Teacher, customConfig?: SupabaseConfig): Promise<boolean> {
-  const res = await syncTeachersToSupabase([teacher], customConfig);
-  return res.success;
-}
-
-export async function saveMultipleTeachersToSupabase(teachers: Teacher[], customConfig?: SupabaseConfig): Promise<boolean> {
-  const res = await syncTeachersToSupabase(teachers, customConfig);
-  return res.success;
-}
-
 export async function saveAttendanceToSupabase(record: AttendanceRecord, customConfig?: SupabaseConfig): Promise<boolean> {
   const res = await syncAttendanceToSupabase([record], customConfig);
   return res.success;
@@ -1111,16 +894,6 @@ export async function saveAttendanceToSupabase(record: AttendanceRecord, customC
 
 export async function saveMultipleAttendanceToSupabase(records: AttendanceRecord[], customConfig?: SupabaseConfig): Promise<boolean> {
   const res = await syncAttendanceToSupabase(records, customConfig);
-  return res.success;
-}
-
-export async function saveTeacherAttendanceToSupabase(record: TeacherAttendanceRecord, customConfig?: SupabaseConfig): Promise<boolean> {
-  const res = await syncTeacherAttendanceToSupabase([record], customConfig);
-  return res.success;
-}
-
-export async function saveMultipleTeacherAttendanceToSupabase(records: TeacherAttendanceRecord[], customConfig?: SupabaseConfig): Promise<boolean> {
-  const res = await syncTeacherAttendanceToSupabase(records, customConfig);
   return res.success;
 }
 
@@ -1225,14 +998,11 @@ export interface RealtimeHandlers {
   onAttendanceInsert?: (record: AttendanceRecord) => void;
   onAttendanceUpdate?: (record: AttendanceRecord) => void;
   onAttendanceDelete?: (id: string) => void;
-  onTeacherAttendanceInsert?: (record: TeacherAttendanceRecord) => void;
-  onTeacherAttendanceUpdate?: (record: TeacherAttendanceRecord) => void;
-  onTeacherAttendanceDelete?: (id: string) => void;
   onStatusChange?: (status: string) => void;
 }
 
 /**
- * Mendengarkan perubahan data presensi siswa dan guru secara real-time via WebSocket Supabase.
+ * Mendengarkan perubahan data presensi siswa secara real-time via WebSocket Supabase.
  * Mengupdate layar monitor piket / dashboard pimpinan secara instan (< 1 detik).
  */
 export function subscribeToSupabaseRealtime(
@@ -1300,65 +1070,6 @@ export function subscribeToSupabaseRealtime(
       (payload) => {
         if (payload.old && (payload.old as any).id && handlers.onAttendanceDelete) {
           handlers.onAttendanceDelete((payload.old as any).id);
-        }
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'teacher_attendance' },
-      (payload) => {
-        if (payload.new && handlers.onTeacherAttendanceInsert) {
-          const row = payload.new as any;
-          handlers.onTeacherAttendanceInsert({
-            id: row.id,
-            tanggal: row.tanggal,
-            timestamp: row.timestamp,
-            nip: row.nip || '',
-            nama: row.nama || '',
-            jabatan: row.jabatan || '',
-            id_qr: row.id_qr || '',
-            rfid_uid: row.rfid_uid || undefined,
-            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
-            jenis: row.jenis || 'Masuk',
-            status: row.status || 'Hadir',
-            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
-            petugas: row.petugas || 'Sistem',
-            catatan: row.catatan || '',
-          });
-        }
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'teacher_attendance' },
-      (payload) => {
-        if (payload.new && handlers.onTeacherAttendanceUpdate) {
-          const row = payload.new as any;
-          handlers.onTeacherAttendanceUpdate({
-            id: row.id,
-            tanggal: row.tanggal,
-            timestamp: row.timestamp,
-            nip: row.nip || '',
-            nama: row.nama || '',
-            jabatan: row.jabatan || '',
-            id_qr: row.id_qr || '',
-            rfid_uid: row.rfid_uid || undefined,
-            scan_method: row.scan_method || (row.rfid_uid ? 'RFID' : 'QR'),
-            jenis: row.jenis || 'Masuk',
-            status: row.status || 'Hadir',
-            terlambatMenit: row.terlambat_menit ?? row.terlambatMenit ?? 0,
-            petugas: row.petugas || 'Sistem',
-            catatan: row.catatan || '',
-          });
-        }
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'teacher_attendance' },
-      (payload) => {
-        if (payload.old && (payload.old as any).id && handlers.onTeacherAttendanceDelete) {
-          handlers.onTeacherAttendanceDelete((payload.old as any).id);
         }
       }
     )
@@ -1554,78 +1265,6 @@ export async function uploadSchoolAssetToSupabase(
 
 // SQL schema generator
 
-export function getSupabaseTeacherOnlySchemaSQL(): string {
-  return `-- ==============================================================================
--- SQL Schema Khusus Tabel Guru & Presensi Guru di Supabase (PostgreSQL)
--- Jalankan di menu: SQL Editor > New Query di Dashboard Supabase
--- ==============================================================================
-
--- 1. TABEL GURU & TENAGA KEPENDIDIKAN (teachers)
-CREATE TABLE IF NOT EXISTS public.teachers (
-    id TEXT,
-    nip TEXT PRIMARY KEY,
-    nama TEXT NOT NULL,
-    jabatan TEXT NOT NULL,
-    id_qr TEXT,
-    status TEXT DEFAULT 'aktif',
-    no_hp TEXT,
-    foto TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Memastikan kolom baru ada
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS id TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS id_qr TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS no_hp TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS foto TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'aktif';
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-
-CREATE INDEX IF NOT EXISTS idx_teachers_id_qr ON public.teachers(id_qr);
-CREATE INDEX IF NOT EXISTS idx_teachers_nama ON public.teachers(nama);
-
--- 2. TABEL PRESENSI GURU & GTK (teacher_attendance)
-CREATE TABLE IF NOT EXISTS public.teacher_attendance (
-    id TEXT PRIMARY KEY,
-    tanggal TEXT NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    nip TEXT NOT NULL,
-    nama TEXT NOT NULL,
-    jabatan TEXT NOT NULL,
-    id_qr TEXT,
-    jenis TEXT NOT NULL,
-    status TEXT NOT NULL,
-    petugas TEXT,
-    catatan TEXT,
-    terlambat_menit INT DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Memastikan kolom baru ada
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS catatan TEXT;
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS terlambat_menit INT DEFAULT 0;
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_tanggal ON public.teacher_attendance(tanggal);
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_nip ON public.teacher_attendance(nip);
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_jenis ON public.teacher_attendance(jenis);
-
--- 3. HAK AKSES ROW LEVEL SECURITY (RLS)
-ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teacher_attendance ENABLE ROW LEVEL SECURITY;
-
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'teachers' AND policyname = 'Allow all teachers') THEN
-        CREATE POLICY "Allow all teachers" ON public.teachers FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'teacher_attendance' AND policyname = 'Allow all teacher attendance') THEN
-        CREATE POLICY "Allow all teacher attendance" ON public.teacher_attendance FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-END $$;
-`;
-}
-
 export function getSupabaseSchemaSQL(): string {
   return `-- ==============================================================================
 -- SQL Schema Lengkap untuk Aplikasi Presensi Digital di Supabase (PostgreSQL)
@@ -1691,55 +1330,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_id_qr ON public.attendance(id_qr);
 CREATE INDEX IF NOT EXISTS idx_attendance_jenis ON public.attendance(jenis);
 CREATE INDEX IF NOT EXISTS idx_attendance_status ON public.attendance(status);
 
--- 3. TABEL GURU & TENAGA KEPENDIDIKAN (teachers)
-CREATE TABLE IF NOT EXISTS public.teachers (
-    id TEXT,
-    nip TEXT PRIMARY KEY,
-    nama TEXT NOT NULL,
-    jabatan TEXT NOT NULL,
-    id_qr TEXT,
-    status TEXT DEFAULT 'aktif',
-    no_hp TEXT,
-    foto TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS id TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS id_qr TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS no_hp TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS foto TEXT;
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'aktif';
-ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-
-CREATE INDEX IF NOT EXISTS idx_teachers_id_qr ON public.teachers(id_qr);
-CREATE INDEX IF NOT EXISTS idx_teachers_nama ON public.teachers(nama);
-
--- 4. TABEL PRESENSI GURU & GTK (teacher_attendance)
-CREATE TABLE IF NOT EXISTS public.teacher_attendance (
-    id TEXT PRIMARY KEY,
-    tanggal TEXT NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    nip TEXT NOT NULL,
-    nama TEXT NOT NULL,
-    jabatan TEXT NOT NULL,
-    id_qr TEXT,
-    jenis TEXT NOT NULL,
-    status TEXT NOT NULL,
-    petugas TEXT,
-    catatan TEXT,
-    terlambat_menit INT DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS catatan TEXT;
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS terlambat_menit INT DEFAULT 0;
-ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_tanggal ON public.teacher_attendance(tanggal);
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_nip ON public.teacher_attendance(nip);
-CREATE INDEX IF NOT EXISTS idx_teacher_attendance_jenis ON public.teacher_attendance(jenis);
-
--- 5. TABEL LOG AKTIVITAS (activity_logs)
+-- 3. TABEL LOG AKTIVITAS (activity_logs)
 CREATE TABLE IF NOT EXISTS public.activity_logs (
     id TEXT PRIMARY KEY,
     timestamp TIMESTAMPTZ NOT NULL,
@@ -1854,11 +1445,9 @@ CREATE INDEX IF NOT EXISTS idx_dispatches_nisn ON public.problematic_student_dis
 CREATE INDEX IF NOT EXISTS idx_dispatches_kelas ON public.problematic_student_dispatches(kelas);
 CREATE INDEX IF NOT EXISTS idx_dispatches_status ON public.problematic_student_dispatches(status);
 
--- 9. KEBIJAKAN ROW LEVEL SECURITY (RLS) & HAK AKSES API
+-- 7. KEBIJAKAN ROW LEVEL SECURITY (RLS) & HAK AKSES API
 ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teacher_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
@@ -1871,12 +1460,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'attendance' AND policyname = 'Allow all attendance') THEN
         CREATE POLICY "Allow all attendance" ON public.attendance FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'teachers' AND policyname = 'Allow all teachers') THEN
-        CREATE POLICY "Allow all teachers" ON public.teachers FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'teacher_attendance' AND policyname = 'Allow all teacher attendance') THEN
-        CREATE POLICY "Allow all teacher attendance" ON public.teacher_attendance FOR ALL USING (true) WITH CHECK (true);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activity_logs' AND policyname = 'Allow all logs') THEN
         CREATE POLICY "Allow all logs" ON public.activity_logs FOR ALL USING (true) WITH CHECK (true);
@@ -1892,7 +1475,7 @@ BEGIN
     END IF;
 END $$;
 
--- 10. STORAGE BUCKET UNTUK FOTO PROFIL SISWA & GURU (nexa-photos)
+-- 8. STORAGE BUCKET UNTUK FOTO PROFIL SISWA (nexa-photos)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('nexa-photos', 'nexa-photos', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
@@ -1910,16 +1493,12 @@ BEGIN
     END IF;
 END $$;
 
--- 11. PUBLIKASI REALTIME (Untuk Sinkronisasi Seketika < 1 Detik Lintas Perangkat)
+-- 9. PUBLIKASI REALTIME (Untuk Sinkronisasi Seketika < 1 Detik Lintas Perangkat)
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         BEGIN
             ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
-        EXCEPTION WHEN duplicate_object THEN NULL;
-        END;
-        BEGIN
-            ALTER PUBLICATION supabase_realtime ADD TABLE public.teacher_attendance;
         EXCEPTION WHEN duplicate_object THEN NULL;
         END;
     END IF;
@@ -1976,43 +1555,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_nisn ON attendance(nisn);
 CREATE INDEX IF NOT EXISTS idx_attendance_status ON attendance(status);
 CREATE INDEX IF NOT EXISTS idx_attendance_jenis ON attendance(jenis);
 
--- 3. Table: Teachers & Staff (Guru & Tenaga Kependidikan)
-CREATE TABLE IF NOT EXISTS teachers (
-    nip VARCHAR(30) PRIMARY KEY,
-    id VARCHAR(100),
-    nama VARCHAR(255) NOT NULL,
-    jabatan VARCHAR(100) NOT NULL,
-    id_qr VARCHAR(100),
-    status VARCHAR(20) DEFAULT 'aktif',
-    no_hp VARCHAR(50),
-    foto TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_teachers_id_qr ON teachers(id_qr);
-CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status);
-
--- 4. Table: Teacher Attendance (Presensi Guru & GTK)
-CREATE TABLE IF NOT EXISTS teacher_attendance (
-    id VARCHAR(100) PRIMARY KEY,
-    tanggal DATE NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    nip VARCHAR(30) NOT NULL REFERENCES teachers(nip) ON UPDATE CASCADE ON DELETE RESTRICT,
-    nama VARCHAR(255) NOT NULL,
-    jabatan VARCHAR(100) NOT NULL,
-    id_qr VARCHAR(100),
-    jenis VARCHAR(20) NOT NULL, -- 'Masuk' | 'Pulang'
-    status VARCHAR(20) NOT NULL, -- 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpa' | 'Dinas Luar'
-    petugas VARCHAR(100),
-    catatan TEXT,
-    terlambat_menit INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_teacher_att_tanggal ON teacher_attendance(tanggal);
-CREATE INDEX IF NOT EXISTS idx_teacher_att_nip ON teacher_attendance(nip);
-
--- 5. Table: Activity Logs (Audit Trail & Log Aktivitas)
+-- 3. Table: Activity Logs (Audit Trail & Log Aktivitas)
 CREATE TABLE IF NOT EXISTS activity_logs (
     id VARCHAR(100) PRIMARY KEY,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -2172,8 +1715,6 @@ networks:
 export function generateFullSqlBackupDump(
   students: Student[],
   attendance: AttendanceRecord[],
-  teachers: Teacher[],
-  teacherAttendance: TeacherAttendanceRecord[],
   logs: ActivityLog[],
   schoolSettings?: any
 ): string {
@@ -2193,8 +1734,6 @@ export function generateFullSqlBackupDump(
 -- Generated: ${new Date().toISOString()}
 -- Total Students: ${students.length}
 -- Total Attendance: ${attendance.length}
--- Total Teachers: ${teachers.length}
--- Total Teacher Attendance: ${teacherAttendance.length}
 -- Total Logs: ${logs.length}
 -- ====================================================================
 
@@ -2224,27 +1763,9 @@ ON CONFLICT (nisn) DO UPDATE SET
     });
   }
 
-  // Insert Teachers
-  if (teachers.length > 0) {
-    sql += `\n-- 2.2 Teachers Data (${teachers.length} rows)\n`;
-    teachers.forEach((t) => {
-      sql += `INSERT INTO teachers (nip, id, nama, jabatan, id_qr, status, no_hp, foto) VALUES (${escapeSql(
-        t.nip
-      )}, ${escapeSql(t.id || t.nip)}, ${escapeSql(t.nama)}, ${escapeSql(t.jabatan)}, ${escapeSql(
-        t.id_qr || t.nip
-      )}, ${escapeSql(t.status || 'aktif')}, ${escapeSql(t.no_hp || '')}, ${escapeSql(t.foto || '')})
-ON CONFLICT (nip) DO UPDATE SET 
-  nama = EXCLUDED.nama, 
-  jabatan = EXCLUDED.jabatan, 
-  id_qr = EXCLUDED.id_qr, 
-  status = EXCLUDED.status, 
-  no_hp = EXCLUDED.no_hp;\n`;
-    });
-  }
-
   // Insert Student Attendance
   if (attendance.length > 0) {
-    sql += `\n-- 2.3 Attendance Records (${attendance.length} rows)\n`;
+    sql += `\n-- 2.2 Attendance Records (${attendance.length} rows)\n`;
     attendance.forEach((a) => {
       const ts = toValidIsoTimestamp(a.timestamp, a.tanggal);
       sql += `INSERT INTO attendance (id, tanggal, timestamp, nisn, name, class, id_qr, jenis, status, petugas, catatan, terlambat_menit) VALUES (${escapeSql(
@@ -2258,25 +1779,9 @@ ON CONFLICT (id) DO NOTHING;\n`;
     });
   }
 
-  // Insert Teacher Attendance
-  if (teacherAttendance.length > 0) {
-    sql += `\n-- 2.4 Teacher Attendance Records (${teacherAttendance.length} rows)\n`;
-    teacherAttendance.forEach((ta) => {
-      const ts = toValidIsoTimestamp(ta.timestamp, ta.tanggal);
-      sql += `INSERT INTO teacher_attendance (id, tanggal, timestamp, nip, nama, jabatan, id_qr, jenis, status, petugas, catatan, terlambat_menit) VALUES (${escapeSql(
-        ta.id
-      )}, ${escapeSql(ta.tanggal)}, '${ts}', ${escapeSql(ta.nip)}, ${escapeSql(ta.nama)}, ${escapeSql(
-        ta.jabatan
-      )}, ${escapeSql(ta.id_qr || ta.nip)}, ${escapeSql(ta.jenis)}, ${escapeSql(ta.status)}, ${escapeSql(
-        ta.petugas || ''
-      )}, ${escapeSql(ta.catatan || '')}, ${escapeNum(ta.terlambatMenit, 0)})
-ON CONFLICT (id) DO NOTHING;\n`;
-    });
-  }
-
   // Insert Logs
   if (logs.length > 0) {
-    sql += `\n-- 2.5 Activity Logs (${logs.length} rows)\n`;
+    sql += `\n-- 2.3 Activity Logs (${logs.length} rows)\n`;
     logs.slice(0, 500).forEach((l) => {
       const ts = toValidIsoTimestamp(l.timestamp);
       sql += `INSERT INTO activity_logs (id, timestamp, user_name, role, action, details) VALUES (${escapeSql(
@@ -2300,13 +1805,11 @@ ON CONFLICT (id) DO NOTHING;\n`;
  */
 export async function purgeSaturdayAlpaFromSupabase(customConfig?: SupabaseConfig): Promise<{
   deletedStudents: number;
-  deletedTeachers: number;
 }> {
   const client = getSupabaseClient(customConfig);
-  if (!client) return { deletedStudents: 0, deletedTeachers: 0 };
+  if (!client) return { deletedStudents: 0 };
 
   let deletedStudents = 0;
-  let deletedTeachers = 0;
 
   const isSat = (dateStr?: string, timestamp?: string): boolean => {
     if (dateStr) {
@@ -2334,7 +1837,7 @@ export async function purgeSaturdayAlpaFromSupabase(customConfig?: SupabaseConfi
   };
 
   try {
-    // 1. Student Attendance
+    // Student Attendance
     const { data: studentRecords } = await client
       .from('attendance')
       .select('id, tanggal, timestamp, status')
@@ -2353,31 +1856,11 @@ export async function purgeSaturdayAlpaFromSupabase(customConfig?: SupabaseConfi
         deletedStudents = idsToDelete.length;
       }
     }
-
-    // 2. Teacher Attendance
-    const { data: teacherRecords } = await client
-      .from('teacher_attendance')
-      .select('id, tanggal, timestamp, status')
-      .eq('status', 'Alpa');
-
-    if (teacherRecords && teacherRecords.length > 0) {
-      const idsToDelete = teacherRecords
-        .filter((r: any) => isSat(r.tanggal, r.timestamp))
-        .map((r: any) => r.id);
-
-      if (idsToDelete.length > 0) {
-        for (let i = 0; i < idsToDelete.length; i += 200) {
-          const chunk = idsToDelete.slice(i, i + 200);
-          await client.from('teacher_attendance').delete().in('id', chunk);
-        }
-        deletedTeachers = idsToDelete.length;
-      }
-    }
   } catch (error) {
     console.warn('purgeSaturdayAlpaFromSupabase warning:', error);
   }
 
-  return { deletedStudents, deletedTeachers };
+  return { deletedStudents };
 }
 
 

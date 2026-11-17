@@ -43,22 +43,7 @@ export interface Student {
 
 export type AttendanceType = 'Masuk' | 'Pulang';
 export type AttendanceStatus = 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpa';
-export type TeacherAttendanceStatus = 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Dinas Luar' | 'Cuti' | 'Alpa';
 export type AttendanceScanMethod = 'QR' | 'RFID' | 'NFC' | 'Manual';
-
-export interface Teacher {
-  id: string; // Document ID
-  nip: string; // Nomor Induk Pegawai (Kunci Identitas Utama)
-  nama: string; // Nama Lengkap Guru & Gelar
-  jabatan: string; // Jabatan / Mata Pelajaran (e.g. Guru Matematika, Kepala Sekolah)
-  id_qr?: string; // QR Code Identifier
-  rfid_uid?: string; // UID Kartu RFID / NFC
-  wali_kelas?: string; // e.g. "X-1", "XI IPA 1", "XII MIPA 2"
-  status: 'aktif' | 'nonaktif';
-  no_hp?: string;
-  foto?: string;
-  createdAt?: string;
-}
 
 export interface AttendanceRecord {
   id: string;
@@ -75,23 +60,6 @@ export interface AttendanceRecord {
   petugas: string; // Email/Name of officer scanning or logged in user
   catatan?: string;
   terlambatMenit?: number; // Late duration in minutes
-}
-
-export interface TeacherAttendanceRecord {
-  id: string;
-  tanggal: string; // format "YYYY-MM-DD"
-  timestamp: string; // ISO String
-  nip: string;
-  nama: string;
-  jabatan: string;
-  id_qr?: string;
-  rfid_uid?: string;
-  scan_method?: AttendanceScanMethod;
-  jenis: AttendanceType;
-  status: TeacherAttendanceStatus;
-  petugas: string;
-  catatan?: string;
-  terlambatMenit?: number;
 }
 
 export interface ActivityLog {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useDeferredValue } from 'r
 import { QRCodeSVG } from 'qrcode.react';
 import { store, isGenericQrCode } from '../lib/store';
 import { toast } from '../lib/toast';
-import { Student, UserRole, AttendanceRecord, Teacher } from '../types';
+import { Student, UserRole, AttendanceRecord } from '../types';
 import {
   exportStudentListToExcel,
   exportStudentListToCSV,
@@ -337,9 +337,8 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ userRole =
   const [rfidBindStudent, setRfidBindStudent] = useState<Student | null>(null);
   const [rfidInputVal, setRfidInputVal] = useState('');
   const [rfidConflict, setRfidConflict] = useState<{
-    type: 'siswa' | 'guru';
+    type: 'siswa';
     student?: Student;
-    teacher?: Teacher;
   } | null>(null);
   const [isNfcActive, setIsNfcActive] = useState(false);
   const rfidInputRef = useRef<HTMLInputElement>(null);

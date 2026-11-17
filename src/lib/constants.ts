@@ -13,8 +13,6 @@ export const STORAGE_KEYS = {
   USERS: 'nexa15_users_v3',
   STUDENTS: 'nexa15_students_v3',
   ATTENDANCE: 'nexa15_attendance_v3',
-  TEACHERS: 'nexa15_teachers_v3',
-  TEACHER_ATTENDANCE: 'nexa15_teacher_attendance_v3',
   LOGS: 'nexa15_logs_v3',
   SYNC_QUEUE: 'nexa15_sync_queue_v3',
   DISPATCHES: 'nexa15_dispatches_v3',
@@ -94,7 +92,7 @@ export const DEFAULT_SETTINGS: SchoolSettings = {
 };
 
 /**
- * Helper to check if a QR identifier is a generic template/NPSN placeholder rather than a unique student/teacher QR
+ * Helper to check if a QR identifier is a generic template/NPSN placeholder rather than a unique student QR
  */
 export function isGenericQrCode(qr?: string): boolean {
   if (!qr) return true;
@@ -120,24 +118,6 @@ export function isMatchingNisn(nisnA?: string, nisnB?: string): boolean {
   if (cleanA === cleanB) return true;
 
   // Compare digit sequences without leading zeros
-  const normA = cleanA.replace(/\D/g, '').replace(/^0+/, '');
-  const normB = cleanB.replace(/\D/g, '').replace(/^0+/, '');
-  if (normA && normB && normA === normB && normA.length >= 3) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Strict NIP matcher for teachers
- */
-export function isMatchingNip(nipA?: string, nipB?: string): boolean {
-  if (!nipA || !nipB) return false;
-  const cleanA = String(nipA).trim();
-  const cleanB = String(nipB).trim();
-  if (!cleanA || !cleanB) return false;
-  if (cleanA === cleanB) return true;
-
   const normA = cleanA.replace(/\D/g, '').replace(/^0+/, '');
   const normB = cleanB.replace(/\D/g, '').replace(/^0+/, '');
   if (normA && normB && normA === normB && normA.length >= 3) {

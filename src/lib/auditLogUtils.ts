@@ -103,29 +103,3 @@ export function formatScanLogDetails(params: {
   const lateStr = isLate ? ` Terlambat ${lateMinutes} mnt` : '';
   return `Scan Presensi Masuk [${status.toUpperCase()}]${rfidTag}: ${nama} (${kelas})${lateStr} oleh ${officerName}`;
 }
-
-/**
- * Format string log aktivitas untuk presensi scan guru / GTK
- */
-export function formatTeacherScanLogDetails(params: {
-  nama: string;
-  jabatan?: string;
-  status: string;
-  jenis: 'Masuk' | 'Pulang';
-  isRfidScan?: boolean;
-  lateMinutes?: number;
-  officer?: string;
-}): string {
-  const { nama, jabatan, status, jenis, isRfidScan, lateMinutes, officer } = params;
-  const officerName = officer || 'Petugas Piket';
-  const rfidTag = isRfidScan ? ' [RFID]' : '';
-  const roleLabel = jabatan || 'Guru / GTK';
-
-  if (jenis === 'Pulang') {
-    return `Scan Presensi Guru Pulang${rfidTag}: ${nama} (${roleLabel}) oleh ${officerName}`;
-  }
-
-  const isLate = status.toLowerCase() === 'terlambat' && (lateMinutes || 0) > 0;
-  const lateStr = isLate ? ` Terlambat ${lateMinutes} mnt` : '';
-  return `Scan Presensi Guru Masuk [${status.toUpperCase()}]${rfidTag}: ${nama} (${roleLabel})${lateStr} oleh ${officerName}`;
-}

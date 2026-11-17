@@ -203,7 +203,12 @@ export const StudentMassPrintModal: React.FC<StudentMassPrintModalProps> = ({
                 const isSelected = massPrintSelectedIds.includes(student.id);
 
                 return (
-                  <React.Fragment key={student.id}>
+                  <div
+                    key={student.id}
+                    className={`flex ${
+                      massPrintSide === 'both' ? 'flex-col' : 'flex-wrap'
+                    } items-center justify-center gap-3`}
+                  >
                     {/* FRONT SIDE CARD */}
                     {(massPrintSide === 'both' || massPrintSide === 'front') && (
                       <OfficialStudentIDCardFront
@@ -252,7 +257,7 @@ export const StudentMassPrintModal: React.FC<StudentMassPrintModalProps> = ({
                         className="cursor-pointer"
                       />
                     )}
-                  </React.Fragment>
+                  </div>
                 );
               })}
           </div>

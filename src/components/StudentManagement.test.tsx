@@ -9,7 +9,6 @@ vi.mock('../lib/store', () => ({
     students: [],
     classes: ['X IPA 1', 'X IPA 2'],
     attendance: [],
-    teachers: [],
     settings: {
       enableTelegramBot: false,
       telegramBotToken: '',

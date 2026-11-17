@@ -1,4 +1,4 @@
-﻿import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
+import { SettingsDatabaseConfig } from './SettingsDatabaseConfig';
 import { SettingsSecurityAndMaintenance } from './SettingsSecurityAndMaintenance';
 import { SettingsHolidays } from './SettingsHolidays';
 import { SettingsHealthCheck } from './SettingsHealthCheck';
@@ -8,7 +8,6 @@ import { SchoolSettings, UserRole } from '../types';
 import {
   testSupabaseConnection,
   getSupabaseSchemaSQL,
-  getSupabaseTeacherOnlySchemaSQL,
   getPostgresSelfHostedSchemaSQL,
   getDockerComposePostgresYAML,
   generateFullSqlBackupDump,
@@ -92,7 +91,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
   const [rfidTestInput, setRfidTestInput] = useState('');
   const [rfidTestResult, setRfidTestResult] = useState<{
     found: boolean;
-    type?: 'siswa' | 'guru';
+    type?: 'siswa';
     person?: any;
     rawInput: string;
     normalizedHex?: string;
@@ -123,10 +122,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
     }
 
     if (rfidMatch) {
-      const personObj = rfidMatch.type === 'siswa' ? rfidMatch.student : rfidMatch.teacher;
+      const personObj = rfidMatch.student;
       setRfidTestResult({
         found: true,
-        type: rfidMatch.type,
+        type: 'siswa',
         person: personObj,
         rawInput: trimmed,
         normalizedHex: hexStr || undefined,
@@ -134,7 +133,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       });
       toast.success(
         'Kartu Terdeteksi',
-        `Kartu RFID cocok dengan ${rfidMatch.type === 'siswa' ? 'Siswa' : 'Guru'}: ${personObj?.nama}`
+        `Kartu RFID cocok dengan Siswa: ${personObj?.nama}`
       );
     } else {
       setRfidTestResult({
@@ -171,7 +170,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
       if (res.total > 0) {
         toast.success(
           'Revisi Alpa Sabtu Selesai',
-          `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (Siswa: ${res.deletedStudents}, Guru: ${res.deletedTeachers}).`
+          `Berhasil menghapus ${res.total} data presensi Alpa pada hari Sabtu (${res.deletedStudents} siswa).`
         );
       } else {
         toast.info(
@@ -1261,7 +1260,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     </span>
                   </h4>
                   <p className="text-[11px] text-sky-700 dark:text-sky-300 mt-0.5">
-                    Mendukung pemindai kartu RFID/NFC fisik via USB (Keyboard Emulation / USB HID) untuk presensi super cepat siswa dan guru.
+                    Mendukung pemindai kartu RFID/NFC fisik via USB (Keyboard Emulation / USB HID) untuk presensi super cepat siswa.
                   </p>
                 </div>
               </div>
@@ -1443,7 +1442,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                             {rfidTestResult.found ? (
                               <>
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                <span>Kartu Terdaftar Sebagai: {rfidTestResult.type === 'siswa' ? 'Siswa' : 'Guru'}</span>
+                                <span>Kartu Terdaftar Sebagai: Siswa</span>
                               </>
                             ) : (
                               <>
@@ -1459,9 +1458,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                                 {rfidTestResult.person.nama}
                               </p>
                               <p className="text-[11px] text-slate-300">
-                                {rfidTestResult.type === 'siswa'
-                                  ? `Kelas: ${(rfidTestResult.person as any).kelas || '-'} | NISN: ${(rfidTestResult.person as any).nisn || '-'}`
-                                  : `Jabatan: ${(rfidTestResult.person as any).jabatan || '-'} | NIP: ${(rfidTestResult.person as any).nip || '-'}`}
+                                Kelas: {(rfidTestResult.person as any).kelas || '-'} | NISN: {(rfidTestResult.person as any).nisn || '-'}
                               </p>
                             </div>
                           )}
@@ -1592,7 +1589,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                   </span>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/70 dark:bg-slate-800/80 border border-current">
-                  {rfidTestResult.type === 'siswa' ? 'Profil Siswa' : rfidTestResult.type === 'guru' ? 'Profil Guru' : 'Kartu Baru'}
+                  {rfidTestResult.type === 'siswa' ? 'Profil Siswa' : 'Kartu Baru'}
                 </span>
               </div>
 
@@ -1602,11 +1599,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole = 'Admin' }
                     {rfidTestResult.person.nama}
                   </div>
                   <div className="text-[11px] text-slate-300">
-                    {rfidTestResult.type === 'siswa' ? (
-                      <span>Kelas: {rfidTestResult.person.kelas} â€¢ NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
-                    ) : (
-                      <span>Jabatan: {rfidTestResult.person.jabatan} â€¢ NIP: <span className="font-mono">{rfidTestResult.person.nip}</span></span>
-                    )}
+                    <span>Kelas: {rfidTestResult.person.kelas} • NISN: <span className="font-mono">{rfidTestResult.person.nisn}</span></span>
                   </div>
                 </div>
               )}

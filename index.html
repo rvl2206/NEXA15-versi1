@@ -2,7 +2,11 @@
 <html lang="id" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#020617" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>NEXA15 - SMA Negeri 15 Ambon Digital Presence</title>
     <meta name="description" content="Sistem Presensi Digital &amp; Manajemen Kehadiran Siswa/Guru dengan QR Code, Kartu Fisik RFID/NFC, AI Analysis, dan Pengaturan Identitas &amp; Logo Sekolah Terpusat." />
     <meta property="og:title" content="NEXA15 - SMA Negeri 15 Ambon Digital Presence" />
@@ -35,6 +39,68 @@
     <style>
       @keyframes nexa-spin {
         to { transform: rotate(360deg); }
+      }
+      html, body, #root {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      :root {
+        --sat: env(safe-area-inset-top, 0px);
+        --sab: env(safe-area-inset-bottom, 0px);
+        --sal: env(safe-area-inset-left, 0px);
+        --sar: env(safe-area-inset-right, 0px);
+      }
+      /* Anti-flicker Hardware Acceleration Optimization for Kiosk Video */
+      #nexa-kiosk-video-feed {
+        width: 100% !important;
+        height: 100% !important;
+        position: relative !important;
+        overflow: hidden !important;
+        background-color: #000000 !important;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      #nexa-kiosk-video-feed video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        will-change: transform;
+      }
+      #nexa-kiosk-video-feed.high-contrast video,
+      #reader.high-contrast video {
+        filter: contrast(1.35) brightness(1.15) saturate(1.20) !important;
+        -webkit-filter: contrast(1.35) brightness(1.15) saturate(1.20) !important;
+      }
+      #nexa-kiosk-video-feed canvas {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+      }
+      #nexa-kiosk-video-feed img {
+        display: none !important;
+      }
+      #nexa-kiosk-video-feed > div {
+        border: none !important;
+      }
+      #nexa-kiosk-video-feed__scan_region {
+        background: transparent !important;
+      }
+      #nexa-kiosk-video-feed__dashboard_section_csr {
+        display: none !important;
       }
       .initial-loader {
         min-height: 100vh;

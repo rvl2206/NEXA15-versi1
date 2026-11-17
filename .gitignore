@@ -7,5 +7,9 @@ coverage/
 .env*
 !.env.example
 *.apk
+.gradle/
+**/.gradle/
 .idea/
 .vscode/
+.neon
+.github/
