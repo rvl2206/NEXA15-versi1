@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   Flame,
+  GraduationCap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { gsap } from 'gsap';
@@ -165,6 +166,12 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
     });
   }, [activeStudents, uniqueDailyRecords]);
 
+  const avgClassRate = useMemo(() => {
+    if (classBreakdown.length === 0) return 0;
+    const total = classBreakdown.reduce((sum, c) => sum + c.rate, 0);
+    return Math.round(total / classBreakdown.length);
+  }, [classBreakdown]);
+
   const modalStudentList = useMemo(() => {
     let list: Array<{ student: Student; record?: AttendanceRecord; statusLabel: string; time?: string }> = [];
 
@@ -232,10 +239,10 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   return (
     <div ref={containerRef} className="w-full space-y-6">
       {/* 2-Column Clean Layout: Pemindaian Terbaru & Matriks Kelas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
         
         {/* Kolom 1: Pemindaian Terbaru (Live Activity Feed) */}
-        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
@@ -255,11 +262,11 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           </div>
 
           {recentScans.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 text-xs">
+            <div className="flex-1 flex items-center justify-center py-12 text-slate-500 text-xs">
               Belum ada pemindaian tercatat untuk tanggal ini.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 flex-1 flex flex-col justify-start">
               {recentScans.map((r, idx) => {
                 const timeStr = r.timestamp
                   ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -302,51 +309,121 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
           )}
         </div>
 
-        {/* Kolom 2: Matriks Kelas */}
-        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+        {/* Kolom 2: Matriks Performa Kelas */}
+        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
-            <div>
-              <h3 className="text-base font-bold text-white">Matriks Performa Kelas</h3>
-              <p className="text-xs text-slate-400">Rincian rasio kehadiran per rombel kelas</p>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Matriks Performa Kelas</h3>
+                <p className="text-xs text-slate-400">Rincian rasio kehadiran per rombel kelas</p>
+              </div>
             </div>
-            <span className="text-xs text-slate-400 font-semibold">{classBreakdown.length} Kelas</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-semibold">{classBreakdown.length} Kelas</span>
+              {avgClassRate > 0 && (
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                  Rata-rata: {avgClassRate}%
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
-            {classBreakdown.map((c) => (
-              <div
-                key={c.kelas}
-                onClick={() => {
-                  setSearchQuery(c.kelas);
-                  setModalFilter('hadir');
-                  setShowStudentListModal(true);
-                }}
-                className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700 transition-all flex flex-col justify-between cursor-pointer group"
-                title={`Klik untuk melihat data siswa kelas ${c.kelas}`}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-slate-200 text-xs sm:text-sm group-hover:text-blue-400 transition-colors">
-                    {c.kelas}
-                  </span>
-                  <span
-                    className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                      c.rate >= 90
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : c.rate >= 75
-                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                    }`}
-                  >
-                    {c.rate}%
-                  </span>
+          {classBreakdown.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center py-12 text-slate-500 text-xs">
+              Belum ada rombel kelas terdaftar.
+            </div>
+          ) : (
+            <div className={`flex-1 ${classBreakdown.length <= 4 ? 'space-y-3 flex flex-col justify-start' : 'grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1'}`}>
+              {classBreakdown.map((c) => (
+                <div
+                  key={c.kelas}
+                  onClick={() => {
+                    setSearchQuery(c.kelas);
+                    setModalFilter('hadir');
+                    setShowStudentListModal(true);
+                  }}
+                  className="p-3.5 sm:p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-950 transition-all flex flex-col gap-2.5 cursor-pointer group shadow-sm"
+                  title={`Klik untuk melihat data siswa kelas ${c.kelas}`}
+                >
+                  {/* Baris 1: Nama Kelas, Jumlah Siswa Masuk & Badge Persentase */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-black text-xs flex items-center justify-center group-hover:scale-105 transition-transform">
+                        {c.kelas}
+                      </div>
+                      <div>
+                        <span className="font-bold text-white text-xs sm:text-sm group-hover:text-blue-400 transition-colors">
+                          Kelas {c.kelas}
+                        </span>
+                        <p className="text-[10px] text-slate-400">
+                          <span className="text-slate-200 font-semibold">{c.masuk}</span> dari {c.total} Siswa Masuk
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                        c.rate >= 90
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : c.rate >= 75
+                          ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                          : c.rate >= 50
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                      }`}
+                    >
+                      {c.rate}% Masuk
+                    </span>
+                  </div>
+
+                  {/* Baris 2: Visual Progress Bar */}
+                  <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden flex border border-slate-800/80">
+                    {c.hadir > 0 && (
+                      <div
+                        className="bg-emerald-500 h-full transition-all duration-500"
+                        style={{ width: `${(c.hadir / c.total) * 100}%` }}
+                        title={`Hadir Tepat Waktu: ${c.hadir}`}
+                      />
+                    )}
+                    {c.terlambat > 0 && (
+                      <div
+                        className="bg-amber-400 h-full transition-all duration-500"
+                        style={{ width: `${(c.terlambat / c.total) * 100}%` }}
+                        title={`Terlambat: ${c.terlambat}`}
+                      />
+                    )}
+                  </div>
+
+                  {/* Baris 3: Status Breakdown Tags */}
+                  <div className="flex justify-between items-center text-[10.5px] text-slate-400 pt-0.5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        {c.hadir} Tepat
+                      </span>
+                      {c.terlambat > 0 && (
+                        <span className="flex items-center gap-1 text-amber-400 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          {c.terlambat} Telat
+                        </span>
+                      )}
+                    </div>
+                    {c.belumAbsen > 0 ? (
+                      <span className="text-rose-400 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                        {c.belumAbsen} Belum Masuk
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 font-semibold text-[10px]">Lengkap (100%)</span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-400 flex justify-between items-center">
-                  <span>{c.masuk}/{c.total} Masuk</span>
-                  {c.belumAbsen > 0 && <span className="text-rose-400 font-semibold">{c.belumAbsen} Belum</span>}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
