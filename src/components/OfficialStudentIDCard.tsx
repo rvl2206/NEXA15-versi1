@@ -76,6 +76,7 @@ export interface CardBackProps {
   kelas?: string;
   qrValue?: string;
   cardSize?: CardSizeOption;
+  qrSize?: number;
   schoolName?: string;
   headmasterName?: string;
   headmasterNIP?: string;
@@ -894,6 +895,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
   nisn,
   qrValue,
   cardSize = 'CR80',
+  qrSize,
   schoolName,
   headmasterName,
   headmasterNIP,
@@ -907,6 +909,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
   className = '',
 }) => {
   const currentSize = CARD_SIZES[cardSize] || CARD_SIZES.CR80;
+  const computedQrPixelSize = qrSize || (cardSize === 'B2' ? 140 : cardSize === 'B1' ? 124 : 118);
   const settings = store.getSettings();
   const activeSchoolName = schoolName || settings.schoolName || 'SMA NEGERI 15 AMBON';
   const schoolNpsn = settings.schoolNPSN || '69933068';
@@ -1037,7 +1040,7 @@ export const OfficialStudentIDCardBack: React.FC<CardBackProps> = ({
           <div style={{ lineHeight: 0 }}>
             <QRCodeSVG
               value={computedQr}
-              size={112}
+              size={computedQrPixelSize}
               level="M"
               includeMargin={false}
               fgColor="#000000"

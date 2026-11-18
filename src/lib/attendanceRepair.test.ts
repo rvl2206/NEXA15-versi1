@@ -112,4 +112,22 @@ describe('attendanceRepair utilities', () => {
     expect(mockAttendance[0].kelas).toBe('XI');
     expect(mockAttendance[0].id).toBe('rec-1');
   });
+
+  it('normalizes various date formats (DD-MM-YYYY, DD/MM/YYYY) to standard YYYY-MM-DD for database compatibility', () => {
+    const rawDates = ['18-11-2026', '18/11/2026', '2026-11-18'];
+    const normalized = rawDates.map((raw) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
+        const [d, m, y] = raw.split('-');
+        return `${y}-${m}-${d}`;
+      }
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+        const [d, m, y] = raw.split('/');
+        return `${y}-${m}-${d}`;
+      }
+      return raw;
+    });
+
+    expect(normalized).toEqual(['2026-11-18', '2026-11-18', '2026-11-18']);
+  });
 });

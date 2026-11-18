@@ -278,7 +278,16 @@ class AppStore {
         }
       }
       if (savedAttendance) {
-        this.attendance = JSON.parse(savedAttendance);
+        const parsed = JSON.parse(savedAttendance);
+        this.attendance = Array.isArray(parsed)
+          ? parsed.map((a: any) => {
+              if (a.tanggal && /^\d{2}-\d{2}-\d{4}$/.test(a.tanggal)) {
+                const [d, m, y] = a.tanggal.split('-');
+                return { ...a, tanggal: `${y}-${m}-${d}` };
+              }
+              return a;
+            })
+          : [];
       }
 
       // Purge any Saturday Alpa records immediately from memory & local storage
@@ -305,7 +314,16 @@ class AppStore {
         }
       }
       if (savedQueue) {
-        this.syncQueue = JSON.parse(savedQueue);
+        const parsed = JSON.parse(savedQueue);
+        this.syncQueue = Array.isArray(parsed)
+          ? parsed.map((q: any) => {
+              if (q.type === 'attendance' && q.data && q.data.tanggal && /^\d{2}-\d{2}-\d{4}$/.test(q.data.tanggal)) {
+                const [d, m, y] = q.data.tanggal.split('-');
+                return { ...q, data: { ...q.data, tanggal: `${y}-${m}-${d}` } };
+              }
+              return q;
+            })
+          : [];
       }
       let savedDispatches = await localforage.getItem<string>(STORAGE_KEYS.DISPATCHES);
       if (!savedDispatches) {
@@ -511,14 +529,16 @@ class AppStore {
       if (config?.url) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        await fetch(`${config.url}/rest/v1/`, {
+        const res = await fetch(`${config.url}/rest/v1/attendance?select=id&limit=1`, {
           method: 'HEAD',
-          headers: { apikey: config.key },
+          headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
-        this.setNetworkOnline(true);
-        return true;
+        if (res.ok || res.status < 500) {
+          this.setNetworkOnline(true);
+          return true;
+        }
       }
     } catch {
       // Supabase probe failed, try Google 204 fallback
@@ -693,7 +713,15 @@ class AppStore {
       if (attendanceUpserts.length > 0) {
         if (hasSupabase) {
           const res = await syncAttendanceToSupabase(attendanceUpserts, config);
-          if (res.success) {
+          if (res.successfulIds && res.successfulIds.length > 0) {
+            const successSet = new Set(res.successfulIds);
+            attendanceQueueItems.forEach((q) => {
+              if (successSet.has(q.id)) {
+                successfulKeys.add(getQueueItemKey(q));
+              }
+            });
+            processedCount += res.successfulIds.length;
+          } else if (res.success) {
             attendanceQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += attendanceUpserts.length;
           }
@@ -710,7 +738,15 @@ class AppStore {
       if (studentUpserts.length > 0) {
         if (hasSupabase) {
           const res = await syncStudentsToSupabase(studentUpserts, config);
-          if (res.success) {
+          if (res.successfulIds && res.successfulIds.length > 0) {
+            const successSet = new Set(res.successfulIds);
+            studentQueueItems.forEach((q) => {
+              if (successSet.has(q.id)) {
+                successfulKeys.add(getQueueItemKey(q));
+              }
+            });
+            processedCount += res.successfulIds.length;
+          } else if (res.success) {
             studentQueueItems.forEach((q) => successfulKeys.add(getQueueItemKey(q)));
             processedCount += studentUpserts.length;
           }
@@ -726,7 +762,15 @@ class AppStore {
       if (logUpserts.length > 0) {
         if (hasSupabase) {
           const res = await syncLogsToSupabase(logUpserts, config);
-          if (res.success) {
+          if (res.successfulIds && res.successfulIds.length > 0) {
+            const successSet = new Set(res.successfulIds);
+            logQueueItems.forEach((q) => {
+              if (successSet.has(q.id)) {
+                successfulKeys.add(getQueueItemKey(q));
+              }
+            });
+            processedCount += res.successfulIds.length;
+          } else if (res.success) {
             logQueueItems.forEach((q) => {
               successfulKeys.add(getQueueItemKey(q));
               processedCount++;
@@ -3201,12 +3245,11 @@ class AppStore {
     if (targets.length === 0) return false;
 
     const newRecords: AttendanceRecord[] = targets.map((t) => {
-      const parts = this.normalizeToYyyyMmDd(t.timestamp).split('-');
-      const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : t.dateFormatted;
+      const normDate = this.normalizeToYyyyMmDd(t.timestamp) || this.getTodayYyyyMmDd();
 
       return {
         id: `att-recovered-${t.logId}`,
-        tanggal: formattedDate,
+        tanggal: normDate,
         timestamp: t.timestamp,
         nisn: t.nisn,
         nama: t.nama,

@@ -59,6 +59,12 @@ export function getSupabaseCredentials(): SupabaseConfig {
   if (!key) {
     key = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_SUPABASE_KEY || '').trim();
   }
+  if (!url) {
+    url = DEFAULT_SUPABASE_URL;
+  }
+  if (!key) {
+    key = DEFAULT_SUPABASE_KEY;
+  }
 
   return { url: sanitizeSupabaseUrl(url), key };
 }
@@ -249,10 +255,10 @@ export async function testSupabaseConnection(customConfig?: SupabaseConfig): Pro
 export async function syncStudentsToSupabase(
   students: Student[],
   customConfig?: SupabaseConfig
-): Promise<{ success: boolean; count: number; error?: string }> {
+): Promise<{ success: boolean; count: number; successfulIds?: string[]; error?: string }> {
   const client = getSupabaseClient(customConfig);
   if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
-  if (students.length === 0) return { success: true, count: 0 };
+  if (students.length === 0) return { success: true, count: 0, successfulIds: [] };
 
   try {
     const records = students
@@ -270,19 +276,44 @@ export async function syncStudentsToSupabase(
       }))
       .filter((r) => r.nisn && r.nisn.length > 0);
 
-    if (records.length === 0) return { success: true, count: 0 };
+    if (records.length === 0) return { success: true, count: 0, successfulIds: [] };
 
+    const successfulIds: string[] = [];
+    const failedErrors: string[] = [];
     const chunks = chunkArray(records, 150);
+
     await parallelBatchExecution(
       chunks,
       async (chunk) => {
         const { error } = await client.from('students').upsert(chunk, { onConflict: 'nisn' });
-        if (error) throw error;
+        if (error) {
+          console.warn('Batch student upsert notice, falling back to item-by-item:', error.message);
+          for (const item of chunk) {
+            try {
+              const { error: itemErr } = await client.from('students').upsert(item, { onConflict: 'nisn' });
+              if (!itemErr) {
+                successfulIds.push(item.id);
+              } else {
+                failedErrors.push(`${item.nisn}: ${itemErr.message}`);
+              }
+            } catch (err: any) {
+              failedErrors.push(`${item.nisn}: ${err?.message || err}`);
+            }
+          }
+        } else {
+          chunk.forEach((item) => successfulIds.push(item.id));
+        }
       },
       5
     );
 
-    return { success: true, count: records.length };
+    const isSuccess = successfulIds.length > 0 || records.length === 0;
+    return {
+      success: isSuccess,
+      count: successfulIds.length,
+      successfulIds,
+      error: failedErrors.length > 0 ? failedErrors.slice(0, 3).join('; ') : undefined,
+    };
   } catch (err: any) {
     console.warn('Supabase student sync notice:', err?.message || err);
     return {
@@ -341,21 +372,35 @@ export async function deleteStudentFromSupabase(identifier: string, customConfig
 export async function syncAttendanceToSupabase(
   attendance: AttendanceRecord[],
   customConfig?: SupabaseConfig
-): Promise<{ success: boolean; count: number; error?: string }> {
+): Promise<{ success: boolean; count: number; successfulIds?: string[]; error?: string }> {
   const client = getSupabaseClient(customConfig);
   if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
-  if (attendance.length === 0) return { success: true, count: 0 };
+  if (attendance.length === 0) return { success: true, count: 0, successfulIds: [] };
 
   try {
     const records = attendance.map((a) => {
       const validTimestamp = toValidIsoTimestamp(a.timestamp, a.tanggal);
-      let tanggal = a.tanggal || '';
+      let rawTanggal = (a.tanggal || '').trim();
+      let tanggal = '';
+
+      if (rawTanggal) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawTanggal)) {
+          tanggal = rawTanggal;
+        } else if (/^\d{2}-\d{2}-\d{4}$/.test(rawTanggal)) {
+          const [d, m, y] = rawTanggal.split('-');
+          tanggal = `${y}-${m}-${d}`;
+        } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawTanggal)) {
+          const [d, m, y] = rawTanggal.split('/');
+          tanggal = `${y}-${m}-${d}`;
+        }
+      }
+
       if (!tanggal) {
         const d = new Date(validTimestamp);
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
-        tanggal = `${day}-${month}-${year}`;
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        tanggal = `${year}-${month}-${day}`;
       }
 
       return {
@@ -376,17 +421,43 @@ export async function syncAttendanceToSupabase(
       };
     });
 
+    const successfulIds: string[] = [];
+    const failedErrors: string[] = [];
     const chunks = chunkArray(records, 150);
+
     await parallelBatchExecution(
       chunks,
       async (chunk) => {
         const { error } = await client.from('attendance').upsert(chunk, { onConflict: 'id' });
-        if (error) throw error;
+        if (error) {
+          console.warn('Batch attendance upsert notice, falling back to item-by-item:', error.message);
+          for (const item of chunk) {
+            try {
+              const { error: itemErr } = await client.from('attendance').upsert(item, { onConflict: 'id' });
+              if (!itemErr) {
+                successfulIds.push(item.id);
+              } else {
+                failedErrors.push(`${item.id}: ${itemErr.message}`);
+                console.warn(`Row-level attendance sync error (${item.id}):`, itemErr.message);
+              }
+            } catch (err: any) {
+              failedErrors.push(`${item.id}: ${err?.message || err}`);
+            }
+          }
+        } else {
+          chunk.forEach((item) => successfulIds.push(item.id));
+        }
       },
       5
     );
 
-    return { success: true, count: records.length };
+    const isSuccess = successfulIds.length > 0 || records.length === 0;
+    return {
+      success: isSuccess,
+      count: successfulIds.length,
+      successfulIds,
+      error: failedErrors.length > 0 ? failedErrors.slice(0, 3).join('; ') : undefined,
+    };
   } catch (err: any) {
     console.warn('Supabase attendance sync notice:', err?.message || err);
     return { success: false, count: 0, error: err?.message || 'Gagal menyimpan tabel attendance ke Supabase' };
@@ -447,10 +518,13 @@ export async function deleteAttendanceFromSupabase(id: string, customConfig?: Su
 
 // Activity logs sync and fetch
 
-export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: SupabaseConfig): Promise<{ success: boolean; count: number; error?: string }> {
+export async function syncLogsToSupabase(
+  logs: ActivityLog[],
+  customConfig?: SupabaseConfig
+): Promise<{ success: boolean; count: number; successfulIds?: string[]; error?: string }> {
   const client = getSupabaseClient(customConfig);
   if (!client) return { success: false, count: 0, error: 'Klien Supabase tidak aktif' };
-  if (logs.length === 0) return { success: true, count: 0 };
+  if (logs.length === 0) return { success: true, count: 0, successfulIds: [] };
 
   try {
     const records = logs.map((l) => ({
@@ -462,17 +536,42 @@ export async function syncLogsToSupabase(logs: ActivityLog[], customConfig?: Sup
       details: l.details || '',
     }));
 
+    const successfulIds: string[] = [];
+    const failedErrors: string[] = [];
     const chunks = chunkArray(records, 150);
+
     await parallelBatchExecution(
       chunks,
       async (chunk) => {
         const { error } = await client.from('activity_logs').upsert(chunk, { onConflict: 'id' });
-        if (error) throw error;
+        if (error) {
+          console.warn('Batch logs upsert notice, falling back to item-by-item:', error.message);
+          for (const item of chunk) {
+            try {
+              const { error: itemErr } = await client.from('activity_logs').upsert(item, { onConflict: 'id' });
+              if (!itemErr) {
+                successfulIds.push(item.id);
+              } else {
+                failedErrors.push(`${item.id}: ${itemErr.message}`);
+              }
+            } catch (err: any) {
+              failedErrors.push(`${item.id}: ${err?.message || err}`);
+            }
+          }
+        } else {
+          chunk.forEach((item) => successfulIds.push(item.id));
+        }
       },
       5
     );
 
-    return { success: true, count: records.length };
+    const isSuccess = successfulIds.length > 0 || records.length === 0;
+    return {
+      success: isSuccess,
+      count: successfulIds.length,
+      successfulIds,
+      error: failedErrors.length > 0 ? failedErrors.slice(0, 3).join('; ') : undefined,
+    };
   } catch (err: any) {
     console.warn('Supabase activity logs sync notice:', err?.message || err);
     return { success: false, count: 0, error: err?.message || 'Gagal menyimpan tabel activity_logs ke Supabase' };
