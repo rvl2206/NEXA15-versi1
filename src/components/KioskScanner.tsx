@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 import { store, SyncQueueItem } from '../lib/store';
 import {
   Flashlight,
@@ -26,6 +27,8 @@ import {
   Minimize2,
   CameraOff,
   Zap,
+  BatteryCharging,
+  Laptop,
 } from 'lucide-react';
 
 interface KioskScannerProps {
@@ -147,15 +150,42 @@ const DigitalClock: React.FC = React.memo(() => {
   return <p className="text-[10px] text-slate-400 truncate">{time || 'Ambon (WIT)'}</p>;
 });
 
+// Platform detection: Web Admin vs Native Mobile (Android APK)
+const isNativePlatform = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+const isMobileDevice =
+  isNativePlatform ||
+  (typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
 export const KioskScanner: React.FC<KioskScannerProps> = ({
   onExitKiosk,
   officerName = 'Petugas Gerbang',
 }) => {
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  // Mobile app defaults to rear ('environment') camera; Web Admin Panel defaults to front/webcam ('user')
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>(
+    isMobileDevice ? 'environment' : 'user'
+  );
   const [torchOn, setTorchOn] = useState<boolean>(false);
   const [banner, setBanner] = useState<ScanResultBanner | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [recentCount, setRecentCount] = useState<number>(0);
+
+  // Eco Battery Mode: Reduces decoding rate (8 FPS) to prevent laptop battery drain
+  const [isEcoMode, setIsEcoMode] = useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('nexa_kiosk_eco_mode') === 'true';
+    }
+    return false;
+  });
+
+  const toggleEcoMode = useCallback(() => {
+    setIsEcoMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('nexa_kiosk_eco_mode', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   // Multi-tier Web & Mobile Camera Compatibility States
   const [availableCameras, setAvailableCameras] = useState<Array<{ id: string; label: string }>>([]);
@@ -367,6 +397,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       if (!code || isProcessing) return;
       setIsProcessing(true);
 
+      // Briefly pause video decoding during banner presentation to save battery and prevent duplicate bursts
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        try {
+          html5QrCodeRef.current.pause(true);
+        } catch {}
+      }
+
       const nowFormatted =
         new Date().toLocaleTimeString('id-ID', {
           timeZone: 'Asia/Jayapura',
@@ -434,11 +471,64 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         setTimeout(() => {
           setBanner(null);
           setIsProcessing(false);
+          if (html5QrCodeRef.current) {
+            try {
+              html5QrCodeRef.current.resume();
+            } catch {}
+          }
         }, 2000);
       }
     },
     [isProcessing, officerName, refreshQueue]
   );
+
+  // Tab Visibility Lifecycle: Auto-pause decoding loop when tab is hidden/minimized to eliminate battery drain
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!html5QrCodeRef.current) return;
+      if (document.hidden) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            html5QrCodeRef.current.pause(true);
+          }
+        } catch {}
+      } else {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            html5QrCodeRef.current.resume();
+          }
+        } catch {}
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Torch / Flashlight controller
+  const toggleTorch = useCallback(async () => {
+    try {
+      const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
+      const stream = videoEl?.srcObject as MediaStream | null;
+      const track = stream?.getVideoTracks()[0];
+      if (track) {
+        const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+        if (caps && caps.torch) {
+          const nextState = !torchOn;
+          await track.applyConstraints({
+            advanced: [{ torch: nextState } as any],
+          });
+          setTorchOn(nextState);
+        } else {
+          console.info('Kiosk notice: Kamera saat ini tidak memiliki kontrol lampu kilat/senter.');
+        }
+      }
+    } catch (e) {
+      console.warn('Torch toggle note:', e);
+    }
+  }, [scannerContainerId, torchOn]);
 
   // Hardware RFID Keystroke listener
   useEffect(() => {
@@ -569,23 +659,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     } catch {}
   }, [scannerContainerId]);
 
-  // Start Camera with Multi-Tier Web & Mobile Camera Fallback
+  // Start Camera with Multi-Tier Web & Mobile Camera Fallback & Battery Optimization
   const startCamera = async (targetCamId?: string) => {
     setIsStartingCamera(true);
     setCameraError(null);
 
     try {
-      if (html5QrCodeRef.current) {
-        try {
-          if (html5QrCodeRef.current.isScanning) {
-            await html5QrCodeRef.current.stop();
-          }
-          html5QrCodeRef.current.clear();
-        } catch {}
-        html5QrCodeRef.current = null;
-      }
-
-      // Check browser MediaDevices support
+      // 1. Check browser MediaDevices support
       if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setIsStartingCamera(false);
         setIsCameraActive(false);
@@ -597,45 +677,45 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         return;
       }
 
-      // Fetch available camera devices if not cached
+      // 2. Fetch available camera devices & map friendly labels for Web Admin vs Mobile
       let currentDevices = availableCameras;
-      if (currentDevices.length === 0) {
-        try {
-          const fetched = await Html5Qrcode.getCameras();
-          if (fetched && fetched.length > 0) {
-            currentDevices = fetched.map((d, idx) => ({
+      try {
+        const fetched = await Html5Qrcode.getCameras();
+        if (fetched && fetched.length > 0) {
+          currentDevices = fetched.map((d, idx) => {
+            let friendlyLabel = d.label || `Kamera ${idx + 1}`;
+            if (!isMobileDevice) {
+              if (/integrated|built-in|internal|facetime|webcam|bawaan/i.test(d.label)) {
+                friendlyLabel = `Kamera Bawaan (${d.label})`;
+              } else if (/usb|external/i.test(d.label)) {
+                friendlyLabel = `Kamera Eksternal (${d.label})`;
+              }
+            }
+            return {
               id: d.id,
-              label: d.label || `Kamera ${idx + 1} (${d.id.substring(0, 6)})`,
-            }));
-            setAvailableCameras(currentDevices);
-          }
-        } catch (e) {
-          console.warn('Kiosk getCameras note:', e);
+              label: friendlyLabel,
+            };
+          });
+          setAvailableCameras(currentDevices);
         }
+      } catch (e) {
+        console.warn('Kiosk getCameras note:', e);
       }
 
-      // Ensure DOM element is mounted
+      // 3. Ensure DOM element is mounted
       const containerEl = document.getElementById(scannerContainerId);
       if (!containerEl) {
         setIsStartingCamera(false);
         return;
       }
 
-      // Restrict formats to QR_CODE & CODE_128 to eliminate 15 unnecessary barcode decoders per frame
-      const qrCode = new Html5Qrcode(scannerContainerId, {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.CODE_128,
-        ],
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true,
-        },
-        verbose: false,
-      });
-      html5QrCodeRef.current = qrCode;
+      // 4. Adaptive FPS for Low Battery & CPU consumption:
+      // - Mobile Gate Kiosk: 20 FPS (or 12 in Eco Mode) for instant gate queues
+      // - Web Admin Panel: 12 FPS normal (or 8 in Eco Mode) - smooth with ~50% less CPU & battery drain
+      const targetFps = isEcoMode ? (isMobileDevice ? 12 : 8) : (isMobileDevice ? 20 : 12);
 
       const scanConfig = {
-        fps: 20, // 20 FPS ensures responsive capture with low CPU overhead
+        fps: targetFps,
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
           // Wide 88% capture area so small cards don't need millimeter-level alignment
@@ -645,126 +725,125 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         disableFlip: false,
       };
 
-      let started = false;
+      // Helper function to safely attempt starting a camera configuration
+      // Cleanly resets instance to prevent Html5Qrcode transition/already-running locks
       let lastErrMsg = '';
+      const tryStartConfig = async (cameraConfig: any): Promise<boolean> => {
+        try {
+          if (html5QrCodeRef.current) {
+            try {
+              if (html5QrCodeRef.current.isScanning) {
+                await html5QrCodeRef.current.stop();
+              }
+              html5QrCodeRef.current.clear();
+            } catch {}
+            html5QrCodeRef.current = null;
+          }
 
-      // TIER 1: If specific camera ID is selected or provided
-      const preferredCamId = targetCamId || selectedCameraId;
+          const el = document.getElementById(scannerContainerId);
+          if (el) el.innerHTML = '';
+
+          const qrCode = new Html5Qrcode(scannerContainerId, {
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.QR_CODE,
+              Html5QrcodeSupportedFormats.CODE_128,
+            ],
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true, // Native GPU/NPU acceleration
+            },
+            verbose: false,
+          });
+
+          await qrCode.start(
+            cameraConfig,
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+
+          html5QrCodeRef.current = qrCode;
+          return true;
+        } catch (err: any) {
+          console.warn('Camera tier attempt note for config:', cameraConfig, err);
+          lastErrMsg = err?.message || String(err);
+          return false;
+        }
+      };
+
+      let started = false;
+
+      // Determine preferred camera device ID if available
+      let preferredCamId = targetCamId || selectedCameraId;
+
+      if (!preferredCamId && currentDevices.length > 0) {
+        if (!isMobileDevice) {
+          // On Desktop Admin Panel, auto-select integrated built-in webcam
+          const integrated = currentDevices.find((d) =>
+            /integrated|built-in|internal|facetime|webcam|bawaan/i.test(d.label)
+          );
+          if (integrated) {
+            preferredCamId = integrated.id;
+          } else {
+            preferredCamId = currentDevices[0].id;
+          }
+        } else {
+          // On Mobile, auto-select rear/environment camera
+          const rear = currentDevices.find((d) =>
+            /back|rear|belakang|environment/i.test(d.label)
+          );
+          if (rear) {
+            preferredCamId = rear.id;
+          }
+        }
+      }
+
+      // TIER 1: If specific camera ID is selected or auto-detected (e.g. Kamera Bawaan Laptop)
       if (preferredCamId) {
-        try {
-          await qrCode.start(
-            preferredCamId,
-            scanConfig,
-            (decodedText) => {
-              handleProcessScan(decodedText, 'QR');
-            },
-            () => {}
-          );
-          started = true;
+        started = await tryStartConfig(preferredCamId);
+        if (started) {
           setSelectedCameraId(preferredCamId);
-        } catch (err: any) {
-          console.warn('Kiosk Camera start with preferredCamId failed:', err);
-          lastErrMsg = err?.message || String(err);
         }
       }
 
-      // TIER 2: Full HD 1080p constraints with facingMode
+      // TIER 2: 720p constraints with facingMode (Battery & CPU friendly, avoids 1080p overheat)
       if (!started) {
-        try {
-          await qrCode.start(
-            {
-              facingMode: facingMode,
-              width: { ideal: 1920, min: 640 },
-              height: { ideal: 1080, min: 480 },
-            },
-            scanConfig,
-            (decodedText) => {
-              handleProcessScan(decodedText, 'QR');
-            },
-            () => {}
-          );
-          started = true;
-        } catch (err: any) {
-          console.warn('FullHD 1080p camera constraint note, trying fallback:', err);
-          lastErrMsg = err?.message || String(err);
-        }
+        started = await tryStartConfig({
+          facingMode: facingMode,
+          width: { ideal: 1280, max: 1280, min: 640 },
+          height: { ideal: 720, max: 720, min: 480 },
+        });
       }
 
-      // TIER 3: Standard resolution with facingMode
+      // TIER 3: Standard resolution with current facingMode
       if (!started) {
-        try {
-          await qrCode.start(
-            { facingMode: facingMode },
-            scanConfig,
-            (decodedText) => {
-              handleProcessScan(decodedText, 'QR');
-            },
-            () => {}
-          );
-          started = true;
-        } catch (err: any) {
-          console.warn(`Standard facingMode ${facingMode} failed:`, err);
-          lastErrMsg = err?.message || String(err);
-        }
+        started = await tryStartConfig({ facingMode: facingMode });
       }
 
-      // TIER 4: Opposite facingMode (Crucial for Web/PC/Laptop where 'environment' camera doesn't exist!)
+      // TIER 4: Opposite facingMode (Crucial for Web/PC/Laptop where 'environment' doesn't exist)
       if (!started) {
         const altFacing = facingMode === 'environment' ? 'user' : 'environment';
-        try {
-          await qrCode.start(
-            { facingMode: altFacing },
-            scanConfig,
-            (decodedText) => {
-              handleProcessScan(decodedText, 'QR');
-            },
-            () => {}
-          );
-          started = true;
+        started = await tryStartConfig({ facingMode: altFacing });
+        if (started) {
           setFacingMode(altFacing);
-        } catch (err: any) {
-          console.warn(`Opposite facingMode ${altFacing} failed:`, err);
-          lastErrMsg = err?.message || String(err);
         }
       }
 
       // TIER 5: Fallback to any enumerated camera deviceId
       if (!started && currentDevices.length > 0) {
         for (const dev of currentDevices) {
-          try {
-            await qrCode.start(
-              dev.id,
-              scanConfig,
-              (decodedText) => {
-                handleProcessScan(decodedText, 'QR');
-              },
-              () => {}
-            );
-            started = true;
+          started = await tryStartConfig(dev.id);
+          if (started) {
             setSelectedCameraId(dev.id);
             break;
-          } catch (err: any) {
-            console.warn(`Device ${dev.id} start failed:`, err);
-            lastErrMsg = err?.message || String(err);
           }
         }
       }
 
       // TIER 6: Blank media track constraints
       if (!started) {
-        try {
-          await qrCode.start(
-            {} as any,
-            scanConfig,
-            (decodedText) => {
-              handleProcessScan(decodedText, 'QR');
-            },
-            () => {}
-          );
-          started = true;
-        } catch (err: any) {
-          lastErrMsg = err?.message || String(err);
-        }
+        started = await tryStartConfig({});
       }
 
       if (started) {
@@ -772,7 +851,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         setIsStartingCamera(false);
         setCameraError(null);
 
-        // Inspect hardware track capabilities and calibrate continuous focus, exposure, and zoom
+        // Hardware sensor calibration
         setTimeout(async () => {
           try {
             const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
@@ -784,7 +863,6 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
               if (caps.torch) setHasTorch(true);
               if (caps.focusMode) setHasContinuousFocus(true);
 
-              // Apply continuous focus, continuous auto-exposure, and continuous white balance
               const advancedConstraints: any = {};
               if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
                 advancedConstraints.focusMode = 'continuous';
@@ -799,13 +877,11 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
                 await track.applyConstraints({ advanced: [advancedConstraints] });
               }
 
-              // Re-apply zoom level if set
               if (zoomLevel > 1.0) {
                 applyZoom(zoomLevel);
               }
             }
 
-            // Apply high-contrast filter if active
             const container = document.getElementById(scannerContainerId);
             if (container && isHighContrast) {
               container.classList.add('high-contrast');
@@ -855,7 +931,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     return () => {
       stopCamera();
     };
-  }, [facingMode]);
+  }, [facingMode, isEcoMode]);
 
   // Flip Camera or Cycle Available Cameras
   const toggleFacingMode = () => {
@@ -1016,6 +1092,49 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Eco Mode / Hemat Baterai Toolbar Button */}
+          <button
+            onClick={toggleEcoMode}
+            className={`px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-xl border transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+              isEcoMode
+                ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
+                : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+            }`}
+            title={
+              isEcoMode
+                ? 'Mode Hemat Baterai AKTIF (8 FPS) - Meminimalkan beban CPU & daya baterai laptop'
+                : 'Aktifkan Mode Hemat Baterai (Menurunkan frekuensi pemindaian ke 8 FPS untuk menghemat baterai laptop)'
+            }
+            aria-label="Hemat Baterai"
+          >
+            <BatteryCharging className={`w-4 h-4 ${isEcoMode ? 'text-emerald-400 animate-pulse' : ''}`} />
+            <span className="hidden sm:inline text-xs font-bold">
+              {isEcoMode ? 'Hemat Baterai: ON' : 'Hemat Baterai'}
+            </span>
+          </button>
+
+          {/* Kamera Bawaan / Device Selector for Web Admin */}
+          {availableCameras.length > 1 && !isMobileDevice && (
+            <div className="hidden lg:flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
+              <Laptop className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={selectedCameraId}
+                onChange={(e) => {
+                  setSelectedCameraId(e.target.value);
+                  startCamera(e.target.value);
+                }}
+                className="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer max-w-[150px] truncate"
+                title="Pilih Sumber Kamera Kiosk"
+              >
+                {availableCameras.map((cam) => (
+                  <option key={cam.id} value={cam.id} className="bg-slate-900 text-slate-200">
+                    {cam.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Antrean Offline Button */}
           <button
             onClick={() => {
@@ -1055,7 +1174,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           {/* Flip Camera Button */}
           <button
             onClick={toggleFacingMode}
-            className="p-2 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700 hover:text-slate-200 active:scale-95 transition-colors relative"
+            className="p-2 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700 hover:text-slate-200 active:scale-95 transition-colors relative cursor-pointer"
             title={availableCameras.length > 1 ? `Ganti Kamera (${availableCameras.length} terdeteksi)` : "Putar Kamera Depan/Belakang"}
             aria-label="Putar Kamera"
           >
@@ -1070,7 +1189,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
-            className={`p-2 rounded-xl border transition-all active:scale-95 ${
+            className={`p-2 rounded-xl border transition-all active:scale-95 cursor-pointer ${
               isFullscreen
                 ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/20'
                 : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
@@ -1177,10 +1296,12 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         {/* Floating Instruction Pill */}
         <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-900/95 border border-slate-700/80 rounded-full text-[10.5px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-2xl whitespace-nowrap max-w-[90vw] pointer-events-none z-10">
           <Radio className="w-3 h-3 text-emerald-400 shrink-0" />
-          <span className="truncate">Arahkan Kartu Pelajar QR / RFID</span>
+          <span className="truncate">
+            {!isMobileDevice ? 'Kamera Bawaan Aktif • Arahkan Kartu QR / Barcode' : 'Arahkan Kartu Pelajar QR / RFID'}
+          </span>
         </div>
 
-        {/* Floating Scanner Enhancement Toolbar (Zoom, Kaca Buram, Senter) */}
+        {/* Floating Scanner Enhancement Toolbar (Zoom, Kaca Buram, Hemat Baterai, Senter) */}
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute top-11 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:gap-2 z-20 max-w-[96vw] pointer-events-auto"
@@ -1236,6 +1357,20 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
             <span className="whitespace-nowrap">{isHighContrast ? 'Kaca Buram ON' : 'Kaca Buram'}</span>
           </button>
 
+          {/* Mode Hemat Baterai (Eco Mode) */}
+          <button
+            onClick={toggleEcoMode}
+            className={`px-2.5 py-1 rounded-2xl border text-[10px] sm:text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-xl cursor-pointer ${
+              isEcoMode
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-extrabold shadow-emerald-500/30'
+                : 'bg-slate-900/90 backdrop-blur-md text-slate-300 border-slate-700/80 hover:text-white'
+            }`}
+            title="Mode Hemat Baterai: Menjalankan pemindaian 8 FPS untuk menghemat daya baterai & menjaga laptop tetap dingin"
+          >
+            <BatteryCharging className="w-3 h-3 shrink-0" />
+            <span className="whitespace-nowrap">{isEcoMode ? 'Hemat Baterai ON' : 'Hemat Baterai'}</span>
+          </button>
+
           {/* Senter Quick Button */}
           <button
             onClick={toggleTorch}
@@ -1244,7 +1379,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
                 ? 'bg-amber-400 text-slate-950 border-amber-300 font-extrabold shadow-amber-400/30'
                 : 'bg-slate-900/90 backdrop-blur-md text-slate-300 border-slate-700/80 hover:text-white'
             }`}
-            title="Lampu Senter: Aktifkan di tempat redup atau kurang terang"
+            title="Lampu Senter: Aktifkan di tempat redup atau kurang terang (Kamera ponsel)"
           >
             {torchOn ? <Flashlight className="w-3 h-3 text-slate-950 shrink-0" /> : <FlashlightOff className="w-3 h-3 shrink-0" />}
             <span className="whitespace-nowrap">{torchOn ? 'Senter ON' : 'Senter'}</span>
