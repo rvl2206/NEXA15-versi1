@@ -23,6 +23,7 @@ import {
   Sparkles,
   AlertCircle,
   Zap,
+  QrCode,
 } from 'lucide-react';
 import {
   BarChart,
@@ -66,6 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(store.getTodayYyyyMmDd());
   const [activeMetricTab, setActiveMetricTab] = useState<'siswa' | 'grafik' | 'peringatan'>('siswa');
+  const [drilldownFilter, setDrilldownFilter] = useState<'hadir' | 'terlambat' | 'alpa' | 'belum_absen' | 'izin_sakit' | null>(null);
 
   const syncData = async () => {
     setIsRefreshing(true);
@@ -272,45 +274,72 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
   }, { scope: containerRef, dependencies: [] });
 
   return (
-    <div ref={containerRef} className="pb-24 space-y-12 bg-[#020617]">
-      {/* 
-        AIDA: ATTENTION (HERO)
-      */}
-      <div className="pt-16 pb-8 px-6 max-w-6xl mx-auto flex flex-col items-center justify-center text-center relative z-10">
-        <SchoolLogo className="gsap-dash-hero w-16 h-16 mb-8 drop-shadow-2xl opacity-90" />
-        <h1 className="gsap-dash-hero w-full text-white font-black text-4xl md:text-5xl lg:text-6xl leading-[1.1] tracking-tighter">
-          Pusat Kendali. <span className="inline-block w-20 h-10 rounded-full align-middle bg-blue-600/30 border border-blue-500/50 mx-3 overflow-hidden relative"><div className="absolute inset-0 bg-blue-500 animate-pulse mix-blend-overlay"></div></span> Presensi Akurat.
-        </h1>
-        <p className="gsap-dash-hero text-slate-400 mt-6 max-w-2xl text-base font-light">
-          Pemantauan langsung data kehadiran siswa dan staf pengajar untuk tanggal {formatIndoDate(selectedDate)}.
-        </p>
-        
-        <div className="gsap-dash-hero mt-8 flex flex-wrap items-center justify-center gap-4">
-          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-xl px-5 py-3 rounded-full border border-white/10">
-            <Calendar className="w-5 h-5 text-blue-400" />
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none"
-            >
-              <option value={todayYyyyMmDd}>Hari Ini ({todayStr})</option>
-              {availableDates.map((d) => {
-                if (d === todayYyyyMmDd) return null;
-                const [y, m, day] = d.split('-');
-                return <option key={d} value={d} className="text-black">{day}-{m}-{y}</option>;
-              })}
-            </select>
+    <div ref={containerRef} className="pb-24 space-y-8 bg-[#020617]">
+      {/* Executive Header Bar */}
+      <div className="pt-8 pb-2 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+          <div className="flex items-center gap-4">
+            <div className="p-2 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30 shadow-lg">
+              <SchoolLogo className="w-10 h-10 object-contain drop-shadow" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                  Pusat Kendali Presensi
+                </h1>
+                <Badge variant="outline" className="hidden sm:inline-flex bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] py-0.5">
+                  LIVE
+                </Badge>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                Pemantauan real-time kedatangan siswa • <span className="text-blue-400 font-semibold">{formatIndoDate(selectedDate)}</span>
+              </p>
+            </div>
           </div>
 
-          <Button
-            onClick={handleManualRefresh}
-            variant="secondary"
-            size="lg"
-            className="group rounded-full bg-white text-slate-950 font-extrabold hover:bg-slate-100 shadow-[0_0_30px_-10px_rgba(255,255,255,0.4)] cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'}`} />
-            <span>Sinkronisasi Data</span>
-          </Button>
+          {/* Action Controls */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            {/* Date Selector */}
+            <div className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-800/80 transition-colors px-3.5 py-2 rounded-xl border border-slate-700/80 text-white shadow-sm">
+              <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-transparent text-xs sm:text-sm font-semibold text-white focus:outline-none cursor-pointer appearance-none pr-2"
+                aria-label="Pilih Tanggal Presensi"
+              >
+                <option value={todayYyyyMmDd} className="bg-slate-900 text-white">Hari Ini ({todayStr})</option>
+                {availableDates.map((d) => {
+                  if (d === todayYyyyMmDd) return null;
+                  const [y, m, day] = d.split('-');
+                  return <option key={d} value={d} className="bg-slate-900 text-white">{day}-{m}-{y}</option>;
+                })}
+              </select>
+            </div>
+
+            {/* Sync Button */}
+            <Button
+              onClick={handleManualRefresh}
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-slate-700 bg-slate-900/90 text-slate-200 hover:text-white hover:bg-slate-800 font-semibold cursor-pointer shadow-sm text-xs sm:text-sm h-9 px-3.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
+              <span>{isRefreshing ? 'Sinkron...' : 'Sinkron'}</span>
+            </Button>
+
+            {/* Buka Pemindai Button */}
+            {onNavigateTab && (
+              <Button
+                onClick={() => onNavigateTab('scan')}
+                size="sm"
+                className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer shadow-lg shadow-blue-600/20 text-xs sm:text-sm h-9 px-4"
+              >
+                <QrCode className="w-4 h-4 mr-1.5" />
+                <span>Buka Pemindai</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -330,25 +359,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
         </div>
       )}
 
-      {/* Tremor-Style Executive KPI Summary Grid */}
+      {/* Tremor-Style Executive KPI Summary Grid (Single Source of Truth) */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <KpiCard
-            title="Tingkat Kehadiran"
+            title="Tingkat Hadir"
             value={`${attendanceRate.toFixed(1)}%`}
-            subtitle={`${totalSiswaMasuk} dari ${totalStudents} siswa masuk`}
+            subtitle={`${totalSiswaMasuk}/${totalStudents} siswa masuk`}
             icon={TrendingUp}
             accentColor="emerald"
             progress={{
               value: attendanceRate,
-              targetLabel: 'Target Disiplin Sekolah: ≥95%',
+              targetLabel: 'Target Disiplin: ≥95%',
             }}
+            onClick={() => setActiveMetricTab('siswa')}
           />
 
           <KpiCard
-            title="Hadir Tepat Waktu"
+            title="Hadir Tepat"
             value={totalHadir}
-            subtitle={`${onTimeRate.toFixed(0)}% dari siswa hadir`}
+            subtitle={`${onTimeRate.toFixed(0)}% disiplin`}
             icon={UserCheck}
             accentColor="cyan"
             delta={{
@@ -356,17 +386,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               type: onTimeRate >= 80 ? 'increase' : 'neutral',
               label: 'Disiplin',
             }}
+            onClick={() => {
+              setActiveMetricTab('siswa');
+              setDrilldownFilter('hadir');
+            }}
           />
 
           <KpiCard
-            title="Siswa Terlambat"
+            title="Terlambat"
             value={totalTerlambat}
-            subtitle={totalTerlambat > 0 ? 'Perlu pembinaan piket gerbang' : 'Tertib tanpa keterlambatan'}
+            subtitle={totalTerlambat > 0 ? 'Perlu pembinaan' : 'Tertib nihil'}
             icon={Clock}
             accentColor="amber"
             delta={{
               value: `${totalTerlambat} siswa`,
               type: totalTerlambat > 0 ? 'decrease' : 'neutral',
+            }}
+            onClick={() => {
+              setActiveMetricTab('siswa');
+              setDrilldownFilter('terlambat');
+            }}
+          />
+
+          <KpiCard
+            title="Izin & Sakit"
+            value={totalIzin + totalSakit}
+            subtitle={`${totalIzin} Izin • ${totalSakit} Sakit`}
+            icon={FileCheck}
+            accentColor="blue"
+            delta={{
+              value: `${totalIzin + totalSakit} surat`,
+              type: 'neutral',
+            }}
+            onClick={() => {
+              setActiveMetricTab('siswa');
+              setDrilldownFilter('izin_sakit');
             }}
           />
 
@@ -380,6 +434,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               value: belumScanCount > 0 ? 'Perlu Follow-up' : 'Lengkap',
               type: belumScanCount > 0 ? 'decrease' : 'increase',
             }}
+            onClick={() => {
+              setActiveMetricTab('siswa');
+              setDrilldownFilter('belum_absen');
+            }}
           />
         </div>
       </div>
@@ -388,14 +446,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
       <div className="sticky top-4 z-40 flex justify-center px-4">
         <div className="inline-flex bg-slate-900/90 backdrop-blur-2xl border border-slate-700/80 rounded-full p-1.5 shadow-2xl">
           {[
-            { id: 'siswa', icon: GraduationCap, val: `${totalSiswaMasuk}/${totalStudents} Siswa` },
-            { id: 'grafik', icon: BarChart2, val: 'Analitik & Tren' },
-            { id: 'peringatan', icon: Clock, val: 'Anomali Kehadiran' }
+            { id: 'siswa', icon: Users, val: 'Ringkasan & Presensi' },
+            { id: 'grafik', icon: BarChart2, val: 'Grafik & Analitik' },
+            { id: 'peringatan', icon: AlertCircle, val: 'Anomali Kehadiran' }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveMetricTab(tab.id as any)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer ${
+              className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer ${
                 activeMetricTab === tab.id 
                   ? 'bg-white text-slate-950 shadow-lg scale-105 font-black' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -411,27 +469,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
       {/* Content Areas */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         
-        {/* Tab 1: Siswa */}
+        {/* Tab 1: Ringkasan & Presensi */}
         {activeMetricTab === 'siswa' && (
-          <div className="animate-in fade-in duration-500 slide-in-from-bottom-5">
-            <DailySummaryWidget
-              students={students}
-              attendance={attendance}
-              selectedDate={selectedDate}
-              onOpenScanner={onNavigateTab ? () => onNavigateTab('scan') : undefined}
-            />
-          </div>
-        )}
-
-        {/* Tab 2: Grafik */}
-        {activeMetricTab === 'grafik' && (
           <div className="space-y-6 animate-in fade-in duration-500 slide-in-from-bottom-5">
             {/* Tremor Class Health Tracker */}
             {classTrackerData.length > 0 && (
-              <Card variant="tremor" className="p-5">
+              <Card variant="tremor" className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <div>
-                    <h4 className="text-sm font-bold text-white">Status Tingkat Kehadiran Antar Kelas</h4>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      Status Tingkat Kehadiran Antar Kelas
+                    </h4>
                     <p className="text-xs text-slate-400">Arahkan kursor pada balok kelas untuk melihat detail statistik</p>
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-slate-400">
@@ -444,6 +493,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
               </Card>
             )}
 
+            <DailySummaryWidget
+              students={students}
+              attendance={attendance}
+              selectedDate={selectedDate}
+              onOpenScanner={onNavigateTab ? () => onNavigateTab('scan') : undefined}
+              externalModalFilter={drilldownFilter}
+              onCloseExternalModal={() => setDrilldownFilter(null)}
+            />
+          </div>
+        )}
+
+        {/* Tab 2: Grafik & Analitik */}
+        {activeMetricTab === 'grafik' && (
+          <div className="space-y-6 animate-in fade-in duration-500 slide-in-from-bottom-5">
             <div className="gsap-bento-grid grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
               <Card variant="tremor" className="gsap-bento-item lg:col-span-2 min-h-[420px]">
                 <CardHeader>
@@ -508,7 +571,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
           </div>
         )}
 
-        {/* Tab 4: Peringatan */}
+        {/* Tab 3: Peringatan */}
         {activeMetricTab === 'peringatan' && (
           <div className="animate-in fade-in duration-500">
             <div className="p-8 md:p-10 border border-rose-500/20 bg-rose-500/5 rounded-[2rem] md:rounded-[3rem] backdrop-blur-md">

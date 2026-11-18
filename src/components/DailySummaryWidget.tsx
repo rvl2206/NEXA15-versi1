@@ -33,6 +33,8 @@ interface DailySummaryWidgetProps {
   selectedDate: string;
   onOpenScanner?: () => void;
   onSelectClassFilter?: (className: string) => void;
+  externalModalFilter?: 'hadir' | 'terlambat' | 'alpa' | 'belum_absen' | 'izin_sakit' | null;
+  onCloseExternalModal?: () => void;
 }
 
 export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
@@ -40,6 +42,8 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   attendance,
   selectedDate,
   onOpenScanner,
+  externalModalFilter,
+  onCloseExternalModal,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'hadir' | 'terlambat' | 'alpa' | 'belum_absen' | 'izin_sakit'>('all');
@@ -48,6 +52,19 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLivePulsing, setIsLivePulsing] = useState<boolean>(false);
   const [lastScanRecord, setLastScanRecord] = useState<AttendanceRecord | null>(null);
+
+  useEffect(() => {
+    if (externalModalFilter) {
+      setModalFilter(externalModalFilter);
+      setSearchQuery('');
+      setShowStudentListModal(true);
+    }
+  }, [externalModalFilter]);
+
+  const handleCloseModal = () => {
+    setShowStudentListModal(false);
+    if (onCloseExternalModal) onCloseExternalModal();
+  };
 
   const todayYyyyMmDd = store.getTodayYyyyMmDd();
   const isToday = selectedDate === todayYyyyMmDd;
@@ -213,154 +230,119 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
   }, { scope: containerRef, dependencies: [] });
 
   return (
-    <div ref={containerRef} className="w-full">
-      {/* Action Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-            <TrendingUp className="w-6 h-6 text-blue-400" />
-          </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white">Pemantauan Presensi</h2>
-            <p className="text-slate-400 font-medium text-sm md:text-base">{totalMasuk} / {totalActive} Siswa Terdata</p>
-          </div>
-        </div>
+    <div ref={containerRef} className="w-full space-y-6">
+      {/* 2-Column Clean Layout: Pemindaian Terbaru & Matriks Kelas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         
-        <div className="flex flex-wrap items-center gap-4">
-          {isToday && (
-            <div className="px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] md:text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Real-time Aktif
+        {/* Kolom 1: Pemindaian Terbaru (Live Activity Feed) */}
+        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
+                <Flame className="w-4 h-4 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Pemindaian Terbaru</h3>
+                <p className="text-xs text-slate-400">Aktivitas presensi kartu gerbang secara langsung</p>
+              </div>
             </div>
-          )}
-          {onOpenScanner && (
-            <button onClick={onOpenScanner} className="px-5 py-2.5 bg-white text-black font-bold text-sm rounded-full flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer">
-              <QrCode className="w-4 h-4" /> Buka Pemindai
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Gapless Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
-        
-        {/* Massive Card 1 - On Time */}
-        <div 
-          onClick={() => openModalWithFilter('hadir')}
-          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 row-span-2 border border-white/10 bg-gradient-to-br from-emerald-500/10 to-transparent p-5 md:p-6 flex flex-col justify-between group cursor-pointer relative overflow-hidden min-h-[140px] rounded-[1.5rem]"
-        >
-          <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-3xl"></div>
-          <UserCheck className="w-6 h-6 text-emerald-400 mb-3 opacity-50 group-hover:scale-110 transition-transform duration-700" />
-          <div>
-            <div className="text-4xl md:text-5xl font-black text-white leading-none tracking-tighter tabular-nums">{hadirCount}</div>
-            <div className="flex items-center justify-between mt-3">
-              <div className="text-xs md:text-sm text-emerald-400 font-bold uppercase tracking-widest">Hadir Tepat</div>
-              <div className="text-sm md:text-base font-light text-slate-500">{onTimeRate}% Tepat Waktu</div>
-            </div>
+            {isToday && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                Live
+              </span>
+            )}
           </div>
-        </div>
 
-        {/* Metric Cell 2 - Late */}
-        <div 
-          onClick={() => openModalWithFilter('terlambat')}
-          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 row-span-1 border border-white/10 bg-amber-500/5 p-4 md:p-5 flex items-center justify-between group cursor-pointer rounded-[1.5rem]"
-        >
-          <div>
-            <div className="text-3xl md:text-4xl font-black text-amber-400 tabular-nums group-hover:scale-105 transition-transform origin-left">{terlambatCount}</div>
-            <div className="text-xs md:text-sm text-amber-600 mt-2 font-bold uppercase tracking-widest">Terlambat</div>
-          </div>
-          <Clock className="w-10 h-10 md:w-12 md:h-12 text-amber-500/20" />
-        </div>
-
-        {/* Metric Cell 3 - Pending */}
-        <div 
-          onClick={() => openModalWithFilter('belum_absen')}
-          className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-1 row-span-1 border border-white/10 bg-sky-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
-        >
-          <div className="text-2xl md:text-3xl font-black text-sky-400 tabular-nums">{belumAbsenCount}</div>
-          <div className="text-[10px] md:text-xs text-sky-600 mt-1 font-bold uppercase tracking-widest">Belum Scan</div>
-        </div>
-
-        {/* Metric Cell 4 - Excused/Sick */}
-        <div 
-          onClick={() => openModalWithFilter('izin_sakit')}
-          className="gsap-summary-item col-span-1 md:col-span-1 lg:col-span-1 row-span-1 border border-white/10 bg-blue-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
-        >
-          <div className="text-2xl md:text-3xl font-black text-blue-400 tabular-nums">{izinCount + sakitCount}</div>
-          <div className="text-[10px] md:text-xs text-blue-600 mt-1 font-bold uppercase tracking-widest">Izin/Sakit</div>
-        </div>
-
-        {/* Metric Cell 5 - Absent */}
-        <div 
-          onClick={() => openModalWithFilter('alpa')}
-          className="gsap-summary-item col-span-1 md:col-span-1 lg:col-span-1 row-span-1 border border-white/10 bg-rose-500/5 p-4 md:p-5 flex flex-col justify-center group cursor-pointer rounded-[1.5rem]"
-        >
-          <div className="text-2xl md:text-3xl font-black text-rose-400 tabular-nums">{alpaCount}</div>
-          <div className="text-[10px] md:text-xs text-rose-600 mt-1 font-bold uppercase tracking-widest">Alpa</div>
-        </div>
-
-        {/* Progress Timeline Row */}
-        <div className="gsap-summary-item col-span-1 md:col-span-4 lg:col-span-6 border border-white/10 bg-black/20 p-4 md:px-6 md:py-5 rounded-[1.5rem]">
-          <div className="flex items-center justify-between text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3 md:mb-4">
-            <span className="text-slate-400">Progres Pemindaian Hari Ini</span>
-            <span className="text-white">{attendanceRate}% Terdata</span>
-          </div>
-          <div className="w-full h-3 md:h-4 rounded-full bg-white/5 overflow-hidden flex gap-0.5 p-0.5">
-            <div style={{ width: `${totalActive > 0 ? (hadirCount / totalActive) * 100 : 0}%` }} className="h-full bg-emerald-500 rounded-l-full" />
-            <div style={{ width: `${totalActive > 0 ? (terlambatCount / totalActive) * 100 : 0}%` }} className="h-full bg-amber-500" />
-            <div style={{ width: `${totalActive > 0 ? ((izinCount + sakitCount) / totalActive) * 100 : 0}%` }} className="h-full bg-blue-500" />
-            <div style={{ width: `${totalActive > 0 ? (alpaCount / totalActive) * 100 : 0}%` }} className="h-full bg-rose-500" />
-            <div style={{ width: `${totalActive > 0 ? (belumAbsenCount / totalActive) * 100 : 0}%` }} className="h-full bg-white/10 rounded-r-full" />
-          </div>
-        </div>
-
-        {/* Data Split: Recent Scans and Class Breakdown */}
-        <div className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 border border-white/10 p-5 md:p-6 rounded-[1.5rem] bg-white/[0.02]">
-          <div className="flex items-center justify-between mb-4 md:mb-5">
-             <h3 className="text-base md:text-lg font-black text-white">Pemindaian Terbaru</h3>
-             <Flame className="w-4 h-4 md:w-5 md:h-5 text-orange-500 animate-pulse" />
-          </div>
           {recentScans.length === 0 ? (
-            <div className="text-slate-500 text-sm py-4">Belum ada pemindaian...</div>
+            <div className="text-center py-12 text-slate-500 text-xs">
+              Belum ada pemindaian tercatat untuk tanggal ini.
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {recentScans.map((r, idx) => {
-                const timeStr = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                const timeStr = r.timestamp
+                  ? new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                  : '-';
+                const isLate = r.status === 'Terlambat';
                 return (
-                  <div key={idx} className="flex justify-between items-center group">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${r.status === 'Terlambat' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                      <div>
-                        <div className="text-white font-bold text-xs md:text-sm group-hover:text-blue-400 transition-colors">{r.nama}</div>
-                        <div className="text-slate-500 text-[10px] md:text-xs">{r.kelas} - {r.nisn}</div>
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                          isLate ? 'bg-amber-400 shadow-sm shadow-amber-400/50' : 'bg-emerald-400 shadow-sm shadow-emerald-400/50'
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-white font-bold text-xs sm:text-sm truncate group-hover:text-blue-400 transition-colors">
+                          {r.nama}
+                        </div>
+                        <div className="text-slate-400 text-[10px] sm:text-xs truncate">
+                          {r.kelas} • NISN: {r.nisn}
+                        </div>
                       </div>
                     </div>
-                    <div className="font-mono text-slate-400 text-xs">{timeStr}</div>
+                    <div className="text-right shrink-0 ml-2">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          isLate ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        {r.status || 'Hadir'}
+                      </span>
+                      <div className="font-mono text-slate-400 text-[10px] mt-1">{timeStr}</div>
+                    </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
         </div>
 
-        <div className="gsap-summary-item col-span-1 md:col-span-2 lg:col-span-3 border border-white/10 p-5 md:p-6 bg-white/[0.01] rounded-[1.5rem]">
-          <h3 className="text-base md:text-lg font-black text-white mb-4 md:mb-5">Matriks Kelas</h3>
-          <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto no-scrollbar pr-2 md:pr-4">
+        {/* Kolom 2: Matriks Kelas */}
+        <div className="gsap-summary-item border border-slate-800 bg-slate-900/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
+            <div>
+              <h3 className="text-base font-bold text-white">Matriks Performa Kelas</h3>
+              <p className="text-xs text-slate-400">Rincian rasio kehadiran per rombel kelas</p>
+            </div>
+            <span className="text-xs text-slate-400 font-semibold">{classBreakdown.length} Kelas</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
             {classBreakdown.map((c) => (
-              <div key={c.kelas} className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-white/5 border border-white/5 flex flex-col justify-between">
-                <div className="flex justify-between items-center mb-3 md:mb-4">
-                  <span className="font-bold text-slate-300 text-sm">{c.kelas}</span>
-                  <span className={`text-[9px] md:text-[10px] font-black px-2 py-1 rounded-sm ${
-                    c.rate >= 90 ? 'bg-emerald-500/20 text-emerald-400' : 
-                    c.rate >= 70 ? 'bg-blue-500/20 text-blue-400' : 
-                    'bg-rose-500/20 text-rose-400'
-                  }`}>
+              <div
+                key={c.kelas}
+                onClick={() => {
+                  setSearchQuery(c.kelas);
+                  setModalFilter('hadir');
+                  setShowStudentListModal(true);
+                }}
+                className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-slate-700 transition-all flex flex-col justify-between cursor-pointer group"
+                title={`Klik untuk melihat data siswa kelas ${c.kelas}`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-slate-200 text-xs sm:text-sm group-hover:text-blue-400 transition-colors">
+                    {c.kelas}
+                  </span>
+                  <span
+                    className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                      c.rate >= 90
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : c.rate >= 75
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
                     {c.rate}%
                   </span>
                 </div>
-                <div className="text-[10px] md:text-xs text-slate-500 flex justify-between flex-wrap gap-1">
-                  <span>{c.masuk} / {c.total}</span>
-                  {c.belumAbsen > 0 && <span className="text-amber-500">{c.belumAbsen} Belum</span>}
+                <div className="text-[10px] text-slate-400 flex justify-between items-center">
+                  <span>{c.masuk}/{c.total} Masuk</span>
+                  {c.belumAbsen > 0 && <span className="text-rose-400 font-semibold">{c.belumAbsen} Belum</span>}
                 </div>
               </div>
             ))}
@@ -389,7 +371,7 @@ export const DailySummaryWidget: React.FC<DailySummaryWidgetProps> = ({
                   </h3>
                   <p className="text-slate-400 mt-2 font-medium text-sm">Ditemukan {modalStudentList.length} siswa dalam kategori ini.</p>
                 </div>
-                <button onClick={() => setShowStudentListModal(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer shrink-0">
+                <button onClick={handleCloseModal} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors cursor-pointer shrink-0">
                   <XCircle className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               </div>
