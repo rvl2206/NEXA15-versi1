@@ -23,6 +23,8 @@ import {
   Sun,
   Focus,
   Maximize2,
+  Minimize2,
+  CameraOff,
   Zap,
 } from 'lucide-react';
 
@@ -155,12 +157,47 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [recentCount, setRecentCount] = useState<number>(0);
 
+  // Multi-tier Web & Mobile Camera Compatibility States
+  const [availableCameras, setAvailableCameras] = useState<Array<{ id: string; label: string }>>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isStartingCamera, setIsStartingCamera] = useState<boolean>(true);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
+    if (typeof document !== 'undefined') {
+      return !!document.fullscreenElement;
+    }
+    return false;
+  });
+
   // Scanner Enhancement: Zoom, High Contrast (Kaca Buram), and Camera Sensor controls
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isHighContrast, setIsHighContrast] = useState<boolean>(false);
   const [hasHardwareZoom, setHasHardwareZoom] = useState<boolean>(false);
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [hasContinuousFocus, setHasContinuousFocus] = useState<boolean>(false);
+
+  // Screen Wake Lock (Ensures Kiosk Display Never Sleeps)
+  const wakeLockRef = useRef<any>(null);
+
+  const requestWakeLock = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      } catch (e) {
+        console.warn('Kiosk WakeLock notice:', e);
+      }
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    if (wakeLockRef.current) {
+      try {
+        wakeLockRef.current.release();
+      } catch {}
+      wakeLockRef.current = null;
+    }
+  }, []);
 
   // Online / Offline & Antrean Presensi Offline state
   const [isOnline, setIsOnline] = useState<boolean>(() => store.isOnline());
@@ -532,15 +569,56 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     } catch {}
   }, [scannerContainerId]);
 
-  // Start Camera with Full HD Sensor, Continuous Autofocus, and Anti-Flicker Hardware Acceleration
-  const startCamera = async () => {
+  // Start Camera with Multi-Tier Web & Mobile Camera Fallback
+  const startCamera = async (targetCamId?: string) => {
+    setIsStartingCamera(true);
+    setCameraError(null);
+
     try {
       if (html5QrCodeRef.current) {
         try {
-          await html5QrCodeRef.current.stop();
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
           html5QrCodeRef.current.clear();
         } catch {}
         html5QrCodeRef.current = null;
+      }
+
+      // Check browser MediaDevices support
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setIsStartingCamera(false);
+        setIsCameraActive(false);
+        if (typeof window !== 'undefined' && window.isSecureContext === false) {
+          setCameraError('Akses kamera diblokir browser karena koneksi HTTP tidak aman. Harap buka aplikasi menggunakan https:// atau http://localhost.');
+        } else {
+          setCameraError('Browser ini tidak mendukung akses kamera langsung (MediaDevices API tidak tersedia).');
+        }
+        return;
+      }
+
+      // Fetch available camera devices if not cached
+      let currentDevices = availableCameras;
+      if (currentDevices.length === 0) {
+        try {
+          const fetched = await Html5Qrcode.getCameras();
+          if (fetched && fetched.length > 0) {
+            currentDevices = fetched.map((d, idx) => ({
+              id: d.id,
+              label: d.label || `Kamera ${idx + 1} (${d.id.substring(0, 6)})`,
+            }));
+            setAvailableCameras(currentDevices);
+          }
+        } catch (e) {
+          console.warn('Kiosk getCameras note:', e);
+        }
+      }
+
+      // Ensure DOM element is mounted
+      const containerEl = document.getElementById(scannerContainerId);
+      if (!containerEl) {
+        setIsStartingCamera(false);
+        return;
       }
 
       // Restrict formats to QR_CODE & CODE_128 to eliminate 15 unnecessary barcode decoders per frame
@@ -556,13 +634,6 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       });
       html5QrCodeRef.current = qrCode;
 
-      // Full HD 1080p constraints: ~6.9px per QR module (4x clarity for small QR through glass)
-      const highResConstraints: MediaTrackConstraints = {
-        facingMode: facingMode,
-        width: { ideal: 1920, min: 640 },
-        height: { ideal: 1080, min: 480 },
-      };
-
       const scanConfig = {
         fps: 20, // 20 FPS ensures responsive capture with low CPU overhead
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
@@ -575,88 +646,208 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       };
 
       let started = false;
-      try {
-        await qrCode.start(
-          highResConstraints,
-          scanConfig,
-          (decodedText) => {
-            handleProcessScan(decodedText, 'QR');
-          },
-          () => {}
-        );
-        started = true;
-      } catch (err) {
-        console.warn('FullHD 1080p camera constraint note, trying fallback:', err);
-      }
+      let lastErrMsg = '';
 
-      // Fallback if 1080p constraint fails on legacy camera
-      if (!started) {
-        await qrCode.start(
-          { facingMode: facingMode },
-          scanConfig,
-          (decodedText) => {
-            handleProcessScan(decodedText, 'QR');
-          },
-          () => {}
-        );
-      }
-
-      // Inspect hardware track capabilities and calibrate continuous focus, exposure, and zoom
-      setTimeout(async () => {
+      // TIER 1: If specific camera ID is selected or provided
+      const preferredCamId = targetCamId || selectedCameraId;
+      if (preferredCamId) {
         try {
-          const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
-          const stream = videoEl?.srcObject as MediaStream | null;
-          const track = stream?.getVideoTracks()[0];
-          if (track) {
-            const caps: any = track.getCapabilities ? track.getCapabilities() : {};
-            if (caps.zoom) setHasHardwareZoom(true);
-            if (caps.torch) setHasTorch(true);
-            if (caps.focusMode) setHasContinuousFocus(true);
-
-            // Apply continuous focus, continuous auto-exposure, and continuous white balance
-            const advancedConstraints: any = {};
-            if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
-              advancedConstraints.focusMode = 'continuous';
-            }
-            if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
-              advancedConstraints.exposureMode = 'continuous';
-            }
-            if (caps.whiteBalanceMode && Array.isArray(caps.whiteBalanceMode) && caps.whiteBalanceMode.includes('continuous')) {
-              advancedConstraints.whiteBalanceMode = 'continuous';
-            }
-            if (Object.keys(advancedConstraints).length > 0) {
-              await track.applyConstraints({ advanced: [advancedConstraints] });
-            }
-
-            // Re-apply zoom level if set
-            if (zoomLevel > 1.0) {
-              applyZoom(zoomLevel);
-            }
-          }
-
-          // Apply high-contrast filter if active
-          const container = document.getElementById(scannerContainerId);
-          if (container && isHighContrast) {
-            container.classList.add('high-contrast');
-          }
-        } catch (e) {
-          console.warn('Hardware camera calibration note:', e);
+          await qrCode.start(
+            preferredCamId,
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+          started = true;
+          setSelectedCameraId(preferredCamId);
+        } catch (err: any) {
+          console.warn('Kiosk Camera start with preferredCamId failed:', err);
+          lastErrMsg = err?.message || String(err);
         }
-      }, 350);
-    } catch (e) {
+      }
+
+      // TIER 2: Full HD 1080p constraints with facingMode
+      if (!started) {
+        try {
+          await qrCode.start(
+            {
+              facingMode: facingMode,
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+            },
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+          started = true;
+        } catch (err: any) {
+          console.warn('FullHD 1080p camera constraint note, trying fallback:', err);
+          lastErrMsg = err?.message || String(err);
+        }
+      }
+
+      // TIER 3: Standard resolution with facingMode
+      if (!started) {
+        try {
+          await qrCode.start(
+            { facingMode: facingMode },
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+          started = true;
+        } catch (err: any) {
+          console.warn(`Standard facingMode ${facingMode} failed:`, err);
+          lastErrMsg = err?.message || String(err);
+        }
+      }
+
+      // TIER 4: Opposite facingMode (Crucial for Web/PC/Laptop where 'environment' camera doesn't exist!)
+      if (!started) {
+        const altFacing = facingMode === 'environment' ? 'user' : 'environment';
+        try {
+          await qrCode.start(
+            { facingMode: altFacing },
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+          started = true;
+          setFacingMode(altFacing);
+        } catch (err: any) {
+          console.warn(`Opposite facingMode ${altFacing} failed:`, err);
+          lastErrMsg = err?.message || String(err);
+        }
+      }
+
+      // TIER 5: Fallback to any enumerated camera deviceId
+      if (!started && currentDevices.length > 0) {
+        for (const dev of currentDevices) {
+          try {
+            await qrCode.start(
+              dev.id,
+              scanConfig,
+              (decodedText) => {
+                handleProcessScan(decodedText, 'QR');
+              },
+              () => {}
+            );
+            started = true;
+            setSelectedCameraId(dev.id);
+            break;
+          } catch (err: any) {
+            console.warn(`Device ${dev.id} start failed:`, err);
+            lastErrMsg = err?.message || String(err);
+          }
+        }
+      }
+
+      // TIER 6: Blank media track constraints
+      if (!started) {
+        try {
+          await qrCode.start(
+            {} as any,
+            scanConfig,
+            (decodedText) => {
+              handleProcessScan(decodedText, 'QR');
+            },
+            () => {}
+          );
+          started = true;
+        } catch (err: any) {
+          lastErrMsg = err?.message || String(err);
+        }
+      }
+
+      if (started) {
+        setIsCameraActive(true);
+        setIsStartingCamera(false);
+        setCameraError(null);
+
+        // Inspect hardware track capabilities and calibrate continuous focus, exposure, and zoom
+        setTimeout(async () => {
+          try {
+            const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
+            const stream = videoEl?.srcObject as MediaStream | null;
+            const track = stream?.getVideoTracks()[0];
+            if (track) {
+              const caps: any = track.getCapabilities ? track.getCapabilities() : {};
+              if (caps.zoom) setHasHardwareZoom(true);
+              if (caps.torch) setHasTorch(true);
+              if (caps.focusMode) setHasContinuousFocus(true);
+
+              // Apply continuous focus, continuous auto-exposure, and continuous white balance
+              const advancedConstraints: any = {};
+              if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+                advancedConstraints.focusMode = 'continuous';
+              }
+              if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
+                advancedConstraints.exposureMode = 'continuous';
+              }
+              if (caps.whiteBalanceMode && Array.isArray(caps.whiteBalanceMode) && caps.whiteBalanceMode.includes('continuous')) {
+                advancedConstraints.whiteBalanceMode = 'continuous';
+              }
+              if (Object.keys(advancedConstraints).length > 0) {
+                await track.applyConstraints({ advanced: [advancedConstraints] });
+              }
+
+              // Re-apply zoom level if set
+              if (zoomLevel > 1.0) {
+                applyZoom(zoomLevel);
+              }
+            }
+
+            // Apply high-contrast filter if active
+            const container = document.getElementById(scannerContainerId);
+            if (container && isHighContrast) {
+              container.classList.add('high-contrast');
+            }
+          } catch (e) {
+            console.warn('Hardware camera calibration note:', e);
+          }
+        }, 350);
+      } else {
+        setIsCameraActive(false);
+        setIsStartingCamera(false);
+        let readableError = 'Kamera tidak dapat diakses atau sedang digunakan oleh aplikasi lain.';
+        const errLower = lastErrMsg.toLowerCase();
+        if (errLower.includes('permission') || errLower.includes('notallowed')) {
+          readableError = 'Izin kamera ditolak oleh browser. Klik ikon gembok/kamera di samping URL browser untuk mengizinkan akses kamera, lalu klik Coba Hubungkan Ulang.';
+        } else if (errLower.includes('notfound') || errLower.includes('devicesnotfound')) {
+          readableError = 'Tidak ada perangkat kamera / webcam yang terdeteksi di laptop / komputer ini.';
+        } else if (errLower.includes('notreadable') || errLower.includes('trackstarterror')) {
+          readableError = 'Kamera sedang digunakan oleh aplikasi lain (seperti Zoom, Google Meet, atau scanner lain). Tutup aplikasi tersebut lalu klik Coba Hubungkan Ulang.';
+        }
+        setCameraError(readableError);
+      }
+    } catch (e: any) {
       console.warn('Camera startup note:', e);
+      setIsCameraActive(false);
+      setIsStartingCamera(false);
+      setCameraError(e?.message || 'Terjadi kesalahan saat memulai kamera.');
     }
   };
 
   const stopCamera = async () => {
     if (html5QrCodeRef.current) {
       try {
-        await html5QrCodeRef.current.stop();
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
         html5QrCodeRef.current.clear();
       } catch {}
       html5QrCodeRef.current = null;
     }
     setTorchOn(false);
+    setIsCameraActive(false);
   };
 
   useEffect(() => {
@@ -666,34 +857,36 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     };
   }, [facingMode]);
 
-  // Toggle Torch/Flashlight
-  const toggleTorch = async () => {
-    try {
-      const nextState = !torchOn;
-      if (html5QrCodeRef.current) {
-        await html5QrCodeRef.current.applyVideoConstraints({
-          advanced: [{ torch: nextState } as any],
-        });
-        setTorchOn(nextState);
-      } else {
-        const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
-        const stream = videoEl?.srcObject as MediaStream | null;
-        const track = stream?.getVideoTracks()[0];
-        if (track) {
-          await track.applyConstraints({
-            advanced: [{ torch: nextState } as any],
-          });
-          setTorchOn(nextState);
-        }
-      }
-    } catch (err) {
-      console.warn('Torch not supported on this device/camera:', err);
+  // Flip Camera or Cycle Available Cameras
+  const toggleFacingMode = () => {
+    if (availableCameras.length > 1) {
+      const curIndex = availableCameras.findIndex((c) => c.id === selectedCameraId);
+      const nextIndex = (curIndex + 1) % availableCameras.length;
+      const nextDev = availableCameras[nextIndex];
+      setSelectedCameraId(nextDev.id);
+      startCamera(nextDev.id);
+    } else {
+      setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
     }
   };
 
-  // Flip Camera
-  const toggleFacingMode = () => {
-    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+  // Toggle Fullscreen (Dedicated Terminal Mode)
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+          setIsFullscreen(true);
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+          setIsFullscreen(false);
+        }
+      }
+    } catch (e) {
+      console.warn('Fullscreen toggle note:', e);
+    }
   };
 
   // Search Students for Lupa Kartu
@@ -862,11 +1055,30 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           {/* Flip Camera Button */}
           <button
             onClick={toggleFacingMode}
-            className="p-2 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700 hover:text-slate-200 active:scale-95 transition-colors"
-            title="Ganti Kamera"
+            className="p-2 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700 hover:text-slate-200 active:scale-95 transition-colors relative"
+            title={availableCameras.length > 1 ? `Ganti Kamera (${availableCameras.length} terdeteksi)` : "Putar Kamera Depan/Belakang"}
             aria-label="Putar Kamera"
           >
             <RefreshCw className="w-4 h-4" />
+            {availableCameras.length > 1 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-cyan-500 text-slate-950 font-black text-[8px] flex items-center justify-center">
+                {availableCameras.length}
+              </span>
+            )}
+          </button>
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={toggleFullscreen}
+            className={`p-2 rounded-xl border transition-all active:scale-95 ${
+              isFullscreen
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/20'
+                : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+            }`}
+            title={isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh (Mode Kiosk Mandiri)'}
+            aria-label="Layar Penuh"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </header>
@@ -880,19 +1092,87 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         {/* Html5Qrcode video target container */}
         <div id={scannerContainerId} className="w-full h-full object-cover" />
 
-        {/* Viewfinder Target Graphic Overlay (Expanded capture area) */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="relative w-[min(76vw,270px)] h-[min(76vw,270px)] border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300">
-            {/* Corner Indicators */}
-            <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl" />
-            <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl" />
-            <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl" />
-            <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl" />
-
-            {/* Smooth Hardware-Accelerated Laser Scanning Line */}
-            <div className="kiosk-laser-line" />
+        {/* Loading Overlay */}
+        {isStartingCamera && !cameraError && (
+          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-30 pointer-events-none">
+            <Loader2 className="w-9 h-9 text-emerald-400 animate-spin" />
+            <p className="text-xs text-slate-300 font-bold tracking-wide">Menghubungkan Sensor Kamera Kiosk...</p>
           </div>
-        </div>
+        )}
+
+        {/* Camera Error Overlay with Interactive Troubleshooting */}
+        {cameraError && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 shadow-lg shadow-rose-500/10">
+              <CameraOff className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-black text-white mb-1.5">Kamera Kiosk Tidak Aktif</h3>
+            <p className="text-xs text-slate-300 max-w-sm mb-4 leading-relaxed">
+              {cameraError}
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-xs">
+              <button
+                type="button"
+                onClick={() => startCamera()}
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 active:scale-95 transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Coba Hubungkan Ulang
+              </button>
+
+              {availableCameras.length > 1 && (
+                <button
+                  type="button"
+                  onClick={toggleFacingMode}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4 text-cyan-400" />
+                  Ganti Kamera ({availableCameras.length})
+                </button>
+              )}
+            </div>
+
+            {availableCameras.length > 1 && (
+              <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <span>Sumber Webcam:</span>
+                <select
+                  value={selectedCameraId}
+                  onChange={(e) => {
+                    setSelectedCameraId(e.target.value);
+                    startCamera(e.target.value);
+                  }}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                >
+                  {availableCameras.map((cam) => (
+                    <option key={cam.id} value={cam.id}>
+                      {cam.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Viewfinder Target Graphic Overlay (Expanded capture area) */}
+        {!cameraError && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="relative w-[min(76vw,270px)] h-[min(76vw,270px)] border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300">
+              {/* Corner Indicators */}
+              <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl" />
+              <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl" />
+
+              {/* Smooth Hardware-Accelerated Laser Scanning Line */}
+              <div className="kiosk-laser-line" />
+            </div>
+          </div>
+        )}
 
         {/* Floating Instruction Pill */}
         <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-900/95 border border-slate-700/80 rounded-full text-[10.5px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-2xl whitespace-nowrap max-w-[90vw] pointer-events-none z-10">

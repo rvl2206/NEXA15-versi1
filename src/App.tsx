@@ -320,7 +320,12 @@ export function App() {
       case 'users':
         return <UserManagement />;
       case 'scan':
-        return <QRScanner currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'} />;
+        return (
+          <QRScanner
+            currentOfficer={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role === 'Kepala Sekolah' ? 'Kepala Sekolah' : 'Petugas Piket'}
+            onOpenKiosk={() => setIsKioskMode(true)}
+          />
+        );
       case 'students':
         return <StudentManagement userRole={currentUser?.role} />;
       case 'card-template':

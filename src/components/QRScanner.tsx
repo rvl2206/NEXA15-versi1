@@ -63,6 +63,7 @@ import { QRScannerModal } from './QRScannerModal';
 
 interface QRScannerProps {
   currentOfficer: string;
+  onOpenKiosk?: () => void;
 }
 
 export type ScanTargetMode = 'siswa';
@@ -82,7 +83,7 @@ export interface ScanOutcome {
   timestamp: string;
 }
 
-export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
+export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer, onOpenKiosk }) => {
   const [scanTypeMode, setScanTypeMode] = useState<'Auto' | 'Masuk' | 'Pulang'>('Auto');
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -136,8 +137,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
   const [todayLupaKartuCount, setTodayLupaKartuCount] = useState<number>(() => store.getTodayLupaKartuList().total);
   const [scheduleStatus, setScheduleStatus] = useState(() => store.getTodayScheduleStatus());
 
-  // Kiosk & Wake Lock State for Dedicated Android Scanner Kiosk
-  const [isKioskMode, setIsKioskMode] = useState<boolean>(false);
+  // Screen Stay On (Wake Lock) State
+  const [isWakeLockActive, setIsWakeLockActive] = useState<boolean>(false);
   const wakeLockRef = useRef<any>(null);
 
   const requestWakeLock = async () => {
@@ -161,9 +162,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
     }
   };
 
-  const toggleKioskMode = async () => {
-    if (!isKioskMode) {
-      setIsKioskMode(true);
+  const toggleWakeLock = async () => {
+    if (!isWakeLockActive) {
+      setIsWakeLockActive(true);
       await requestWakeLock();
       if (!isCameraActive) {
         setTimeout(() => startCamera(), 100);
@@ -174,18 +175,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
         }
       } catch {}
       toast.success(
-        'Mode Kiosk Scanner Aktif',
-        'Layar diatur tetap menyala tanpa mati (Wake Lock aktif). Perangkat Android siap beroperasi sebagai mesin scanner presensi mandiri.'
+        'Layar Terjaga Aktif',
+        'Layar diatur tetap menyala tanpa mati (Wake Lock aktif). Perangkat siap memindai presensi tanpa layar terkunci.'
       );
     } else {
-      setIsKioskMode(false);
+      setIsWakeLockActive(false);
       await releaseWakeLock();
       try {
         if (document.fullscreenElement && document.exitFullscreen) {
           await document.exitFullscreen();
         }
       } catch {}
-      toast.info('Mode Kiosk Dinonaktifkan', 'Kembali ke tampilan scanner biasa.');
+      toast.info('Layar Terjaga Dinonaktifkan', 'Layar kembali ke mode tidur normal.');
     }
   };
 
@@ -1182,19 +1183,33 @@ export const QRScanner: React.FC<QRScannerProps> = ({ currentOfficer }) => {
               )}
             </button>
 
-            {/* Dedicated Android Kiosk Mode Button (Screen Stay On) */}
+            {/* Buka Kiosk Gerbang Button (Dedicated Fullscreen Kiosk) */}
+            {onOpenKiosk && (
+              <button
+                type="button"
+                id="btn-buka-kiosk-gerbang"
+                onClick={onOpenKiosk}
+                className="flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                title="Buka Mode Pemindai Kiosk Layar Penuh Dedicated Gerbang"
+              >
+                <Zap className="w-4 h-4 text-slate-950 fill-current" />
+                <span>Buka Kiosk Gerbang</span>
+              </button>
+            )}
+
+            {/* Screen Stay On (Wake Lock) Button */}
             <button
               type="button"
-              onClick={toggleKioskMode}
+              onClick={toggleWakeLock}
               className={`flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
-                isKioskMode
+                isWakeLockActive
                   ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-md shadow-amber-500/20 animate-pulse'
                   : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-white/10 hover:border-amber-400/40'
               }`}
-              title="Mode Mesin Kiosk: Layar HP/Tablet Android tetap menyala tanpa mati otomatis (Wake Lock) untuk gerbang presensi"
+              title="Cegah layar mati otomatis (Wake Lock) selama memindai presensi di HP/Tablet/Laptop"
             >
               <Smartphone className="w-4 h-4 text-amber-400" />
-              <span>{isKioskMode ? 'Kiosk Aktif (Layar Terjaga)' : 'Mode Kiosk Mesin'}</span>
+              <span>{isWakeLockActive ? 'Layar Terjaga (Aktif)' : 'Cegah Layar Mati'}</span>
             </button>
           </div>
         </div>
