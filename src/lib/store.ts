@@ -90,8 +90,10 @@ import {
 } from './attendanceRules';
 import {
   findDoubleMasukRecords,
+  findClassMismatchRecords,
   getMissingAttendanceItemsFromLogs,
   DoubleMasukAnomaly,
+  ClassMismatchAnomaly,
 } from './attendanceRepair';
 import {
   STORAGE_KEYS,
@@ -113,6 +115,7 @@ export {
   getDayScheduleStatus,
   getDayOfWeekWIT,
   findDoubleMasukRecords,
+  findClassMismatchRecords,
   getMissingAttendanceItemsFromLogs,
 };
 export type {
@@ -120,6 +123,7 @@ export type {
   ScanEligibilityResult,
   ScanDuplicateReason,
   DoubleMasukAnomaly,
+  ClassMismatchAnomaly,
   DayScheduleStatus,
 };
 
@@ -138,6 +142,8 @@ export interface HealthCheckResult {
   totalAttendance: number;
   uniqueAttendanceStudents: number;
   orphanedAttendanceCount: number;
+  doubleMasukCount: number;
+  classMismatchCount: number;
   missingStudentDetails: Array<{
     nisn: string;
     name: string;
@@ -418,6 +424,25 @@ class AppStore {
           }
           if (isGenericQrCode(s.id_qr)) {
             s.id_qr = `${schoolNpsn}.${cleanNisn}.${(s.nama || '').trim()}`;
+            changed = true;
+          }
+        }
+      });
+    }
+
+    // Auto-align attendance records with master student class if mismatched
+    if (this.students && this.students.length > 0 && this.attendance && this.attendance.length > 0) {
+      const studentClassMap = new Map<string, string>();
+      this.students.forEach((s) => {
+        if (s.nisn && s.kelas) {
+          studentClassMap.set(s.nisn.trim(), s.kelas.trim());
+        }
+      });
+      this.attendance.forEach((a) => {
+        if (a.nisn) {
+          const masterClass = studentClassMap.get(a.nisn.trim());
+          if (masterClass && a.kelas && a.kelas.trim() !== masterClass) {
+            a.kelas = masterClass;
             changed = true;
           }
         }
@@ -3017,27 +3042,92 @@ class AppStore {
   public repairDoubleMasukRecords(selectedRecordIds?: string[]): number {
     const anomalies = this.findDoubleMasukRecords();
     let removedCount = 0;
+    const idsToDelete: string[] = [];
 
     anomalies.forEach((group) => {
       // Sort ascending by timestamp -> keep earliest, remove duplicates
       const sorted = [...group.records].sort(
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
-      const toKeep = sorted[0];
+      // Keep earliest (sorted[0]), collect only true duplicates
       const duplicates = sorted.slice(1);
 
       duplicates.forEach((d) => {
         if (!selectedRecordIds || selectedRecordIds.includes(d.id)) {
-          this.deleteAttendance(d.id);
+          idsToDelete.push(d.id);
           removedCount++;
         }
       });
     });
 
+    if (idsToDelete.length > 0) {
+      this.deleteMultipleAttendance(idsToDelete);
+      this.saveLocalData(true);
+      this.createManualBackup();
+    }
+
     if (removedCount > 0) {
-      toast.success('Pembersihan Berhasil', `Berhasil menghapus ${removedCount} data scan Masuk ganda.`);
+      toast.success('Pembersihan Berhasil', `Berhasil menghapus ${removedCount} data scan Masuk ganda (data scan pertama tetap dipertahankan).`);
     }
     return removedCount;
+  }
+
+  public findClassMismatchRecords(): ClassMismatchAnomaly<AttendanceRecord>[] {
+    return findClassMismatchRecords(this.attendance, this.students);
+  }
+
+  public repairClassMismatches(): number {
+    const mismatches = this.findClassMismatchRecords();
+    if (mismatches.length === 0) return 0;
+
+    let updatedCount = 0;
+    const recordsToSync: AttendanceRecord[] = [];
+
+    mismatches.forEach((m) => {
+      const target = this.attendance.find((a) => a.id === m.recordId);
+      if (target && m.expectedMasterClass) {
+        target.kelas = m.expectedMasterClass;
+        updatedCount++;
+        recordsToSync.push(target);
+      }
+    });
+
+    if (updatedCount > 0) {
+      this.saveLocalData(true);
+      this.createManualBackup();
+      this.notify();
+      recordsToSync.forEach((rec) => {
+        this.enqueueSync({ id: rec.id, type: 'attendance', action: 'upsert', data: rec });
+      });
+      syncAttendanceToSupabase(recordsToSync, this.getSupabaseConfig()).catch(() => {});
+      this.addLog(
+        'PENYELARASAN_KELAS_PRESENSI',
+        `Menyelaraskan nama rombel kelas pada ${updatedCount} rekaman presensi dengan kelas master siswa.`
+      );
+      toast.success('Penyelarasan Berhasil', `Berhasil menyelaraskan ${updatedCount} rekaman presensi dengan kelas master siswa.`);
+    }
+
+    return updatedCount;
+  }
+
+  public repairAllHealthInconsistencies(): { doubleMasukRemoved: number; classesUpdated: number } {
+    const doubleMasukRemoved = this.repairDoubleMasukRecords();
+    const classesUpdated = this.repairClassMismatches();
+
+    this.saveLocalData(true);
+    this.createManualBackup();
+    this.notify();
+
+    if (doubleMasukRemoved === 0 && classesUpdated === 0) {
+      toast.info('Data Sudah Konsisten', 'Tidak ditemukan scan ganda atau ketidaksesuaian kelas pada data presensi.');
+    } else {
+      toast.success(
+        'Perbaikan Data Selesai',
+        `Berhasil membersihkan ${doubleMasukRemoved} scan ganda & menyelaraskan ${classesUpdated} kelas presensi (tanpa ada data presensi yang hilang).`
+      );
+    }
+
+    return { doubleMasukRemoved, classesUpdated };
   }
 
   public autoRepairAttendanceFromActivityLogs(): number {
@@ -3176,16 +3266,8 @@ class AppStore {
     const doubleMasukCount = doubleMasukAnomalies.reduce((sum, a) => sum + a.records.length - 1, 0);
 
     // Check class inconsistencies (presensi class vs student master class)
-    const studentClassMap = new Map<string, string>();
-    this.students.forEach((s) => studentClassMap.set(s.nisn, s.kelas.trim()));
-
-    let classMismatchCount = 0;
-    this.attendance.forEach((a) => {
-      const masterClass = studentClassMap.get(a.nisn);
-      if (masterClass && a.kelas && a.kelas.trim() !== masterClass) {
-        classMismatchCount++;
-      }
-    });
+    const classMismatches = this.findClassMismatchRecords();
+    const classMismatchCount = classMismatches.length;
 
     const discrepancies: string[] = [];
     const recommendations: string[] = [];
@@ -3221,7 +3303,7 @@ class AppStore {
     }
 
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
-    if (orphanedAttendanceCount > 0 || doubleMasukCount > 0) {
+    if (orphanedAttendanceCount > 0 || doubleMasukCount > 0 || classMismatchCount > 0) {
       status = 'warning';
     }
     if (orphanedAttendanceCount > 10 || totalStudents === 0 && totalAttendance > 0) {
@@ -3234,6 +3316,8 @@ class AppStore {
       totalAttendance,
       uniqueAttendanceStudents: attNisns.size,
       orphanedAttendanceCount,
+      doubleMasukCount,
+      classMismatchCount,
       missingStudentDetails,
       backupInfo: {
         exists: true,

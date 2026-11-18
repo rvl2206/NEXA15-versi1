@@ -28,6 +28,16 @@ export interface DoubleMasukAnomaly<T = AttendanceRecord> {
   records: T[];
 }
 
+export interface ClassMismatchAnomaly<T = AttendanceRecord> {
+  recordId: string;
+  nisn: string;
+  studentName: string;
+  currentAttendanceClass: string;
+  expectedMasterClass: string;
+  date: string;
+  record: T;
+}
+
 /**
  * Mendeteksi anomali rekaman scan 'Masuk' ganda untuk siswa pada tanggal yang sama.
  * Mengikuti implementasi kanonikal NEXA15:
@@ -167,3 +177,49 @@ export function getMissingAttendanceItemsFromLogs(
 
   return missing;
 }
+
+/**
+ * Mendeteksi rekaman presensi dengan nama kelas yang tidak selaras dengan data induk siswa.
+ * Mengembalikan daftar anomali kelas tanpa memutasi data.
+ */
+export function findClassMismatchRecords<
+  T extends {
+    id?: string;
+    nisn: string;
+    kelas?: string;
+    nama: string;
+    tanggal: string;
+  },
+  S extends {
+    nisn: string;
+    kelas: string;
+  }
+>(records: readonly T[], students: readonly S[]): ClassMismatchAnomaly<T>[] {
+  const studentMap = new Map<string, string>();
+  students.forEach((s) => {
+    if (s.nisn && s.kelas) {
+      studentMap.set(s.nisn.trim(), s.kelas.trim());
+    }
+  });
+
+  const mismatches: ClassMismatchAnomaly<T>[] = [];
+  records.forEach((r) => {
+    if (r.nisn) {
+      const masterClass = studentMap.get(r.nisn.trim());
+      if (masterClass && r.kelas && r.kelas.trim() !== masterClass) {
+        mismatches.push({
+          recordId: r.id || '',
+          nisn: r.nisn,
+          studentName: r.nama,
+          currentAttendanceClass: r.kelas,
+          expectedMasterClass: masterClass,
+          date: r.tanggal,
+          record: r as T,
+        });
+      }
+    }
+  });
+
+  return mismatches;
+}
+

@@ -5,6 +5,7 @@ import { toast } from '../lib/toast';
 
 export const SettingsHealthCheck: React.FC = () => {
   const [health, setHealth] = useState<HealthCheckResult>(() => store.runDataHealthCheck());
+  const [isRepairing, setIsRepairing] = useState(false);
 
   useEffect(() => {
     const updateHealth = () => {
@@ -17,6 +18,15 @@ export const SettingsHealthCheck: React.FC = () => {
 
   const handleRecheckHealth = () => {
     setHealth(store.runDataHealthCheck());
+  };
+
+  const handleRepairAllInconsistencies = () => {
+    setIsRepairing(true);
+    setTimeout(() => {
+      store.repairAllHealthInconsistencies();
+      setHealth(store.runDataHealthCheck());
+      setIsRepairing(false);
+    }, 200);
   };
 
   const handleRestoreFromBackup = () => {
@@ -207,11 +217,39 @@ export const SettingsHealthCheck: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* Reassurance banner regarding zero data loss */}
+            {(health.doubleMasukCount > 0 || health.classMismatchCount > 0) && (
+              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-blue-200">Jaminan Integritas & Keamanan Presensi:</span>
+                  <p className="mt-0.5 text-blue-300/90 text-[11px] leading-relaxed">
+                    Tidak ada data presensi yang hilang. Perbaikan hanya menghapus rekaman ganda berlebih (hanya 1 scan Masuk pertama per siswa yang dipertahankan) dan menyelaraskan penamaan rombel kelas dengan master data siswa saat ini.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Action Buttons for Recovery */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+        {/* Action Buttons for Recovery & Maintenance */}
+        <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center gap-3">
+          {(health.doubleMasukCount > 0 || health.classMismatchCount > 0) && (
+            <button
+              onClick={handleRepairAllInconsistencies}
+              disabled={isRepairing}
+              className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              title="Bersihkan scan Masuk ganda (simpan 1 data pertama) dan selaraskan kelas presensi dengan kelas master siswa"
+            >
+              <Wrench className={`w-4 h-4 ${isRepairing ? 'animate-spin' : ''}`} />
+              <span>
+                {isRepairing
+                  ? 'Memproses Perbaikan...'
+                  : `Perbaiki & Selaraskan Data Presensi (${health.doubleMasukCount + health.classMismatchCount} Masalah)`}
+              </span>
+            </button>
+          )}
+
           {health.backupInfo.exists && (
             <button
               onClick={handleRestoreFromBackup}

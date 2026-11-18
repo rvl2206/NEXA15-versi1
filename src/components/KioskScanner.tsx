@@ -396,13 +396,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     async (code: string, scanMethod: 'QR' | 'RFID' | 'NFC' | 'Manual' = 'QR') => {
       if (!code || isProcessing) return;
       setIsProcessing(true);
-
-      // Briefly pause video decoding during banner presentation to save battery and prevent duplicate bursts
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        try {
-          html5QrCodeRef.current.pause(true);
-        } catch {}
-      }
+      console.log('[KioskScanner] Berhasil memindai kode:', code, 'Metode:', scanMethod);
 
       const nowFormatted =
         new Date().toLocaleTimeString('id-ID', {
@@ -467,15 +461,10 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         });
       } finally {
         refreshQueue();
-        // Auto-dismiss banner and rearm after 2.0 seconds
+        // Rearm scanner after 2.0 seconds cooldown without freezing camera video stream
         setTimeout(() => {
           setBanner(null);
           setIsProcessing(false);
-          if (html5QrCodeRef.current) {
-            try {
-              html5QrCodeRef.current.resume();
-            } catch {}
-          }
         }, 2000);
       }
     },
@@ -714,14 +703,9 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       // - Web Admin Panel: 12 FPS normal (or 8 in Eco Mode) - smooth with ~50% less CPU & battery drain
       const targetFps = isEcoMode ? (isMobileDevice ? 12 : 8) : (isMobileDevice ? 20 : 12);
 
+      // Scanning configuration: Omit qrbox to scan entire camera viewport reliably without dimension errors
       const scanConfig = {
-        fps: targetFps,
-        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          // Wide 88% capture area so small cards don't need millimeter-level alignment
-          const qrEdge = Math.max(180, Math.floor(minEdge * 0.88));
-          return { width: qrEdge, height: qrEdge };
-        },
+        fps: isEcoMode ? 12 : 20,
         disableFlip: false,
       };
 
@@ -743,14 +727,16 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           const el = document.getElementById(scannerContainerId);
           if (el) el.innerHTML = '';
 
+          // Use reliable pure ZXing engine supporting all standard student card barcode/QR formats
           const qrCode = new Html5Qrcode(scannerContainerId, {
             formatsToSupport: [
               Html5QrcodeSupportedFormats.QR_CODE,
               Html5QrcodeSupportedFormats.CODE_128,
+              Html5QrcodeSupportedFormats.CODE_39,
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E,
             ],
-            experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true, // Native GPU/NPU acceleration
-            },
             verbose: false,
           });
 
