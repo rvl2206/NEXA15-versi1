@@ -20,6 +20,9 @@ import {
   Calendar,
   RefreshCw,
   GraduationCap,
+  Sparkles,
+  AlertCircle,
+  Zap,
 } from 'lucide-react';
 import {
   BarChart,
@@ -36,6 +39,18 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import {
+  KpiCard,
+  Callout,
+  Tracker,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Badge,
+  Button,
+} from './ui';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -142,6 +157,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
   const totalSakit = React.useMemo(() => uniqueDailyRecords.filter((a) => a.status === 'Sakit').length, [uniqueDailyRecords]);
   const totalAlpa = React.useMemo(() => uniqueDailyRecords.filter((a) => a.status === 'Alpa').length, [uniqueDailyRecords]);
   const totalSiswaMasuk = totalHadir + totalTerlambat;
+  const attendanceRate = totalStudents > 0 ? (totalSiswaMasuk / totalStudents) * 100 : 0;
+  const onTimeRate = totalSiswaMasuk > 0 ? (totalHadir / totalSiswaMasuk) * 100 : 0;
+  const belumScanCount = Math.max(0, totalStudents - uniqueDailyRecords.length);
 
   const classData = React.useMemo(() => {
     const classList = Array.from(
@@ -171,6 +189,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
       };
     });
   }, [students, attendance, uniqueDailyRecords]);
+
+  const classTrackerData = React.useMemo(() => {
+    return classData.map((c) => {
+      const rate = c.TotalSiswa > 0 ? ((c.Hadir + c.Terlambat) / c.TotalSiswa) * 100 : 0;
+      let color: 'emerald' | 'amber' | 'rose' | 'slate' = 'emerald';
+      if (rate < 60) color = 'rose';
+      else if (rate < 85) color = 'amber';
+      return {
+        key: c.kelas,
+        color,
+        tooltip: `${c.kelas}: ${rate.toFixed(0)}% (${c.Hadir + c.Terlambat}/${c.TotalSiswa} Siswa Masuk)`,
+      };
+    });
+  }, [classData]);
 
   const trendData = React.useMemo(() => {
     const uniqueNormalizedDates: string[] = Array.from(
@@ -270,47 +302,102 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
             </select>
           </div>
 
-          <button onClick={handleManualRefresh} className="group flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-bold text-sm rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_-10px_rgba(255,255,255,0.3)]">
+          <Button
+            onClick={handleManualRefresh}
+            variant="secondary"
+            size="lg"
+            className="group rounded-full bg-white text-slate-950 font-extrabold hover:bg-slate-100 shadow-[0_0_30px_-10px_rgba(255,255,255,0.4)] cursor-pointer"
+          >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'}`} />
-            Sinkronisasi
-          </button>
+            <span>Sinkronisasi Data</span>
+          </Button>
         </div>
       </div>
 
-      {/* Info Notice Banner */}
+      {/* Info Notice Banner via Tremor Callout */}
       {isTodaySelected && uniqueDailyRecords.length === 0 && latestDataDate && (
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-5 text-amber-200">
-            <div className="flex items-center gap-4">
-              <Clock className="w-6 h-6 text-amber-500 shrink-0" />
-              <p className="text-sm font-medium">
-                Tidak ada data kehadiran untuk tanggal {todayStr}. Koneksi terakhir tercatat pada {latestDataDate.split('-').reverse().join('-')}.
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedDate(latestDataDate)}
-              className="px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap text-sm"
-            >
-              Muat Data Terakhir
-            </button>
-          </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <Callout
+            variant="warning"
+            title={`Tidak ada data kehadiran baru untuk hari ini (${todayStr})`}
+            action={{
+              label: 'Muat Data Terakhir',
+              onClick: () => setSelectedDate(latestDataDate),
+            }}
+          >
+            Data kehadiran terakhir tercatat pada tanggal {latestDataDate.split('-').reverse().join('-')}. Anda dapat mengklik tombol untuk meninjau data historis tersebut.
+          </Callout>
         </div>
       )}
 
+      {/* Tremor-Style Executive KPI Summary Grid */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            title="Tingkat Kehadiran"
+            value={`${attendanceRate.toFixed(1)}%`}
+            subtitle={`${totalSiswaMasuk} dari ${totalStudents} siswa masuk`}
+            icon={TrendingUp}
+            accentColor="emerald"
+            progress={{
+              value: attendanceRate,
+              targetLabel: 'Target Disiplin Sekolah: ≥95%',
+            }}
+          />
+
+          <KpiCard
+            title="Hadir Tepat Waktu"
+            value={totalHadir}
+            subtitle={`${onTimeRate.toFixed(0)}% dari siswa hadir`}
+            icon={UserCheck}
+            accentColor="cyan"
+            delta={{
+              value: `${onTimeRate.toFixed(0)}%`,
+              type: onTimeRate >= 80 ? 'increase' : 'neutral',
+              label: 'Disiplin',
+            }}
+          />
+
+          <KpiCard
+            title="Siswa Terlambat"
+            value={totalTerlambat}
+            subtitle={totalTerlambat > 0 ? 'Perlu pembinaan piket gerbang' : 'Tertib tanpa keterlambatan'}
+            icon={Clock}
+            accentColor="amber"
+            delta={{
+              value: `${totalTerlambat} siswa`,
+              type: totalTerlambat > 0 ? 'decrease' : 'neutral',
+            }}
+          />
+
+          <KpiCard
+            title="Belum Absen / Alpa"
+            value={belumScanCount}
+            subtitle={totalAlpa > 0 ? `${totalAlpa} terkonfirmasi Alpa` : `${belumScanCount} belum scan gerbang`}
+            icon={XCircle}
+            accentColor="rose"
+            delta={{
+              value: belumScanCount > 0 ? 'Perlu Follow-up' : 'Lengkap',
+              type: belumScanCount > 0 ? 'decrease' : 'increase',
+            }}
+          />
+        </div>
+      </div>
+
       {/* Floating Pill Nav */}
-      <div className="sticky top-4 z-50 flex justify-center px-4">
-        <div className="inline-flex bg-white/5 backdrop-blur-3xl border border-white/10 rounded-full p-1.5 shadow-2xl">
+      <div className="sticky top-4 z-40 flex justify-center px-4">
+        <div className="inline-flex bg-slate-900/90 backdrop-blur-2xl border border-slate-700/80 rounded-full p-1.5 shadow-2xl">
           {[
-            { id: 'siswa', icon: GraduationCap, val: `${totalSiswaMasuk}/${totalStudents}` },
-            { id: 'grafik', icon: BarChart2, val: 'Analitik' },
-            { id: 'peringatan', icon: Clock, val: 'Anomali' }
+            { id: 'siswa', icon: GraduationCap, val: `${totalSiswaMasuk}/${totalStudents} Siswa` },
+            { id: 'grafik', icon: BarChart2, val: 'Analitik & Tren' },
+            { id: 'peringatan', icon: Clock, val: 'Anomali Kehadiran' }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveMetricTab(tab.id as any)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold transition-all duration-500 ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer ${
                 activeMetricTab === tab.id 
-                  ? 'bg-white text-black shadow-lg scale-105' 
+                  ? 'bg-white text-slate-950 shadow-lg scale-105 font-black' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -338,52 +425,85 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab }) => {
 
         {/* Tab 2: Grafik */}
         {activeMetricTab === 'grafik' && (
-          <div className="gsap-bento-grid grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-            <div className="gsap-bento-item lg:col-span-2 border border-white/10 p-6 md:p-8 min-h-[400px] rounded-[2rem] bg-white/[0.02]">
-              <h3 className="text-xl md:text-2xl font-black text-white mb-6">Distribusi Kehadiran Kelas</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={classData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                  <XAxis dataKey="kelas" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '1rem', color: '#fff', fontSize: '12px' }} />
-                  <Bar dataKey="Hadir" fill="#38bdf8" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="Terlambat" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="gsap-bento-item lg:col-span-1 border border-white/10 p-6 md:p-8 flex flex-col justify-center items-center bg-black/20 min-h-[300px] rounded-[2rem]">
-               <h3 className="text-lg md:text-xl font-bold text-white mb-6 text-center">Proporsi Hari Ini</h3>
-               <div className="w-full h-56">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <PieChart>
-                     <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
-                       {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                     </Pie>
-                     <Tooltip contentStyle={{ backgroundColor: '#020617', borderRadius: '1rem', color: '#fff', border: 'none', fontSize: '12px' }} />
-                   </PieChart>
-                 </ResponsiveContainer>
-               </div>
-            </div>
-            
-            <div className="gsap-bento-item lg:col-span-3 border border-white/10 p-6 md:p-8 min-h-[350px] rounded-[2rem] bg-white/[0.02]">
-              <h3 className="text-xl md:text-2xl font-black text-white mb-6">Tren Kehadiran (10 Hari Terakhir)</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorHadirDark" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                  <XAxis dataKey="tanggal" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#020617', borderRadius: '1rem', border: 'none', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="Hadir" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorHadirDark)" />
-                </AreaChart>
-              </ResponsiveContainer>
+          <div className="space-y-6 animate-in fade-in duration-500 slide-in-from-bottom-5">
+            {/* Tremor Class Health Tracker */}
+            {classTrackerData.length > 0 && (
+              <Card variant="tremor" className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Status Tingkat Kehadiran Antar Kelas</h4>
+                    <p className="text-xs text-slate-400">Arahkan kursor pada balok kelas untuk melihat detail statistik</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> ≥85% (Baik)</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" /> 60-84% (Sedang)</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block" /> &lt;60% (Rendah)</span>
+                  </div>
+                </div>
+                <Tracker data={classTrackerData} />
+              </Card>
+            )}
+
+            <div className="gsap-bento-grid grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+              <Card variant="tremor" className="gsap-bento-item lg:col-span-2 min-h-[420px]">
+                <CardHeader>
+                  <CardTitle className="text-white text-xl">Distribusi Kehadiran Kelas</CardTitle>
+                  <CardDescription>Perbandingan jumlah siswa Hadir dan Terlambat per rombel</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={classData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                      <XAxis dataKey="kelas" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '1rem', color: '#fff', fontSize: '12px' }} />
+                      <Bar dataKey="Hadir" fill="#38bdf8" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="Terlambat" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card variant="tremor" className="gsap-bento-item lg:col-span-1 min-h-[420px] flex flex-col justify-between">
+                <CardHeader>
+                  <CardTitle className="text-white text-xl">Proporsi Kehadiran</CardTitle>
+                  <CardDescription>Status kehadiran siswa tanggal {formatIndoDate(selectedDate)}</CardDescription>
+                </CardHeader>
+                <CardContent className="h-72 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
+                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: '#020617', borderRadius: '1rem', color: '#fff', border: 'none', fontSize: '12px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card variant="tremor" className="gsap-bento-item lg:col-span-3 min-h-[380px]">
+                <CardHeader>
+                  <CardTitle className="text-white text-xl">Tren Kehadiran (10 Hari Terakhir)</CardTitle>
+                  <CardDescription>Grafik fluktuasi kedatangan siswa harian</CardDescription>
+                </CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorHadirDark" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                      <XAxis dataKey="tanggal" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: '#020617', borderRadius: '1rem', border: 'none', fontSize: '12px' }} />
+                      <Area type="monotone" dataKey="Hadir" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorHadirDark)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
