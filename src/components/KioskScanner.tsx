@@ -390,11 +390,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
   // Scanner ref
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'nexa-kiosk-video-feed';
+  const isProcessingRef = useRef<boolean>(false);
 
   // Post scan directly to store (Client-side SSOT with automatic offline queue & Supabase sync)
   const handleProcessScan = useCallback(
     async (code: string, scanMethod: 'QR' | 'RFID' | 'NFC' | 'Manual' = 'QR') => {
-      if (!code || isProcessing) return;
+      if (!code || isProcessingRef.current) return;
+      isProcessingRef.current = true;
       setIsProcessing(true);
       console.log('[KioskScanner] Berhasil memindai kode:', code, 'Metode:', scanMethod);
 
@@ -464,11 +466,12 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         // Rearm scanner after 2.0 seconds cooldown without freezing camera video stream
         setTimeout(() => {
           setBanner(null);
+          isProcessingRef.current = false;
           setIsProcessing(false);
         }, 2000);
       }
     },
-    [isProcessing, officerName, refreshQueue]
+    [officerName, refreshQueue]
   );
 
   // Tab Visibility Lifecycle: Auto-pause decoding loop when tab is hidden/minimized to eliminate battery drain
@@ -698,16 +701,17 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         return;
       }
 
-      // 4. Adaptive FPS for Low Battery & CPU consumption:
-      // - Mobile Gate Kiosk: 20 FPS (or 12 in Eco Mode) for instant gate queues
-      // - Web Admin Panel: 12 FPS normal (or 8 in Eco Mode) - smooth with ~50% less CPU & battery drain
-      const targetFps = isEcoMode ? (isMobileDevice ? 12 : 8) : (isMobileDevice ? 20 : 12);
-
-      // Scanning configuration: Native 16:9 widescreen ratio matching laptop 1280x720 built-in webcam
+      // 4. Scanning configuration:
+      // Setting qrbox focuses the frame directly on the card, preventing ambient room
+      // and background lighting from washing out the black-and-white QR code contrast.
       const scanConfig: any = {
-        fps: targetFps,
+        fps: 20,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const boxSize = Math.max(220, Math.floor(minEdge * 0.78));
+          return { width: boxSize, height: boxSize };
+        },
         disableFlip: false,
-        aspectRatio: isMobileDevice ? undefined : 16 / 9,
       };
 
       // Helper function to safely attempt starting a camera configuration
@@ -786,16 +790,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         }
       }
 
-      // TIER 1: If specific camera ID is selected or auto-detected (e.g. Kamera Bawaan Laptop 1280x720 16:9)
+      // TIER 1: If specific camera ID is selected or auto-detected (e.g. Kamera Bawaan Laptop)
       if (preferredCamId) {
-        started = await tryStartConfig({
-          deviceId: { exact: preferredCamId },
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
-          aspectRatio: { ideal: 16 / 9 },
-        });
+        started = await tryStartConfig(preferredCamId);
         if (!started) {
-          started = await tryStartConfig(preferredCamId);
+          started = await tryStartConfig({
+            deviceId: { exact: preferredCamId },
+          });
         }
         if (started) {
           setSelectedCameraId(preferredCamId);
@@ -1203,15 +1204,8 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0 cursor-pointer"
         title="Ketuk layar untuk kalibrasi ulang fokus lensa"
       >
-        <style>{`
-          #${scannerContainerId} video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-          }
-        `}</style>
         {/* Html5Qrcode video target container */}
-        <div id={scannerContainerId} className="w-full h-full object-cover" />
+        <div id={scannerContainerId} className="w-full h-full flex items-center justify-center" />
 
         {/* Loading Overlay */}
         {isStartingCamera && !cameraError && (
@@ -1281,23 +1275,21 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
 
         {/* Viewfinder Target Graphic Overlay (Expanded capture area) */}
         {!cameraError && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div
-              className={`relative border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300 ${
-                !isMobileDevice
-                  ? 'w-[min(82vw,440px)] h-[min(48vh,250px)] aspect-video'
-                  : 'w-[min(76vw,270px)] h-[min(76vw,270px)]'
-              }`}
-            >
+          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+            <div className="relative w-[min(76vw,76vh,320px)] h-[min(76vw,76vh,320px)] border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.2)]">
               {/* Corner Indicators */}
-              <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl" />
-              <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl" />
+              <div className="absolute top-0 left-0 w-7 h-7 sm:w-9 sm:h-9 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl" />
+              <div className="absolute top-0 right-0 w-7 h-7 sm:w-9 sm:h-9 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl" />
+              <div className="absolute bottom-0 left-0 w-7 h-7 sm:w-9 sm:h-9 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl" />
+              <div className="absolute bottom-0 right-0 w-7 h-7 sm:w-9 sm:h-9 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl" />
 
               {/* Smooth Hardware-Accelerated Laser Scanning Line */}
               <div className="kiosk-laser-line" />
             </div>
+
+            <p className="mt-3 text-[11px] font-bold text-emerald-300 tracking-wide bg-slate-950/85 px-3 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md shadow-lg pointer-events-none">
+              Posisikan Kartu di Tengah Kotak Hijau (Jarak 25–40 cm)
+            </p>
           </div>
         )}
 
