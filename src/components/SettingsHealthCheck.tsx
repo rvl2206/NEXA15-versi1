@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, RefreshCw, BookmarkCheck, CheckCircle2, AlertTriangle, ShieldAlert, Users, FileText, Database, RotateCcw, Wrench } from 'lucide-react';
 import { store, HealthCheckResult } from '../lib/store';
 import { toast } from '../lib/toast';

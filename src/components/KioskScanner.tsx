@@ -610,9 +610,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       videoEl.style.transformOrigin = 'center center';
       videoEl.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
     }
+
+    if (targetZoom >= 2.0) {
+      toast.info('Mode QR Kecil Aktif (Zoom 2.0x)', 'Fokus diperbesar 2x untuk membaca kartu dengan QR code kecil atau rapat.');
+    }
   }, [scannerContainerId]);
 
-  // Mode Kaca Buram / Kontras Tinggi (High Contrast CSS filter on video canvas)
+  // Mode Anti-Silau / Cahaya Berlebih & Kontras Tinggi (Anti-Glare & High Contrast Filter)
   const toggleHighContrast = useCallback(() => {
     setIsHighContrast((prev) => {
       const next = !prev;
@@ -620,10 +624,48 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       if (container) {
         if (next) {
           container.classList.add('high-contrast');
+          container.classList.add('anti-glare');
         } else {
           container.classList.remove('high-contrast');
+          container.classList.remove('anti-glare');
         }
       }
+
+      // Preprocessing pada internal canvas decoding context
+      try {
+        const canvas = document.querySelector(`#${scannerContainerId} canvas`) as HTMLCanvasElement | null;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.filter = next ? 'contrast(1.65) brightness(0.82)' : 'none';
+          }
+        }
+      } catch {}
+
+      // Kalibrasi hardware exposure compensation jika didukung kamera
+      try {
+        const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
+        const stream = videoEl?.srcObject as MediaStream | null;
+        const track = stream?.getVideoTracks()[0];
+        if (track && track.getCapabilities) {
+          const caps: any = track.getCapabilities();
+          const advanced: any = {};
+          if (caps.exposureCompensation) {
+            advanced.exposureCompensation = next ? Math.max(caps.exposureCompensation.min ?? -2, -1.2) : 0;
+          }
+          if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
+            advanced.exposureMode = 'continuous';
+          }
+          if (Object.keys(advanced).length > 0) {
+            track.applyConstraints({ advanced: [advanced] }).catch(() => {});
+          }
+        }
+      } catch {}
+
+      if (next) {
+        toast.info('Mode Anti-Silau Aktif', 'Meredam pantulan cahaya berlebih & mempertajam kontras modul QR code.');
+      }
+
       return next;
     });
   }, [scannerContainerId]);
@@ -881,6 +923,14 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
             const container = document.getElementById(scannerContainerId);
             if (container && isHighContrast) {
               container.classList.add('high-contrast');
+              container.classList.add('anti-glare');
+              try {
+                const canvas = document.querySelector(`#${scannerContainerId} canvas`) as HTMLCanvasElement | null;
+                if (canvas) {
+                  const ctx = canvas.getContext('2d');
+                  if (ctx) ctx.filter = 'contrast(1.65) brightness(0.82)';
+                }
+              } catch {}
             }
           } catch (e) {
             console.warn('Hardware camera calibration note:', e);
@@ -1288,7 +1338,11 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
             </div>
 
             <p className="mt-3 text-[11px] font-bold text-emerald-300 tracking-wide bg-slate-950/85 px-3 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md shadow-lg pointer-events-none">
-              Posisikan Kartu di Tengah Kotak Hijau (Jarak 25–40 cm)
+              {zoomLevel >= 2.0
+                ? 'Mode QR Kecil Aktif • Tahan Kartu 20–30 cm'
+                : isHighContrast
+                  ? 'Mode Anti-Silau Aktif • Meredam Pantulan Cahaya'
+                  : 'Posisikan Kartu di Tengah Kotak Hijau (Jarak 25–40 cm)'}
             </p>
           </div>
         )}
@@ -1301,12 +1355,12 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           </span>
         </div>
 
-        {/* Floating Scanner Enhancement Toolbar (Zoom, Kaca Buram, Hemat Baterai, Senter) */}
+        {/* Floating Scanner Enhancement Toolbar (Zoom, Anti-Silau, Hemat Baterai, Senter) */}
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute top-11 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:gap-2 z-20 max-w-[96vw] pointer-events-auto"
         >
-          {/* Zoom Selector (1.0x, 1.5x, 2.0x) */}
+          {/* Zoom Selector (1.0x, 1.5x, 2.0x Mode QR Kecil) */}
           <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-0.5 shadow-xl">
             <button
               onClick={() => applyZoom(1.0)}
@@ -1326,35 +1380,35 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
                   ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
                   : 'text-slate-300 hover:text-white'
               }`}
-              title="Zoom 1.5x (Optimal QR Sedang & Jarak 15cm)"
+              title="Zoom 1.5x (Optimal untuk QR Sedang & Jarak 25 cm)"
             >
               1.5x
             </button>
             <button
               onClick={() => applyZoom(2.0)}
-              className={`px-2 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold transition-all active:scale-95 ${
+              className={`px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold transition-all active:scale-95 ${
                 zoomLevel === 2.0
-                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20 ring-2 ring-emerald-400/40'
                   : 'text-slate-300 hover:text-white'
               }`}
-              title="Zoom 2.0x (Mode QR Kecil / Jarak 20cm)"
+              title="Zoom 2.0x (Mode QR Kecil / Rapat)"
             >
-              2.0x
+              2.0x (QR Kecil)
             </button>
           </div>
 
-          {/* Mode Kaca Buram / Kontras Tinggi */}
+          {/* Mode Anti-Silau / Cahaya Berlebih & Kontras Tinggi */}
           <button
             onClick={toggleHighContrast}
             className={`px-2.5 py-1 rounded-2xl border text-[10px] sm:text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-xl cursor-pointer ${
               isHighContrast
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-extrabold shadow-amber-500/30'
+                ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-amber-500/40 ring-2 ring-amber-400/40'
                 : 'bg-slate-900/90 backdrop-blur-md text-slate-300 border-slate-700/80 hover:text-white'
             }`}
-            title="Mode Kaca Buram: Meningkatkan ketajaman & kontras jika kaca/casing pelindung buram"
+            title="Mode Anti-Silau: Meredam cahaya berlebih, pantulan silau pada kartu laminasi, dan mempertajam QR code"
           >
-            <Sun className="w-3 h-3 shrink-0" />
-            <span className="whitespace-nowrap">{isHighContrast ? 'Kaca Buram ON' : 'Kaca Buram'}</span>
+            <Sun className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{isHighContrast ? 'Anti-Silau ON' : 'Anti-Silau'}</span>
           </button>
 
           {/* Mode Hemat Baterai (Eco Mode) */}

@@ -371,4 +371,13 @@ html.dark .glass-panel {
   }
 }
 
+/* Anti-Silau & Kontras Tinggi Scanner (Anti-Glare & Small QR Optimization) */
+.high-contrast video,
+.anti-glare video,
+#nexa-kiosk-video-feed.high-contrast video,
+#nexa-kiosk-video-feed.anti-glare video {
+  filter: contrast(1.65) brightness(0.82) saturate(0.6) !important;
+}
+
+
 
