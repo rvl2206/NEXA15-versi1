@@ -22,6 +22,8 @@ import {
   Send,
   Loader2,
   Sun,
+  SunMedium,
+  FlipHorizontal,
   Focus,
   Maximize2,
   Minimize2,
@@ -200,9 +202,9 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     return false;
   });
 
-  // Scanner Enhancement: Zoom, High Contrast (Kaca Buram), and Camera Sensor controls
+  // Scanner Enhancement: Zoom, Mirroring (Cermin), and Camera Sensor controls
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
-  const [isHighContrast, setIsHighContrast] = useState<boolean>(false);
+  const [isMirrored, setIsMirrored] = useState<boolean>(false);
   const [hasHardwareZoom, setHasHardwareZoom] = useState<boolean>(false);
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [hasContinuousFocus, setHasContinuousFocus] = useState<boolean>(false);
@@ -579,6 +581,19 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     };
   }, [handleProcessScan]);
 
+  // Helper untuk menerapkan transformasi visual (Mirroring dan Zoom) pada elemen video
+  const updateVideoTransform = useCallback((mirrored: boolean, zoom: number) => {
+    const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
+    if (videoEl) {
+      const parts: string[] = [];
+      if (mirrored) parts.push('scaleX(-1)');
+      if (zoom > 1.02) parts.push(`scale(${zoom})`);
+      videoEl.style.transform = parts.length > 0 ? parts.join(' ') : 'none';
+      videoEl.style.transformOrigin = 'center center';
+      videoEl.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+  }, [scannerContainerId]);
+
   // Camera Zoom (Hardware Optical / Sensor Zoom with GPU CSS Scale Fallback)
   const applyZoom = useCallback(async (targetZoom: number) => {
     setZoomLevel(targetZoom);
@@ -604,70 +619,53 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
     }
 
     // 2. Hardware-accelerated CSS Zoom fallback on video element
-    const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
-    if (videoEl) {
-      videoEl.style.transform = targetZoom > 1.02 ? `scale(${targetZoom})` : 'none';
-      videoEl.style.transformOrigin = 'center center';
-      videoEl.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
-    }
+    updateVideoTransform(isMirrored, targetZoom);
 
     if (targetZoom >= 2.0) {
       toast.info('Mode QR Kecil Aktif (Zoom 2.0x)', 'Fokus diperbesar 2x untuk membaca kartu dengan QR code kecil atau rapat.');
     }
-  }, [scannerContainerId]);
+  }, [scannerContainerId, isMirrored, updateVideoTransform]);
 
-  // Mode Anti-Silau / Cahaya Berlebih & Kontras Tinggi (Anti-Glare & High Contrast Filter)
-  const toggleHighContrast = useCallback(() => {
-    setIsHighContrast((prev) => {
+  // Toggle Mirroring Kamera (Normal vs Cermin)
+  const toggleMirroring = useCallback(() => {
+    setIsMirrored((prev) => {
       const next = !prev;
-      const container = document.getElementById(scannerContainerId);
-      if (container) {
-        if (next) {
-          container.classList.add('high-contrast');
-          container.classList.add('anti-glare');
-        } else {
-          container.classList.remove('high-contrast');
-          container.classList.remove('anti-glare');
-        }
-      }
-
-      // Preprocessing pada internal canvas decoding context
-      try {
-        const canvas = document.querySelector(`#${scannerContainerId} canvas`) as HTMLCanvasElement | null;
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.filter = next ? 'contrast(1.65) brightness(0.82)' : 'none';
-          }
-        }
-      } catch {}
-
-      // Kalibrasi hardware exposure compensation jika didukung kamera
-      try {
-        const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
-        const stream = videoEl?.srcObject as MediaStream | null;
-        const track = stream?.getVideoTracks()[0];
-        if (track && track.getCapabilities) {
-          const caps: any = track.getCapabilities();
-          const advanced: any = {};
-          if (caps.exposureCompensation) {
-            advanced.exposureCompensation = next ? Math.max(caps.exposureCompensation.min ?? -2, -1.2) : 0;
-          }
-          if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
-            advanced.exposureMode = 'continuous';
-          }
-          if (Object.keys(advanced).length > 0) {
-            track.applyConstraints({ advanced: [advanced] }).catch(() => {});
-          }
-        }
-      } catch {}
-
+      updateVideoTransform(next, zoomLevel);
       if (next) {
-        toast.info('Mode Anti-Silau Aktif', 'Meredam pantulan cahaya berlebih & mempertajam kontras modul QR code.');
+        toast.info('Mode Cermin Aktif', 'Tampilan kamera dibalik secara horizontal (mirrored).');
+      } else {
+        toast.info('Mode Normal Aktif', 'Tampilan kamera normal tanpa pembalikan (kartu presensi terbaca lurus).');
       }
-
       return next;
     });
+  }, [updateVideoTransform, zoomLevel]);
+
+  // Kalibrasi Penyesuaian Cahaya Otomatis (Auto Light & Continuous Auto Exposure Sensor)
+  const triggerAutoLight = useCallback(async () => {
+    try {
+      const videoEl = document.querySelector(`#${scannerContainerId} video`) as HTMLVideoElement | null;
+      const stream = videoEl?.srcObject as MediaStream | null;
+      const track = stream?.getVideoTracks()[0];
+      if (track && track.getCapabilities) {
+        const caps: any = track.getCapabilities();
+        const advanced: any = {};
+        if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
+          advanced.exposureMode = 'continuous';
+        }
+        if (caps.whiteBalanceMode && Array.isArray(caps.whiteBalanceMode) && caps.whiteBalanceMode.includes('continuous')) {
+          advanced.whiteBalanceMode = 'continuous';
+        }
+        if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+          advanced.focusMode = 'continuous';
+        }
+        if (Object.keys(advanced).length > 0) {
+          await track.applyConstraints({ advanced: [advanced] });
+        }
+      }
+      toast.success('Auto Cahaya Aktif', 'Sensor kamera otomatis menyesuaikan pencahayaan kartu.');
+    } catch {
+      toast.info('Auto Cahaya Aktif', 'Sensor kamera memproses pencahayaan dinamis secara otomatis.');
+    }
   }, [scannerContainerId]);
 
   // Kalibrasi Ulang Fokus Lensa (Continuous Autofocus Retrigger)
@@ -753,7 +751,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
           const boxSize = Math.max(220, Math.floor(minEdge * 0.78));
           return { width: boxSize, height: boxSize };
         },
-        disableFlip: false,
+        disableFlip: true,
       };
 
       // Helper function to safely attempt starting a camera configuration
@@ -920,18 +918,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
               }
             }
 
-            const container = document.getElementById(scannerContainerId);
-            if (container && isHighContrast) {
-              container.classList.add('high-contrast');
-              container.classList.add('anti-glare');
-              try {
-                const canvas = document.querySelector(`#${scannerContainerId} canvas`) as HTMLCanvasElement | null;
-                if (canvas) {
-                  const ctx = canvas.getContext('2d');
-                  if (ctx) ctx.filter = 'contrast(1.65) brightness(0.82)';
-                }
-              } catch {}
-            }
+            updateVideoTransform(isMirrored, zoomLevel);
           } catch (e) {
             console.warn('Hardware camera calibration note:', e);
           }
@@ -1254,6 +1241,37 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0 cursor-pointer"
         title="Ketuk layar untuk kalibrasi ulang fokus lensa"
       >
+        {/* Scoped CSS enforcing single video viewport & strictly hiding decoding canvas */}
+        <style>{`
+          #${scannerContainerId} {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+          }
+          #${scannerContainerId} video {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+            margin: 0 auto !important;
+          }
+          #${scannerContainerId} canvas {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+        `}</style>
+
         {/* Html5Qrcode video target container */}
         <div id={scannerContainerId} className="w-full h-full flex items-center justify-center" />
 
@@ -1340,9 +1358,7 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
             <p className="mt-3 text-[11px] font-bold text-emerald-300 tracking-wide bg-slate-950/85 px-3 py-1 rounded-full border border-emerald-500/30 backdrop-blur-md shadow-lg pointer-events-none">
               {zoomLevel >= 2.0
                 ? 'Mode QR Kecil Aktif • Tahan Kartu 20–30 cm'
-                : isHighContrast
-                  ? 'Mode Anti-Silau Aktif • Meredam Pantulan Cahaya'
-                  : 'Posisikan Kartu di Tengah Kotak Hijau (Jarak 25–40 cm)'}
+                : 'Posisikan Kartu di Tengah Kotak Hijau (Jarak 25–40 cm)'}
             </p>
           </div>
         )}
@@ -1397,18 +1413,29 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
             </button>
           </div>
 
-          {/* Mode Anti-Silau / Cahaya Berlebih & Kontras Tinggi */}
+          {/* Tombol Toggle Mirroring Kamera (Normal vs Cermin) */}
           <button
-            onClick={toggleHighContrast}
+            onClick={toggleMirroring}
             className={`px-2.5 py-1 rounded-2xl border text-[10px] sm:text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-xl cursor-pointer ${
-              isHighContrast
-                ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-amber-500/40 ring-2 ring-amber-400/40'
+              isMirrored
+                ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-extrabold shadow-cyan-500/30'
                 : 'bg-slate-900/90 backdrop-blur-md text-slate-300 border-slate-700/80 hover:text-white'
             }`}
-            title="Mode Anti-Silau: Meredam cahaya berlebih, pantulan silau pada kartu laminasi, dan mempertajam QR code"
+            title="Klik untuk membalik tampilan kamera (Mode Normal / Cermin)"
           >
-            <Sun className="w-3.5 h-3.5 shrink-0" />
-            <span className="whitespace-nowrap">{isHighContrast ? 'Anti-Silau ON' : 'Anti-Silau'}</span>
+            <FlipHorizontal className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{isMirrored ? 'Cermin: ON' : 'Cermin: OFF'}</span>
+          </button>
+
+          {/* Indikator / Kalibrasi Auto Cahaya Adaptif */}
+          <button
+            onClick={triggerAutoLight}
+            className="px-2.5 py-1 rounded-2xl border text-[10px] sm:text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xl cursor-pointer bg-slate-900/90 backdrop-blur-md text-amber-300 border-amber-500/40 hover:bg-slate-800"
+            title="Sensor kamera otomatis menyesuaikan pencahayaan dan kontras kartu presensi"
+          >
+            <SunMedium className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="whitespace-nowrap">Auto Cahaya</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </button>
 
           {/* Mode Hemat Baterai (Eco Mode) */}
