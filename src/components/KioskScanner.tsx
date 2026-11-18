@@ -703,10 +703,11 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
       // - Web Admin Panel: 12 FPS normal (or 8 in Eco Mode) - smooth with ~50% less CPU & battery drain
       const targetFps = isEcoMode ? (isMobileDevice ? 12 : 8) : (isMobileDevice ? 20 : 12);
 
-      // Scanning configuration: Omit qrbox to scan entire camera viewport reliably without dimension errors
-      const scanConfig = {
-        fps: isEcoMode ? 12 : 20,
+      // Scanning configuration: Native 16:9 widescreen ratio matching laptop 1280x720 built-in webcam
+      const scanConfig: any = {
+        fps: targetFps,
         disableFlip: false,
+        aspectRatio: isMobileDevice ? undefined : 16 / 9,
       };
 
       // Helper function to safely attempt starting a camera configuration
@@ -785,9 +786,17 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         }
       }
 
-      // TIER 1: If specific camera ID is selected or auto-detected (e.g. Kamera Bawaan Laptop)
+      // TIER 1: If specific camera ID is selected or auto-detected (e.g. Kamera Bawaan Laptop 1280x720 16:9)
       if (preferredCamId) {
-        started = await tryStartConfig(preferredCamId);
+        started = await tryStartConfig({
+          deviceId: { exact: preferredCamId },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          aspectRatio: { ideal: 16 / 9 },
+        });
+        if (!started) {
+          started = await tryStartConfig(preferredCamId);
+        }
         if (started) {
           setSelectedCameraId(preferredCamId);
         }
@@ -1194,6 +1203,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden min-h-0 cursor-pointer"
         title="Ketuk layar untuk kalibrasi ulang fokus lensa"
       >
+        <style>{`
+          #${scannerContainerId} video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+          }
+        `}</style>
         {/* Html5Qrcode video target container */}
         <div id={scannerContainerId} className="w-full h-full object-cover" />
 
@@ -1266,7 +1282,13 @@ export const KioskScanner: React.FC<KioskScannerProps> = ({
         {/* Viewfinder Target Graphic Overlay (Expanded capture area) */}
         {!cameraError && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="relative w-[min(76vw,270px)] h-[min(76vw,270px)] border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300">
+            <div
+              className={`relative border-2 border-emerald-500/40 rounded-3xl overflow-hidden transition-all duration-300 ${
+                !isMobileDevice
+                  ? 'w-[min(82vw,440px)] h-[min(48vh,250px)] aspect-video'
+                  : 'w-[min(76vw,270px)] h-[min(76vw,270px)]'
+              }`}
+            >
               {/* Corner Indicators */}
               <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl" />
               <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl" />
